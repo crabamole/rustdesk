@@ -1,6 +1,7 @@
 let HOST = "/ws/id";
 let RELAY_HOST = "/ws/relay";
 let CONFIG_KEY = "";
+let API_SERVER = "";
 
 export function setConfig(host: string, relay: string, key: string) {
   HOST = host;
@@ -18,6 +19,10 @@ export function getRelayHost(): string {
 
 export function getConfigKey(): string {
   return CONFIG_KEY;
+}
+
+export function getApiServer(): string {
+  return API_SERVER || location.origin;
 }
 
 export function resolveUri(value: string): string {
@@ -41,6 +46,7 @@ export async function loadConfig(): Promise<void> {
       if (config.host) HOST = config.host;
       if (config.relay) RELAY_HOST = config.relay;
       if (config.key) CONFIG_KEY = config.key;
+      if (config.api) API_SERVER = config.api;
       console.log("Loaded config: host=" + HOST + ", relay=" + (RELAY_HOST || HOST));
     }
   } catch (e) {

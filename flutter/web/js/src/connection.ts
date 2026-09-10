@@ -5,9 +5,9 @@ import { loadVp9 } from "./codec";
 import * as sha256 from "fast-sha256";
 import * as globals from "./globals";
 import { decompress, mapKey, sleep } from "./common";
-import { loadConfig, getConfigKey, getDefaultUri, getHost, getRelayHost } from "./url";
+import { loadConfig, getConfigKey, getDefaultUri, getHost, getRelayHost, getApiServer } from "./url";
 
-export { loadConfig, getConfigKey };
+export { loadConfig, getConfigKey, getApiServer };
 
 export function getConfigHost(): string {
   return getHost();
