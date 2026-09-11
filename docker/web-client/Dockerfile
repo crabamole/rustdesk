@@ -66,8 +66,12 @@ COPY <<'EOF' /docker-entrypoint.d/90-rustdesk-config.sh
 #!/bin/sh
 set -e
 CONFIG=/usr/share/nginx/html/config.json
+API_LINE=""
+if [ -n "${RUSTDESK_API:-}" ]; then
+  API_LINE="$(printf '\n  "api": "%s",' "$RUSTDESK_API")"
+fi
 cat > "$CONFIG" <<CONF
-{
+{${API_LINE}
   "host": "${RUSTDESK_HOST:-/ws/id}",
   "relay": "${RUSTDESK_RELAY:-/ws/relay}",
   "key": "${RUSTDESK_KEY:?RUSTDESK_KEY is required}"
