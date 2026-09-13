@@ -67,5 +67,7 @@ core
 flutter/core
 # playwright testing artifacts
 .playwright-mcp/
+# machine-specific local config and scripts
+.local/
 # helm local overrides (contain private config)
 deploy/helm/*/values-*.yaml
