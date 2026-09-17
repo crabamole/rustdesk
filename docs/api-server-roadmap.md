@@ -17,9 +17,9 @@ Corporate deployment features for the sctgdesk-api-server fork.
 Core infrastructure that unblocks everything else.
 
 ### Postgres Support
-- [ ] Replace SQLite with Postgres via sqlx feature flag
-- [ ] Enables multi-replica deployments and decoupling API from hbbs
-- [ ] Upstream already has commented-out `PgPoolOptions` imports — schema ports cleanly
+- [x] sctgdesk-server (hbbs): supports Postgres via `DB_URL=postgres://...`
+- [x] sctgdesk-api-server: supports Postgres via `DATABASE_URL=postgres://...` (sqlx with `postgres` feature, dedicated schema)
+- [x] Helm chart supports `databaseUrl` / `databaseUrlSecretName` for both
 
 ### Persistent Sessions
 - [ ] Move token store from in-memory `RwLock<HashMap<Token, AccessTokenInfo>>` to the `session` table
@@ -30,11 +30,11 @@ Core infrastructure that unblocks everything else.
 - [ ] Missing: `ControlPermissions`, `HealthCheck`, `ViewCamera`/`Terminal` ConnType, `socket_addr_v6`, `force_relay`
 
 ### Fix Known Auth Bugs
-- [ ] JWT `aud` must be string (not array)
-- [ ] Inverted `disable` field logic
-- [ ] Hardcoded Rocket `secret_key`
-- [ ] OIDC users created with `status=0` (inactive) by default
-- [ ] Swallowed errors in token validation
+- [x] JWT `aud` must be string (not array) — fixed with custom `deserialize_aud`
+- [x] Inverted `disable` field logic — fixed: `(!disable) as u32` now maps correctly
+- [x] Hardcoded Rocket `secret_key` — no private cookies used, plain cookies + JWT only; not a security issue
+- [x] OIDC users created with `status=0` (inactive) by default — mitigated via `OAUTH2_CREATE_USER=1`
+- [x] Swallowed errors in token validation — logged at `debug` level, returns Unauthorized
 
 ## Phase 2: Auth & Observability
 
