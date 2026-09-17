@@ -3,7 +3,7 @@
 Corporate deployment features for the sctgdesk-api-server fork.
 
 **Base:** sctgdesk-api-server (AGPL-3.0)  
-**Updated:** 2026-09-12
+**Updated:** 2026-09-17
 
 ## Architecture Context
 
@@ -89,5 +89,5 @@ Data loss prevention controls for regulated environments.
 - [x] **Login Enforcement** — `LOGGED_IN_ONLY=Y` rejects unauthenticated connections at punch hole (verified with Playwright)
 - [x] **WebSocket Mode** — single-port on 443 via `/ws/id` and `/ws/relay`, was Pro-only, our fork enables it
 - [x] **Web Client** — Flutter web client restored from OSS, deployed via Helm with nginx
-- [x] **Helm Chart & K8s** — separate deployments for hbbs, hbbr, webclient, Istio routing, silent install
+- [x] **Helm Chart & K8s** — separate deployments for hbbs, hbbr, webclient, apiserver sidecar; published to `oci://ghcr.io/rophy/charts/rustdesk`
 - [x] **OIDC Authentication** — GitHub and Dex providers, auto-create users on first login

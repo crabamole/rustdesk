@@ -61,8 +61,8 @@ Establish test coverage as a foundation for opinionated development.
 
 ### Phase 4: Operations
 
-- [ ] CI/CD pipeline: auto-build Docker image on tag/release
-- [ ] Helm chart or k8s manifests for deployment alongside hbbs/hbbr
+- [x] CI/CD pipeline: auto-build Docker image on tag push (`web-client-<version>`)
+- [x] Helm chart: `oci://ghcr.io/rophy/charts/rustdesk` with webclient deployment, configmap, and nginx config
 - [ ] Health check endpoint or readiness probe
 - [ ] Documentation: deployment guide, config.json reference, architecture diagram
 
