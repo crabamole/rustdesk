@@ -21,6 +21,7 @@
     "libsodium-wrappers": "^0.7.9",
     "pcm-player": "^0.0.11",
     "ts-proto": "^1.181.2",
+    "undici": "^8.10.2",
     "wasm-feature-detect": "^1.2.11",
     "zstddec": "^0.0.2"
   }
