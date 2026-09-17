@@ -22,8 +22,8 @@ Core infrastructure that unblocks everything else.
 - [x] Helm chart supports `databaseUrl` / `databaseUrlSecretName` for both
 
 ### Persistent Sessions
-- [ ] Move token store from in-memory `RwLock<HashMap<Token, AccessTokenInfo>>` to the `session` table
-- [ ] Tokens currently vanish on restart and can't be shared across replicas
+- [x] Move token store from in-memory `RwLock<HashMap<Token, AccessTokenInfo>>` to the `session` table
+- [x] Tokens survive restart and can be shared across replicas
 
 ### Proto Update
 - [ ] Update sctgdesk-server's `rendezvous.proto` to match our client fork
@@ -47,9 +47,9 @@ Make authentication fast and auditable.
 - **Depends on:** Persistent Sessions
 
 ### Audit Logging
-- [ ] Implement write path for existing `audit_conn`, `audit_file`, `audit_alarm` tables
-- [ ] Add three route handlers: `POST /api/audit/conn`, `/api/audit/file`, `/api/audit/alarm`
-- [ ] Client already sends rich audit payloads — API server currently discards them
+- [x] Implement write path for existing `audit_conn`, `audit_file`, `audit_alarm` tables
+- [x] Add route handlers: `POST /api/audit/conn`, `/file`, `/alarm` + `GET /api/audit/conn/active`
+- [x] Client audit payloads now persisted with nonce-based deduplication
 - **Note:** DB tables and indexes already exist in schema
 
 ## Phase 3: Policy & Control
