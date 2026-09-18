@@ -160,38 +160,55 @@ if (YUVCanvas.WebGLFrameSink.isAvailable()) {
   var canvas = document.createElement('canvas');
   yuvCanvas = YUVCanvas.attach(canvas, { webGL: true });
   gl = canvas.getContext("webgl");
+  console.info('video: using WebGL YUV renderer');
 } else {
   yuvWorker = new Worker("./yuv.js");
+  console.info('video: using Web Worker YUV renderer');
 }
 let testSpeed = [0, 0];
 
+let drawErrorLogged = false;
 export function draw(frame) {
   if (yuvWorker) {
     // frame's (y/u/v).bytes already detached, can not transferrable any more.
     yuvWorker.postMessage(frame);
   } else {
-    var tm0 = new Date().getTime();
-    yuvCanvas.drawFrame(frame);
-    var width = canvas.width;
-    var height = canvas.height;
-    var size = width * height * 4;
-    if (size != oldSize) {
-      pixels = new Uint8Array(size);
-      flipPixels = new Uint8Array(size);
-      oldSize = size;
-    }
-    gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-    const row = width * 4;
-    const end = (height - 1) * row;
-    for (let i = 0; i < size; i += row) {
-      flipPixels.set(pixels.subarray(i, i + row), end - i);
-    }
-    window.onRgba(0, flipPixels);
-    testSpeed[1] += new Date().getTime() - tm0;
-    testSpeed[0] += 1;
-    if (testSpeed[0] > 30) {
-      console.log('gl: ' + parseInt('' + testSpeed[1] / testSpeed[0]));
-      testSpeed = [0, 0];
+    try {
+      var tm0 = new Date().getTime();
+      yuvCanvas.drawFrame(frame);
+      var width = canvas.width;
+      var height = canvas.height;
+      var size = width * height * 4;
+      if (size != oldSize) {
+        pixels = new Uint8Array(size);
+        flipPixels = new Uint8Array(size);
+        oldSize = size;
+      }
+      gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+      const row = width * 4;
+      const end = (height - 1) * row;
+      for (let i = 0; i < size; i += row) {
+        flipPixels.set(pixels.subarray(i, i + row), end - i);
+      }
+      if (typeof window.onRgba !== 'function') {
+        if (!drawErrorLogged) {
+          console.error('video: window.onRgba is not defined, cannot render frames');
+          drawErrorLogged = true;
+        }
+        return;
+      }
+      window.onRgba(0, flipPixels);
+      testSpeed[1] += new Date().getTime() - tm0;
+      testSpeed[0] += 1;
+      if (testSpeed[0] > 30) {
+        console.log('gl: ' + parseInt('' + testSpeed[1] / testSpeed[0]));
+        testSpeed = [0, 0];
+      }
+    } catch (e) {
+      if (!drawErrorLogged) {
+        console.error('video: draw failed:', e.message);
+        drawErrorLogged = true;
+      }
     }
   }
   /*
@@ -513,6 +530,9 @@ window.init = async () => {
   if (yuvWorker) {
     yuvWorker.onmessage = (e) => {
       window.onRgba(0, e.data);
+    }
+    yuvWorker.onerror = (e) => {
+      console.error('video: yuv worker error:', e.message);
     }
   }
   opusWorker.onmessage = (e) => {

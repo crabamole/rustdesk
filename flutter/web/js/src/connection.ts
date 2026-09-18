@@ -36,6 +36,9 @@ export default class Connection {
   _password: Uint8Array | undefined;
   _options: any;
   _videoTestSpeed: number[];
+  _decoderNotReadyWarned: boolean | undefined;
+  _decodeFailureWarned: boolean | undefined;
+  _unsupportedCodecWarned: boolean | undefined;
   //_cursors: { [name: number]: any };
 
   constructor() {
@@ -264,7 +267,7 @@ export default class Connection {
           this.handlePeerInfo(r.peer_info);
         }
       } else if (msg?.video_frame) {
-        this.handleVideoFrame(msg?.video_frame!);
+        this.handleVideoFrame(msg.video_frame!);
       } else if (msg?.clipboard) {
         const cb = msg?.clipboard;
         if (cb.compress) {
@@ -431,6 +434,10 @@ export default class Connection {
     if (vf.vp9s) {
       const dec = this._videoDecoder;
       if (!dec) {
+        if (!this._decoderNotReadyWarned) {
+          console.warn("video: decoder not ready, dropping frames");
+          this._decoderNotReadyWarned = true;
+        }
         this.sendVideoReceived();
         return;
       }
@@ -456,9 +463,21 @@ export default class Connection {
               );
               this._videoTestSpeed = [0, 0];
             }
+          } else if (!ok) {
+            if (!this._decodeFailureWarned) {
+              console.warn("video: VP9 decode failed for frame");
+              this._decodeFailureWarned = true;
+            }
           }
         });
       });
+    } else {
+      const codec = vf.av1s ? 'AV1' : vf.h264s ? 'H264' : vf.h265s ? 'H265' : vf.vp8s ? 'VP8' : 'unknown';
+      if (!this._unsupportedCodecWarned) {
+        console.warn("video: received unsupported codec: " + codec + " (only VP9 is supported)");
+        this._unsupportedCodecWarned = true;
+      }
+      this.sendVideoReceived();
     }
   }
 

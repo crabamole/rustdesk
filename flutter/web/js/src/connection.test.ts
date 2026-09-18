@@ -670,6 +670,51 @@ describe("Connection", () => {
 
       expect(mockWs.sendMessage).toHaveBeenCalled();
     });
+
+    it("warns once when decoder is not ready", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      (conn as any)._videoDecoder = undefined;
+      (conn as any)._firstFrame = true;
+
+      conn.handleVideoFrame({ vp9s: { frames: [{ data: new Uint8Array([1]) }] } } as any);
+      conn.handleVideoFrame({ vp9s: { frames: [{ data: new Uint8Array([2]) }] } } as any);
+
+      const decoderWarns = warnSpy.mock.calls.filter(c => c[0].includes("decoder not ready"));
+      expect(decoderWarns).toHaveLength(1);
+      warnSpy.mockRestore();
+    });
+
+    it("warns once on decode failure", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const mockDecoder = {
+        processFrame: vi.fn((data: any, cb: Function) => cb(false)),
+        frameBuffer: null,
+        close: vi.fn(),
+      };
+      (conn as any)._videoDecoder = mockDecoder;
+      (conn as any)._firstFrame = true;
+
+      conn.handleVideoFrame({ vp9s: { frames: [{ data: new Uint8Array([1]) }] } } as any);
+      conn.handleVideoFrame({ vp9s: { frames: [{ data: new Uint8Array([2]) }] } } as any);
+
+      const decodeWarns = warnSpy.mock.calls.filter(c => c[0].includes("decode failed"));
+      expect(decodeWarns).toHaveLength(1);
+      warnSpy.mockRestore();
+    });
+
+    it("warns once for unsupported codec and acks the frame", () => {
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      (conn as any)._firstFrame = true;
+
+      conn.handleVideoFrame({ av1s: { frames: [{ data: new Uint8Array([1]) }] } } as any);
+      conn.handleVideoFrame({ h264s: { frames: [{ data: new Uint8Array([2]) }] } } as any);
+
+      const codecWarns = warnSpy.mock.calls.filter(c => c[0].includes("unsupported codec"));
+      expect(codecWarns).toHaveLength(1);
+      expect(codecWarns[0][0]).toContain("AV1");
+      expect(mockWs.sendMessage).toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
   });
 
   describe("decoder lifecycle", () => {
