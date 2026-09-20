@@ -92,7 +92,7 @@ class UserModel {
       }
       final data = json.decode(decode_http_response(response));
       final error = data['error'];
-      if (error != null) {
+      if (error != null && error != false) {
         // The only failure known to come from the server itself, so the
         // check-your-network tip does not apply. Flag before the message is
         // set in the catch below so rebuilds read a consistent pair.
