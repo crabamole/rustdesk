@@ -163,23 +163,29 @@ class _PeerTabPageState extends State<PeerTabPage>
               child: Obx(() => Tooltip(
                     preferBelow: false,
                     message: model.tabTooltip(t),
+                    excludeFromSemantics: true,
                     onTriggered: isMobile ? mobileShowTabVisibilityMenu : null,
-                    child: InkWell(
-                      child: Container(
-                        decoration: (hover.value
-                            ? (selected ? decoBorder : deco)
-                            : (selected ? decoBorder : null)),
-                        child: Icon(model.tabIcon(t), color: color)
-                            .paddingSymmetric(horizontal: 4),
-                      ).paddingSymmetric(horizontal: 4),
-                      onTap: isOptionFixed(kOptionPeerTabIndex)
-                          ? null
-                          : () async {
-                              await handleTabSelection(t);
-                              await bind.setLocalFlutterOption(
-                                  k: kOptionPeerTabIndex, v: t.toString());
-                            },
-                      onHover: (value) => hover.value = value,
+                    child: Semantics(
+                      button: true,
+                      label: model.tabTooltip(t),
+                      selected: selected,
+                      child: InkWell(
+                        child: Container(
+                          decoration: (hover.value
+                              ? (selected ? decoBorder : deco)
+                              : (selected ? decoBorder : null)),
+                          child: Icon(model.tabIcon(t), color: color)
+                              .paddingSymmetric(horizontal: 4),
+                        ).paddingSymmetric(horizontal: 4),
+                        onTap: isOptionFixed(kOptionPeerTabIndex)
+                            ? null
+                            : () async {
+                                await handleTabSelection(t);
+                                await bind.setLocalFlutterOption(
+                                    k: kOptionPeerTabIndex, v: t.toString());
+                              },
+                        onHover: (value) => hover.value = value,
+                      ),
                     ),
                   )));
         }).toList());
