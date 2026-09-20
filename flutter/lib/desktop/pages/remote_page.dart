@@ -703,6 +703,26 @@ class _RemotePageState extends State<RemotePage>
         );
 
     bodyWidget() {
+      if (isWeb) {
+        return Stack(
+          children: [
+            Container(
+                color: kColorCanvas,
+                child: RawKeyFocusScope(
+                    focusNode: _rawKeyFocusNode,
+                    onFocusChange: (bool imageFocused) {},
+                    inputModel: _ffi.inputModel,
+                    child: getBodyForDesktop(context))),
+            Obx(() => _ffi.inputModel.relativeMouseMode.value
+                ? const Offstage()
+                : _ffi.ffiModel.pi.isSet.isTrue
+                    ? Overlay(initialEntries: [
+                        OverlayEntry(builder: remoteToolbar)
+                      ])
+                    : remoteToolbar(context)),
+          ],
+        );
+      }
       return Stack(
         children: [
           Container(
@@ -788,6 +808,10 @@ class _RemotePageState extends State<RemotePage>
             _blockableOverlayState.applyFfi(_ffi);
           }
           // Block the whole `bodyWidget()` when dialog shows.
+          // On web, BlockableOverlay (Overlay widget) breaks hit testing
+          if (isWeb) {
+            return bodyWidget();
+          }
           return BlockableOverlay(
             underlying: bodyWidget(),
             state: _blockableOverlayState,
