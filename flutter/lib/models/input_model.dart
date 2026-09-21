@@ -1613,8 +1613,6 @@ class InputModel {
   /// we subtract both the mobile safe-area padding and the current canvas
   /// adjustment before passing the position into mouse mapping.
   ///
-  /// Desktop and web desktop continue to use the global position directly
-  /// because their pointer mapping is window-based.
   Offset _pointerPositionForRemoteCanvas(PointerEvent event) {
     if (isDesktop || isWebDesktop) {
       return event.position;
