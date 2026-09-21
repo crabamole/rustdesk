@@ -9,7 +9,7 @@ final isWindows_ = false;
 final isMacOS_ = false;
 final isLinux_ = false;
 final isWeb_ = true;
-final isWebDesktop_ = true;
+final isWebDesktop_ = !js.context.callMethod('isMobile');
 
 final isDesktop_ = false;
 
