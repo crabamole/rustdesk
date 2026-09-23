@@ -3,13 +3,13 @@
 Corporate deployment features for the sctgdesk-api-server fork.
 
 **Base:** sctgdesk-api-server (AGPL-3.0)  
-**Updated:** 2026-09-17
+**Updated:** 2026-09-23
 
 ## Architecture Context
 
 - sctgdesk-api-server is a Rust/Rocket library crate embedded in the hbbs binary — same pattern as hbbs/hbbr sharing one codebase, different entrypoints
 - hbbs and API share a SQLite file — both read/write the `peer` table. Postgres removes this constraint and allows separate deployments.
-- Client fork (rophy/rustdesk) has upstream-compatible protos; sctgdesk-server uses older, incompatible protos
+- Both rophy/rustdesk and sctgdesk-server use the same `hbb_common` submodule (from `rustdesk/hbb_common`); protos are in sync
 - lejianwen/rustdesk-api was evaluated and rejected (AGPL violation, DMCA history)
 
 ## Phase 1: Foundation
@@ -26,8 +26,8 @@ Core infrastructure that unblocks everything else.
 - [x] Tokens survive restart and can be shared across replicas
 
 ### Proto Update
-- [ ] Update sctgdesk-server's `rendezvous.proto` to match our client fork
-- [ ] Missing: `ControlPermissions`, `HealthCheck`, `ViewCamera`/`Terminal` ConnType, `socket_addr_v6`, `force_relay`
+- [x] Both repos use the same `hbb_common` submodule — protos already match
+- **Note:** Upstream `hbb_common` has newer commits (WebRTC, ICE, security fixes) — bump submodule when a feature needs them
 
 ### Fix Known Auth Bugs
 - [x] JWT `aud` must be string (not array) — fixed with custom `deserialize_aud`
@@ -60,14 +60,12 @@ Enforce organizational policies on client behavior during remote sessions.
 - [ ] Heartbeat response delivers `StrategyOptions.config_options` to enforce client settings
 - [ ] Controls: `enable-file-transfer`, `enable-clipboard`, `access-mode`, `enable-keyboard`, etc.
 - [ ] sctgdesk has the endpoint but returns empty config
-- **Depends on:** Proto Update
-
 ### Control Role Enforcement
 - [ ] hbbs decides permission policy per connection (based on user/group)
 - [ ] Sends `ControlPermissions` bitmask to client
 - [ ] Client enforces: clipboard, file transfer, keyboard, terminal, camera, privacy mode, block input
 - [ ] Design doc complete
-- **Depends on:** Proto Update, Strategy Push
+- **Depends on:** Strategy Push
 
 ## Phase 4: DLP & Compliance
 
@@ -91,3 +89,4 @@ Data loss prevention controls for regulated environments.
 - [x] **Web Client** — Flutter web client restored from OSS, deployed via Helm with nginx
 - [x] **Helm Chart & K8s** — separate deployments for hbbs, hbbr, webclient, apiserver sidecar; published to `oci://ghcr.io/rophy/charts/rustdesk`
 - [x] **OIDC Authentication** — GitHub and Dex providers, auto-create users on first login
+- [x] **Extra CA Certs** — `extraCACerts` Helm value mounts corporate CA bundle, apiserver uses `rustls-tls-native-roots` + `SSL_CERT_FILE` for OIDC token exchange
