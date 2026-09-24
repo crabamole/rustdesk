@@ -93,7 +93,7 @@ Data loss prevention controls for regulated environments.
 - [x] **Login Enforcement** — `LOGGED_IN_ONLY=Y` rejects unauthenticated connections at punch hole (verified with Playwright)
 - [x] **WebSocket Mode** — single-port on 443 via `/ws/id` and `/ws/relay`, was Pro-only, our fork enables it
 - [x] **Web Client** — Flutter web client restored from OSS, deployed via Helm with nginx
-- [x] **Helm Chart & K8s** — separate deployments for hbbs, hbbr, webclient, api-server, plus bundled PostgreSQL StatefulSet; published to `oci://ghcr.io/rophy/charts/rustdesk`
+- [x] **Helm Chart & K8s** — separate deployments for hbbs, hbbr, webclient, api-server, plus bundled PostgreSQL StatefulSet; published to `oci://ghcr.io/crabamole/charts/rustdesk`
 - [x] **E2E Regression Suite** — rustdesk-e2e (Vitest + Playwright): API, OIDC, web client to Linux/Mac peers, extraCACerts, shared database and database-restart resilience, with server coverage collection
 - [x] **OIDC Authentication** — GitHub and Dex providers, auto-create users on first login
 - [x] **Extra CA Certs** — `extraCACerts` Helm value mounts corporate CA bundle, apiserver uses `rustls-tls-native-roots` + `SSL_CERT_FILE` for OIDC token exchange

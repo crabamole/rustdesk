@@ -12,10 +12,11 @@ Five repos work together, in the [crabamole](https://github.com/crabamole) org, 
 | [crabamole/rustdesk-charts](https://github.com/crabamole/rustdesk-charts) | `~/crabamole/rustdesk-charts` | Helm chart for deploying all components to Kubernetes |
 | [crabamole/rustdesk-e2e](https://github.com/crabamole/rustdesk-e2e) (private) | `~/crabamole/rustdesk-e2e` | E2E tests and deployment (skaffold builds from the sibling checkouts) |
 
-Images published to `ghcr.io/rophy/`:
-- `ghcr.io/rophy/rustdesk-server` — hbbs and hbbr (multi-binary image)
-- `ghcr.io/rophy/rustdesk/web-client` — browser-based client
-- Helm chart: `oci://ghcr.io/rophy/charts/rustdesk`
+Images published to `ghcr.io/crabamole/`:
+- `ghcr.io/crabamole/rustdesk-server` — hbbs and hbbr (multi-binary image)
+- `ghcr.io/crabamole/rustdesk-api` — API server
+- `ghcr.io/crabamole/rustdesk/web-client` — browser-based client
+- Helm chart: `oci://ghcr.io/crabamole/charts/rustdesk`
 
 ## Project Layout
 

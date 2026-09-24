@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: ghcr.io/rophy/rustdesk/web-client
+  IMAGE_NAME: ghcr.io/crabamole/rustdesk/web-client
 
 jobs:
   test:

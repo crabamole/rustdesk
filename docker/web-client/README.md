@@ -9,7 +9,7 @@ Behind a reverse proxy with path-based routing (recommended):
 ```bash
 docker run -d -p 8080:80 \
   -e RUSTDESK_KEY=your-public-key \
-  ghcr.io/rophy/rustdesk/web-client
+  ghcr.io/crabamole/rustdesk/web-client
 ```
 
 The web client defaults to same-origin WebSocket paths `/ws/id` and `/ws/relay`, with `ws://` or `wss://` selected automatically based on the page protocol. No host configuration needed.
@@ -22,14 +22,14 @@ docker run -d -p 8080:80 \
   -e RUSTDESK_HOST=ws://hbbs.example.com:21118 \
   -e RUSTDESK_RELAY=ws://hbbr.example.com:21119 \
   -e RUSTDESK_KEY=your-public-key \
-  ghcr.io/rophy/rustdesk/web-client
+  ghcr.io/crabamole/rustdesk/web-client
 
 # Secure WebSocket via TLS-terminating proxy
 docker run -d -p 8080:80 \
   -e RUSTDESK_HOST=wss://rustdesk.example.com/ws/id \
   -e RUSTDESK_RELAY=wss://rustdesk.example.com/ws/relay \
   -e RUSTDESK_KEY=your-public-key \
-  ghcr.io/rophy/rustdesk/web-client
+  ghcr.io/crabamole/rustdesk/web-client
 ```
 
 Then open http://localhost:8080 in a browser.

@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 ghcr.io/rophy/rustdesk/web-deps:20260823-1 AS web-deps
+FROM --platform=linux/amd64 ghcr.io/crabamole/rustdesk/web-deps:20260925-1 AS web-deps
 
 FROM --platform=linux/amd64 ubuntu:22.04 AS build
 
