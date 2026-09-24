@@ -2,13 +2,15 @@
 
 ## Repos
 
-Three repos work together:
+Five repos work together, in the [crabamole](https://github.com/crabamole) org, checked out side by side under `~/crabamole/`:
 
 | Repo | Local Path | Purpose |
 |------|-----------|---------|
-| [rophy/rustdesk](https://github.com/rophy/rustdesk) | `~/projects/rustdesk` | Client + web client (Flutter), forked to restore OSS web client |
-| [rophy/rustdesk-server](https://github.com/rophy/rustdesk-server) | `~/projects/rustdesk-server` | Server (hbbs/hbbr), forked to enable WS peer registration |
-| [rophy/rustdesk-charts](https://github.com/rophy/rustdesk-charts) | `~/projects/rustdesk-charts` | Helm chart for deploying all components to Kubernetes |
+| [crabamole/rustdesk](https://github.com/crabamole/rustdesk) | `~/crabamole/rustdesk` | Client + web client (Flutter), forked to restore OSS web client |
+| [crabamole/rustdesk-server](https://github.com/crabamole/rustdesk-server) | `~/crabamole/rustdesk-server` | Server (hbbs/hbbr): WS peer registration, Postgres |
+| [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api) | `~/crabamole/rustdesk-api` | API server + web console (OSS take on RustDesk Pro API) |
+| [crabamole/rustdesk-charts](https://github.com/crabamole/rustdesk-charts) | `~/crabamole/rustdesk-charts` | Helm chart for deploying all components to Kubernetes |
+| [crabamole/rustdesk-e2e](https://github.com/crabamole/rustdesk-e2e) (private) | `~/crabamole/rustdesk-e2e` | E2E tests and deployment (skaffold builds from the sibling checkouts) |
 
 Images published to `ghcr.io/rophy/`:
 - `ghcr.io/rophy/rustdesk-server` — hbbs and hbbr (multi-binary image)
