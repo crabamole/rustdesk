@@ -1,5 +1,7 @@
 # RustDesk OSS Web Client Roadmap
 
+**Updated:** 2026-09-24
+
 Upstream RustDesk removed the open-source web client in favor of a closed-source Pro offering. This roadmap tracks our effort to revive and maintain the web client against the OSS rendezvous server (hbbs/hbbr).
 
 ## Architecture Overview
@@ -35,14 +37,14 @@ The web client shares ~68K lines of Dart with native clients. The web-specific l
 
 Establish test coverage as a foundation for opinionated development.
 
-- [ ] **JS unit tests (vitest)**: Set up vitest in `flutter/web/js/`. Priority test targets:
+- [x] **JS unit tests (vitest)**: vitest in `flutter/web/js/` — 7 suites (url, globals, connection, websock, codec, common, ui), ~84% coverage. Original priority targets:
   - `getrUriFromRs()` / `getDefaultUri()` — URI construction logic
   - `jsonfyForDart()` — payload serialization
   - `getByName`/`setByName` option handlers — defaults, read/write, server config blocking
   - `loadConfig()` — config.json parsing and fallback behavior
 - [ ] **Flutter widget tests**: Extend existing `server_settings_dialog_test.dart` for `readOnly` parameter. Add tests for web-specific UI behavior (read-only server settings, close-only dialog).
-- [ ] **CI gating**: Add `flutter test` and `npm test` (vitest) steps to the web build job in `flutter-build.yml`
-- [ ] **E2E smoke test**: Playwright test that loads the web client, verifies it renders, and attempts a connection to a local hbbs/hbbr
+- [x] **CI gating**: `web-docker.yml` runs `yarn test` (vitest) before building the web image; `flutter-build.yml` runs `flutter test` in the `flutter-test` job
+- [x] **E2E smoke test**: rustdesk-e2e `webclient-linux` / `webclient-mac` log in via OIDC, connect to real Linux and macOS peers through hbbs/hbbr, and verify the remote desktop screenshot
 
 ### Phase 2: Connection Reliability
 
@@ -53,7 +55,7 @@ Establish test coverage as a foundation for opinionated development.
 
 ### Phase 3: Features
 
-- [ ] **WSS support**: Allow `wss://` endpoints for reverse proxy / TLS termination (was stripped from Phase 0, needs test infra first)
+- [x] **WSS support**: `url.ts` resolves `/ws/id` and `/ws/relay` to `wss://` on HTTPS pages (same-origin, behind a TLS-terminating reverse proxy); covered by `url.test.ts` and used in production over HTTPS
 - [ ] **Auto-connect via URL params**: `?id=<peer_id>&pw=<password>` for embedded/kiosk use (inspired by MonsieurBiche fork)
 - [ ] **Clipboard support**: Text clipboard sync between web client and remote
 - [ ] **File transfer**: Basic upload/download (many bridge stubs to implement)
@@ -63,7 +65,7 @@ Establish test coverage as a foundation for opinionated development.
 
 - [x] CI/CD pipeline: auto-build Docker image on tag push (`web-client-<version>`)
 - [x] Helm chart: `oci://ghcr.io/rophy/charts/rustdesk` with webclient deployment, configmap, and nginx config
-- [ ] Health check endpoint or readiness probe
+- [x] Health check endpoint or readiness probe (liveness/readiness probes in the Helm chart's webclient Deployment)
 - [ ] Documentation: deployment guide, config.json reference, architecture diagram
 
 ## Non-Goals
