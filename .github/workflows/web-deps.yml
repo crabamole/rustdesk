@@ -44,6 +44,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.IMAGE_NAME }}
+          flavor: latest=false
           tags: |
             type=match,pattern=web-deps-(.+),group=1
 
