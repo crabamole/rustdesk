@@ -79,4 +79,7 @@ cat > "$CONFIG" <<CONF
 CONF
 echo "config.json written"
 EOF
-RUN chmod +x /docker-entrypoint.d/90-rustdesk-config.sh
+# config.json is owned by nginx so the script can rewrite it when running as that user.
+RUN chmod +x /docker-entrypoint.d/90-rustdesk-config.sh \
+    && touch /usr/share/nginx/html/config.json \
+    && chown nginx:nginx /usr/share/nginx/html/config.json
