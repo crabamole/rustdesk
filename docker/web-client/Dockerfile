@@ -66,6 +66,8 @@ COPY <<'EOF' /docker-entrypoint.d/90-rustdesk-config.sh
 #!/bin/sh
 set -e
 CONFIG=/usr/share/nginx/html/config.json
+# A key read from a file may end with a newline, which would break the JSON.
+KEY=$(printf '%s' "${RUSTDESK_KEY:?RUSTDESK_KEY is required}" | tr -d '[:space:]')
 API_LINE=""
 if [ -n "${RUSTDESK_API:-}" ]; then
   API_LINE="$(printf '\n  "api": "%s",' "$RUSTDESK_API")"
@@ -74,7 +76,7 @@ cat > "$CONFIG" <<CONF
 {${API_LINE}
   "host": "${RUSTDESK_HOST:-/ws/id}",
   "relay": "${RUSTDESK_RELAY:-/ws/relay}",
-  "key": "${RUSTDESK_KEY:?RUSTDESK_KEY is required}"
+  "key": "${KEY}"
 }
 CONF
 echo "config.json written"
