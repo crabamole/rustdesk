@@ -1,6 +1,6 @@
 # Web Client Mouse Coordinate Offset on Android Chrome
 
-**Status:** Not fixed — the change below was never committed; `input_model.dart` still uses `isDesktop || isWebDesktop` (checked 2026-09-25)  
+**Status:** Not fixed, deprioritized 2026-09-26 (mobile is not a priority). See "Investigation 2026-09-26"; the root cause below is unconfirmed.  
 **Date:** 2026-09-21  
 **Component:** Flutter client `input_model.dart`  
 **Platform:** Android Chrome (mobile browser accessing web client)
@@ -55,3 +55,10 @@ This ensures all web builds (desktop browser, mobile browser) use the correct gl
 - `flutter/lib/models/input_model.dart:1619-1621` — the coordinate mapping fix
 - `flutter/web/js/src/globals.js:108-111` — `isMobile()` user agent detection
 - `flutter/lib/web/common.dart:12` — `isWebDesktop_` definition
+
+## Investigation 2026-09-26 (Playwright Pixel 7 emulation, a self-hosted instance, Linux peer; remote pointer read with xdotool)
+
+- On Android the web client shows the **mobile** home/menu screens but the **desktop** remote-session screen, so "always use the desktop path" is not obviously safe.
+- **Offset not reproduced in emulation.** Mouse input maps correctly, e.g. page (206,400) -> remote 960,449 (expected ~960,451), even though it takes the mobile coordinate path. That path subtracts safe-area insets and the keyboard-helper adjustment, both zero in emulation; a real phone (status bar/cutout inset, keyboard helper bar) may differ. Needs a real device.
+- **Touch taps never moved the remote pointer** (stayed at 0,0) while mouse clicks at the same points did. Unconfirmed whether taps click at the current cursor (mobile "mouse mode") or are ignored: `xinput test-xi2` did not see the injected input, and a screenshot check was inconclusive.
+- Next steps if picked up: test on a real Android phone (tap an icon / the Applications menu), and read the touch handling of the desktop remote page on web (`input_model.dart`, `desktop/pages/remote_page.dart`).
