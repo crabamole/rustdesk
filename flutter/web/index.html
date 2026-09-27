@@ -94,6 +94,11 @@
        application. For more information, see:
        https://developers.google.com/web/fundamentals/primers/service-workers -->
   <script>
+    // Air-gapped installs: CanvasKit and fonts come from this server, not Google's CDNs.
+    window.flutterConfiguration = { canvasKitBaseUrl: "canvaskit/", fontFallbackBaseUrl: "fonts/" };
+    window.rustdeskLocalFonts = true;
+  </script>
+  <script>
     var serviceWorkerVersion = null;
     var scriptLoaded = false;
     function loadMainDartJs() {

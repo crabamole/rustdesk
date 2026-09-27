@@ -1,5 +1,10 @@
 FROM --platform=linux/amd64 ghcr.io/crabamole/rustdesk/web-deps:20260925-1 AS web-deps
 
+# Fonts the web client would otherwise download from Google at runtime.
+FROM --platform=linux/amd64 alpine:3.22 AS fonts
+COPY docker/web-client/fetch-fonts.sh docker/web-client/fonts.sha256 /fonts-src/
+RUN /fonts-src/fetch-fonts.sh /fonts
+
 FROM --platform=linux/amd64 ubuntu:22.04 AS build
 
 ARG FLUTTER_VERSION=3.24.5
@@ -42,12 +47,14 @@ WORKDIR /build/flutter
 COPY --from=web-deps /web_deps.tar.gz /tmp/web_deps.tar.gz
 RUN flutter pub get && flutter build web --release \
     && tar xzf /tmp/web_deps.tar.gz -C build/web \
+    && sh /build/docker/web-client/check-fonts.sh build/web/main.dart.js \
     && sh /build/docker/web-client/cache-bust.sh
 
 # --- Production stage ---
 FROM nginx:alpine
 
 COPY --from=build /build/flutter/build/web /usr/share/nginx/html
+COPY --from=fonts /fonts /usr/share/nginx/html/fonts
 
 # Prevent CDN/browser from caching mutable assets; let the Flutter service worker handle caching
 COPY <<'NGINX' /etc/nginx/conf.d/cache-control.conf
