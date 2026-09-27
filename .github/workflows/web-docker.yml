@@ -20,7 +20,6 @@ on:
       - 'docker/web-client/**'
       - '.github/workflows/web-docker.yml'
       - '.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff'
-    tags: ['web-client-*']
   workflow_dispatch:
 
 env:
@@ -46,6 +45,13 @@ jobs:
       - name: Install protoc
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
+      - name: Check the version matches upstream RustDesk
+        run: |
+          # flutter/web/js/package.json holds <upstream RustDesk version>-<our build number>.
+          version=$(jq -r .version flutter/web/js/package.json)
+          upstream=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          [[ "$version" =~ ^${upstream//./\\.}-[0-9]+$ ]] || { echo "package.json version $version must be $upstream-<n>"; exit 1; }
+
       - name: Install and test
         working-directory: flutter/web/js
         run: |
@@ -58,7 +64,7 @@ jobs:
     needs: test
     runs-on: ubuntu-22.04
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - name: Checkout
@@ -67,33 +73,48 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
+      - name: Check if this version is published
+        id: check
+        run: |
+          version=$(jq -r .version flutter/web/js/package.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" != push ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          # Publish only on a definite "not found"; any other lookup error fails the job.
+          elif out=$(docker manifest inspect "$IMAGE_NAME:$version" 2>&1); then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          elif grep -qiE 'manifest unknown|no such manifest|not found' <<<"$out"; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "$out" >&2
+            exit 1
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
-        if: startsWith(github.ref, 'refs/tags/')
+        if: steps.check.outputs.publish == 'true'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          flavor: latest=false
-          tags: |
-            type=match,pattern=web-client-(.+),group=1
-
       - name: Build and push
         uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/web-client/Dockerfile
-          push: ${{ startsWith(github.ref, 'refs/tags/') }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          push: ${{ steps.check.outputs.publish == 'true' }}
+          tags: ${{ env.IMAGE_NAME }}:${{ steps.check.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Tag release
+        if: steps.check.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${{ github.repository }}/git/refs" \
+            -f ref="refs/tags/web-client-${{ steps.check.outputs.version }}" -f sha="$GITHUB_SHA"
