@@ -1,0 +1,7 @@
+# Local build output: images must build from sources only, as they do in CI.
+target/
+flutter/build/
+flutter/.dart_tool/
+**/node_modules/
+flutter/web/js/dist/
+flutter/web/js/coverage/
