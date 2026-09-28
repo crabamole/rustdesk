@@ -1,5 +1,8 @@
 # Design: Clipboard Activity Monitoring
 
+**Status: not implemented.** The clipboard audit endpoint and client calls below are
+still to be built, on [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api).
+
 ## Problem
 
 RustDesk has file transfer auditing (`post_file_audit()` → `{api-server}/api/audit/file`)
@@ -43,25 +46,24 @@ Several open-source projects implement the RustDesk api-server contract:
 
 **None implement `/api/audit/clipboard`** — that is our custom addition.
 
-## Recommendation: Fork lejianwen/rustdesk-api
+## Decision: build on crabamole/rustdesk-api
 
-Rather than building from scratch, fork the most mature community implementation and
-add clipboard audit support. Benefits:
+Implement the endpoint in [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api),
+our fork of sctgdesk-api-server, which is already deployed by the chart and has the
+connection, file and alarm audit endpoints to extend.
 
-- Address book, OIDC, device management, audit — all working out of the box
-- Web admin UI for managing devices and viewing audit logs
-- Remote config push via heartbeat — can enforce settings without custom.txt
-- Go — small binary, easy to containerize and deploy in K8s
-- Only need to add one endpoint: `/api/audit/clipboard`
+**Do not use lejianwen/rustdesk-api**, as a base or as a source of code: its licensing
+does not fit this AGPL-3.0 project (it distributes RustDesk-derived code under another
+license). Its documentation may be read for ideas; its code must not be copied.
 
 ## Scope
 
-### 1. API Server (fork of lejianwen/rustdesk-api)
+### 1. API Server (crabamole/rustdesk-api)
 
-Add `/api/audit/clipboard` endpoint to the existing audit module. Store alongside
-connection and file audit events in the same database.
+Add `/api/audit/clipboard` endpoint next to the existing audit endpoints. Store alongside
+connection and file audit events in the same PostgreSQL database.
 
-### 2. Client-Side: Text Clipboard Audit Calls (rophy/rustdesk fork)
+### 2. Client-Side: Text Clipboard Audit Calls (crabamole/rustdesk)
 
 Add `post_clipboard_audit()` mirroring the existing `post_file_audit()` pattern.
 
@@ -124,46 +126,25 @@ RustDesk Client (controlled device)
   │ POST /api/sysinfo          (device inventory)
   │
   ▼
-Istio VirtualService (rustdesk.example.com:443)
+web client nginx (rustdesk.example.com:443)
   │
   ├── /ws/id       → hbbs:21118
   ├── /ws/relay    → hbbr:21119
-  ├── /api/*       → rustdesk-api:8080
-  └── /            → webclient:80
+  ├── /api/, /ui   → rustdesk-api:21114
+  └── /            → web client
   │
   ▼
-rustdesk-api (fork of lejianwen/rustdesk-api)
+rustdesk-api (crabamole/rustdesk-api)
   │
-  ├── Audit: connections, files, clipboard, alarms
+  ├── Audit: connections, files, alarms, + clipboard (to add)
   ├── Device management: heartbeat, sysinfo, address book
-  ├── Auth: OIDC/SSO login
-  ├── Config push: remote settings via heartbeat response
-  └── Web admin UI
+  ├── Auth: OIDC login
+  └── Web console (/ui)
 ```
-
-Note: With the api-server handling all `/api/*` routes, the webclient nginx
-`/api/` catch-all (returning 200) should be removed or made a fallback only
-for paths the api-server doesn't handle.
 
 ## Deployment
 
-Deploy as a fourth component in the Helm chart:
-
-```yaml
-apiServer:
-  enabled: false
-  image:
-    registry: ghcr.io
-    repository: rophy/rustdesk-api
-    tag: "0.1.0"
-  replicas: 1
-  env:
-    DB_DRIVER: sqlite
-    DB_DSN: /data/rustdesk-api.db
-  persistence:
-    enabled: true
-    size: 1Gi
-```
+No new component: the chart already deploys rustdesk-api and routes `/api/` to it.
 
 Client configuration in `RustDesk2.toml`:
 
@@ -172,15 +153,14 @@ Client configuration in `RustDesk2.toml`:
 api-server = 'https://rustdesk.example.com'
 ```
 
-Same domain as hbbs/hbbr/webclient — Istio routes `/api/*` to the api-server.
+Same domain as hbbs/hbbr/web client — the web client's nginx routes `/api/` to the api-server.
 
 ## Repos
 
 | Repo | Purpose |
 |------|---------|
-| `rophy/rustdesk` | Add `post_clipboard_audit()` calls (~30 lines) |
-| `rophy/rustdesk-api` (fork of lejianwen/rustdesk-api) | Add `/api/audit/clipboard` endpoint |
-| `rophy/rustdesk-charts` | Add api-server component, update VirtualService routes |
+| `crabamole/rustdesk` | Add `post_clipboard_audit()` calls (~30 lines) |
+| `crabamole/rustdesk-api` | Add `/api/audit/clipboard` endpoint |
 
 ## Additional Value from API Server
 
@@ -196,7 +176,6 @@ Beyond clipboard monitoring, deploying the api-server enables:
 
 ## Open Questions
 
-- Should we evaluate `lantongxue/rustdesk-api-server-pro` instead? (More recently active)
 - Does the heartbeat config push fully replace the need for custom.txt enforcement?
 - Retention policy for audit logs?
 - Do we need the web admin UI exposed externally, or internal only?
