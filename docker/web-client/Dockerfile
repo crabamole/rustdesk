@@ -45,7 +45,9 @@ RUN yarn install && yarn build
 
 WORKDIR /build/flutter
 COPY --from=web-deps /web_deps.tar.gz /tmp/web_deps.tar.gz
-RUN flutter pub get && flutter build web --release \
+# Flutter copies web/ into the build; of web/js only the built bundle is served.
+RUN find web/js -mindepth 1 -maxdepth 1 ! -name dist -exec rm -rf {} + \
+    && flutter pub get && flutter build web --release \
     && tar xzf /tmp/web_deps.tar.gz -C build/web \
     && sh /build/docker/web-client/check-fonts.sh build/web/main.dart.js \
     && sh /build/docker/web-client/cache-bust.sh

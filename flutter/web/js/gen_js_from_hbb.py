@@ -10,6 +10,10 @@ def pad_start(s, n, c = ' '):
       return s
    return c * (n - len(s)) + s
 
+def unescape_rust(s):
+   # Rust escapes (\n, \", ...) must reach JS as the characters themselves, not as backslashes.
+   return re.sub(r'\\(.)', lambda m: {'n': '\n', 't': '\t', 'r': '\r'}.get(m.group(1), m.group(1)), s)
+
 def safe_unicode(s):
    res = ""
    for c in s:
@@ -29,7 +33,7 @@ def main():
             assert(len(toks) == 2)
             a = toks[0][2:]
             b = toks[1][:-3]
-            print('    "%s": "%s",'%(safe_unicode(a), safe_unicode(b)))
+            print('    "%s": "%s",'%(safe_unicode(unescape_rust(a)), safe_unicode(unescape_rust(b))))
       print('  },')
    print('}')
    check_if_retry = ['', False]
