@@ -22,8 +22,10 @@ WORKDIR /build
 COPY docker/web-deps/opus-worker-glue.js /tmp/opus-worker-glue.js
 RUN cat /tmp/opus-worker-glue.js >> api.js
 
-# Build libopus.js + libopus.wasm
-RUN ./build.sh -O2 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -fno-exceptions -s DISABLE_EXCEPTION_CATCHING=1
+# Build libopus.js + libopus.wasm. api.js calls Module._malloc, which current
+# Emscripten only exports when listed (build.sh lists just _free).
+RUN ./build.sh -O2 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -fno-exceptions -s DISABLE_EXCEPTION_CATCHING=1 \
+    -s 'EXPORTED_FUNCTIONS=["_free","_malloc"]'
 
 # ---
 
