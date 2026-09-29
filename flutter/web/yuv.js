@@ -1,10 +1,19 @@
 var wasmExports;
 
-fetch('yuv.wasm').then(function (res) { return res.arrayBuffer(); })
+fetch('yuv.wasm').then(function (res) {
+    if (!res.ok) throw new Error('yuv.wasm: HTTP ' + res.status);
+    return res.arrayBuffer();
+  })
   .then(function (file) { return WebAssembly.instantiate(file); })
   .then(function (wasm) {
     wasmExports = wasm.instance.exports;
+    // Standalone builds need their static init run once.
+    if (wasmExports._initialize) wasmExports._initialize();
     console.log('yuv ready');
+  })
+  .catch(function (e) {
+    console.error('yuv: failed to load decoder output converter:', e);
+    self.postMessage({ error: String(e && e.message || e) });
   });
 
 var yPtr, yPtrLen, uPtr, uPtrLen, vPtr, vPtrLen, outPtr, outPtrLen;

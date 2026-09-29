@@ -292,24 +292,24 @@ void yuv420_rgb24_std(
 			
 			int16_t y_tmp;
 			y_tmp = (param->y_factor*(y_ptr1[0]-param->y_offset))>>7;
-			rgb_ptr1[2] = clamp(y_tmp + r_cr_offset);
+			rgb_ptr1[0] = clamp(y_tmp + r_cr_offset);
 			rgb_ptr1[1] = clamp(y_tmp - g_cbcr_offset);
-			rgb_ptr1[0] = clamp(y_tmp + b_cb_offset);
+			rgb_ptr1[2] = clamp(y_tmp + b_cb_offset);
 			
 			y_tmp = (param->y_factor*(y_ptr1[1]-param->y_offset))>>7;
-			rgb_ptr1[6] = clamp(y_tmp + r_cr_offset);
+			rgb_ptr1[4] = clamp(y_tmp + r_cr_offset);
 			rgb_ptr1[5] = clamp(y_tmp - g_cbcr_offset);
-			rgb_ptr1[4] = clamp(y_tmp + b_cb_offset);
+			rgb_ptr1[6] = clamp(y_tmp + b_cb_offset);
 			
 			y_tmp = (param->y_factor*(y_ptr2[0]-param->y_offset))>>7;
-			rgb_ptr2[2] = clamp(y_tmp + r_cr_offset);
+			rgb_ptr2[0] = clamp(y_tmp + r_cr_offset);
 			rgb_ptr2[1] = clamp(y_tmp - g_cbcr_offset);
-			rgb_ptr2[0] = clamp(y_tmp + b_cb_offset);
+			rgb_ptr2[2] = clamp(y_tmp + b_cb_offset);
 			
 			y_tmp = (param->y_factor*(y_ptr2[1]-param->y_offset))>>7;
-			rgb_ptr2[6] = clamp(y_tmp + r_cr_offset);
+			rgb_ptr2[4] = clamp(y_tmp + r_cr_offset);
 			rgb_ptr2[5] = clamp(y_tmp - g_cbcr_offset);
-			rgb_ptr2[4] = clamp(y_tmp + b_cb_offset);
+			rgb_ptr2[6] = clamp(y_tmp + b_cb_offset);
 			
 			rgb_ptr1 += 8;
 			rgb_ptr2 += 8;

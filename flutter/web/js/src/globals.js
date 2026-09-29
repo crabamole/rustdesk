@@ -529,6 +529,10 @@ export function playAudio(packet) {
 window.init = async () => {
   if (yuvWorker) {
     yuvWorker.onmessage = (e) => {
+      if (e.data?.error) {
+        console.error('video: yuv worker error:', e.data.error);
+        return;
+      }
       window.onRgba(0, e.data);
     }
     yuvWorker.onerror = (e) => {

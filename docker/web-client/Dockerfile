@@ -1,5 +1,13 @@
 FROM --platform=linux/amd64 ghcr.io/crabamole/rustdesk/web-deps:20260925-1 AS web-deps
 
+# yuv.wasm for yuv.js, which renders video when the browser has no WebGL.
+FROM --platform=linux/amd64 emscripten/emsdk:3.1.61 AS yuv-wasm
+COPY flutter/web/js/yuv2rgb /src
+RUN emcc -O2 -msimd128 /src/yuv_rgb.c --no-entry -s STANDALONE_WASM \
+      -s EXPORTED_FUNCTIONS=_yuv420_rgb24_std,_malloc,_free -o /out/yuv.wasm \
+    && node /src/test.mjs /out/yuv.wasm \
+    && cp /src/LICENSE /out/yuv.wasm.LICENSE
+
 # Fonts the web client would otherwise download from Google at runtime.
 FROM --platform=linux/amd64 alpine:3.22 AS fonts
 COPY docker/web-client/fetch-fonts.sh docker/web-client/fonts.sha256 /fonts-src/
@@ -45,10 +53,12 @@ RUN yarn install && yarn build
 
 WORKDIR /build/flutter
 COPY --from=web-deps /web_deps.tar.gz /tmp/web_deps.tar.gz
+COPY --from=yuv-wasm /out /tmp/yuv-wasm
 # Flutter copies web/ into the build; of web/js only the built bundle is served.
 RUN find web/js -mindepth 1 -maxdepth 1 ! -name dist -exec rm -rf {} + \
     && flutter pub get && flutter build web --release \
     && tar xzf /tmp/web_deps.tar.gz -C build/web \
+    && cp /tmp/yuv-wasm/* build/web/ \
     && sh /build/docker/web-client/check-fonts.sh build/web/main.dart.js \
     && sh /build/docker/web-client/cache-bust.sh
 

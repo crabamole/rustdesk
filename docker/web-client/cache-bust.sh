@@ -13,5 +13,7 @@ hash_bust() {
 
 hash_bust "$WEB/libopus.js"         "./libopus.js"      "$WEB/js/dist/index.js"
 hash_bust "$WEB/libopus.wasm"       "libopus.wasm"      "$WEB/libopus.js"
+hash_bust "$WEB/yuv.wasm"           "yuv.wasm"          "$WEB/yuv.js"
+hash_bust "$WEB/yuv.js"             "./yuv.js"          "$WEB/js/dist/index.js"
 hash_bust "$WEB/js/dist/index.js"   "js/dist/index.js"  "$WEB/index.html"
 hash_bust "$WEB/js/dist/vendor.js"  "js/dist/vendor.js" "$WEB/index.html"
