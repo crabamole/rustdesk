@@ -1,4 +1,32 @@
-FROM --platform=linux/amd64 ghcr.io/crabamole/rustdesk/web-deps:20260925-1 AS web-deps
+# Browser-side codecs, built from source.
+FROM --platform=linux/amd64 emscripten/emsdk:3.1.61 AS libopus
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    autoconf automake libtool && rm -rf /var/lib/apt/lists/*
+
+# Clone libopusjs wrapper
+RUN git clone --depth 1 https://github.com/ImagicTheCat/libopusjs.git .
+
+# Build libopus v1.3.1 from xiph/opus with Emscripten
+RUN rm -rf /build/opus \
+    && git clone --depth 1 --branch v1.3.1 https://github.com/xiph/opus.git /build/opus
+WORKDIR /build/opus
+RUN ./autogen.sh \
+    && emconfigure ./configure --disable-rtcd --disable-intrinsics --disable-shared \
+       --enable-static --disable-stack-protector --disable-hardening \
+    && emmake make -j$(nproc)
+
+# Append RustDesk worker glue to api.js
+WORKDIR /build
+COPY docker/web-client/opus-worker-glue.js /tmp/opus-worker-glue.js
+RUN cat /tmp/opus-worker-glue.js >> api.js
+
+# Build libopus.js + libopus.wasm. api.js calls Module._malloc, which current
+# Emscripten only exports when listed (build.sh lists just _free).
+RUN ./build.sh -O2 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -fno-exceptions -s DISABLE_EXCEPTION_CATCHING=1 \
+    -s 'EXPORTED_FUNCTIONS=["_free","_malloc"]'
 
 # yuv.wasm for yuv.js, which renders video when the browser has no WebGL.
 FROM --platform=linux/amd64 emscripten/emsdk:3.1.61 AS yuv-wasm
@@ -8,6 +36,36 @@ RUN mkdir -p /out \
       -s EXPORTED_FUNCTIONS=_yuv420_rgb24_std,_malloc,_free -o /out/yuv.wasm \
     && node /src/test.mjs /out/yuv.wasm \
     && cp /src/LICENSE /out/yuv.wasm.LICENSE
+
+FROM --platform=linux/amd64 node:18-slim AS yuv-canvas
+
+WORKDIR /build
+RUN npm pack yuv-canvas@1.2.6 \
+    && tar xzf yuv-canvas-1.2.6.tgz \
+    && cd package \
+    && npm install \
+    && npx grunt replace browserify \
+    && npx browserify src/yuv-canvas.js --standalone YUVCanvas -o /build/yuv-canvas-1.2.6.js
+
+# Everything copied into the web root next to the Flutter build.
+FROM --platform=linux/amd64 alpine:3.20 AS web-deps
+
+RUN apk add --no-cache curl unzip
+
+WORKDIR /out
+
+# ogvjs 1.8.6 from GitHub release (includes SIMD builds not in npm)
+RUN curl -fsSL -o /tmp/ogvjs.zip \
+      https://github.com/brion/ogv.js/releases/download/1.8.6/ogvjs-1.8.6.zip \
+    && unzip /tmp/ogvjs.zip -d /out
+
+COPY --from=libopus /build/libopus.js /build/libopus.wasm /out/
+COPY --from=yuv-canvas /build/yuv-canvas-1.2.6.js /out/
+COPY --from=yuv-wasm /out/ /out/
+
+# Just the files, for local builds: docker build --target web-deps-files --output flutter/web
+FROM scratch AS web-deps-files
+COPY --from=web-deps /out /
 
 # Fonts the web client would otherwise download from Google at runtime.
 FROM --platform=linux/amd64 alpine:3.22 AS fonts
@@ -53,13 +111,11 @@ WORKDIR /build/flutter/web/js
 RUN yarn install && yarn build
 
 WORKDIR /build/flutter
-COPY --from=web-deps /web_deps.tar.gz /tmp/web_deps.tar.gz
-COPY --from=yuv-wasm /out /tmp/yuv-wasm
+COPY --from=web-deps /out /tmp/web-deps
 # Flutter copies web/ into the build; of web/js only the built bundle is served.
 RUN find web/js -mindepth 1 -maxdepth 1 ! -name dist -exec rm -rf {} + \
     && flutter pub get && flutter build web --release \
-    && tar xzf /tmp/web_deps.tar.gz -C build/web \
-    && cp /tmp/yuv-wasm/* build/web/ \
+    && cp -r /tmp/web-deps/. build/web/ \
     && sh /build/docker/web-client/check-fonts.sh build/web/main.dart.js \
     && sh /build/docker/web-client/cache-bust.sh
 

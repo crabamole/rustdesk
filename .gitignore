@@ -61,6 +61,9 @@ rustdesk-data/
 # web client build artifacts
 flutter/web/ogvjs*/
 flutter/web/web_deps.tar.gz
+flutter/web/libopus.*
+flutter/web/yuv-canvas-*.js
+flutter/web/yuv.wasm*
 flutter/web/js/coverage/
 # core dumps
 core

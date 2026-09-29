@@ -6,10 +6,10 @@ npm install
 npm run build
 
 cd /app/flutter/web
-if [ ! -d "ogvjs" ]; then
-    wget -q https://github.com/rustdesk/doc.rustdesk.com/releases/download/console/web_deps.tar.gz
-    tar xzf web_deps.tar.gz
-    rm web_deps.tar.gz
+if [ ! -f "libopus.js" ] || [ ! -f "yuv.wasm" ]; then
+    echo "Missing browser codecs; build them on the host first:" >&2
+    echo "  docker build -f docker/web-client/Dockerfile --target web-deps-files --output flutter/web ." >&2
+    exit 1
 fi
 
 cd /app/flutter
