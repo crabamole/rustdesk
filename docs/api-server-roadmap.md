@@ -77,9 +77,9 @@ Make authentication fast and auditable.
 Enforce organizational policies on client behavior during remote sessions.
 
 ### Strategy Push
-- [ ] Heartbeat response delivers `StrategyOptions.config_options` to enforce client settings
-- [ ] Controls: `enable-file-transfer`, `enable-clipboard`, `access-mode`, `enable-keyboard`, etc.
-- [ ] sctgdesk has the endpoint but returns empty config
+- [x] Heartbeat response delivers `StrategyOptions.config_options` (one global policy, Pro send-on-change semantics, re-push)
+- [x] Controls: the client's Permissions settings (allow-list in the api-server)
+- [ ] Named policies assigned to devices, users and device groups
 ### Control Role Enforcement
 - [ ] hbbs decides permission policy per connection (based on user/group)
 - [ ] Sends `ControlPermissions` bitmask to client
