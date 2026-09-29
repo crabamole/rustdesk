@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -28,6 +29,18 @@ Future<ui.Image?> decodeImageFromPixels(
       print("not allow upscaling but targetHeight > height");
       return null;
     }
+  }
+
+  // On web, ImageDescriptor.raw round-trips through a BMP and the browser
+  // decoder, which yields no image when CanvasKit has no WebGL (flutter#175423).
+  if (isWeb) {
+    final completer = Completer<ui.Image?>();
+    ui.decodeImageFromPixels(pixels, width, height, format, completer.complete,
+        rowBytes: rowBytes,
+        targetWidth: targetWidth,
+        targetHeight: targetHeight,
+        allowUpscaling: allowUpscaling);
+    return completer.future;
   }
 
   final ui.ImmutableBuffer buffer;
