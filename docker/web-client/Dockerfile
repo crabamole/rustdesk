@@ -3,7 +3,8 @@ FROM --platform=linux/amd64 ghcr.io/crabamole/rustdesk/web-deps:20260925-1 AS we
 # yuv.wasm for yuv.js, which renders video when the browser has no WebGL.
 FROM --platform=linux/amd64 emscripten/emsdk:3.1.61 AS yuv-wasm
 COPY flutter/web/js/yuv2rgb /src
-RUN emcc -O2 -msimd128 /src/yuv_rgb.c --no-entry -s STANDALONE_WASM \
+RUN mkdir -p /out \
+    && emcc -O2 -msimd128 /src/yuv_rgb.c --no-entry -s STANDALONE_WASM \
       -s EXPORTED_FUNCTIONS=_yuv420_rgb24_std,_malloc,_free -o /out/yuv.wasm \
     && node /src/test.mjs /out/yuv.wasm \
     && cp /src/LICENSE /out/yuv.wasm.LICENSE
