@@ -167,8 +167,43 @@ if (YUVCanvas.WebGLFrameSink.isAvailable()) {
 }
 let testSpeed = [0, 0];
 
+// Say why the screen stays black (or slow) instead of failing silently.
+const RENDER_TIMEOUT_MS = 5000;
+const NOTICE_DELAY_MS = 1000; // Flutter dismisses dialogs when the first image arrives.
+let renderState;
+
+function resetRenderState() {
+  clearTimeout(renderState?.timer);
+  renderState = { drawn: false, errorShown: false, timer: undefined };
+}
+resetRenderState();
+
+function onFrameDecoded() {
+  if (renderState.drawn || renderState.timer) return;
+  renderState.timer = setTimeout(() => {
+    if (!renderState.drawn) renderError(`no frame drawn ${RENDER_TIMEOUT_MS} ms after the first decoded frame`);
+  }, RENDER_TIMEOUT_MS);
+}
+
+function onFrameDrawn() {
+  if (renderState.drawn) return;
+  renderState.drawn = true;
+  clearTimeout(renderState.timer);
+  if (yuvWorker) {
+    setTimeout(() => msgbox('custom-nocancel-info', 'Warning', 'software_rendering_tip'), NOTICE_DELAY_MS);
+  }
+}
+
+function renderError(detail) {
+  console.error('video: cannot display video:', detail);
+  if (renderState.errorShown) return;
+  renderState.errorShown = true;
+  msgbox('custom-nocancel-error', 'Error', 'video_render_error_tip');
+}
+
 let drawErrorLogged = false;
 export function draw(frame) {
+  onFrameDecoded();
   if (yuvWorker) {
     // frame's (y/u/v).bytes already detached, can not transferrable any more.
     yuvWorker.postMessage(frame);
@@ -198,6 +233,7 @@ export function draw(frame) {
         return;
       }
       window.onRgba(0, flipPixels);
+      onFrameDrawn();
       testSpeed[1] += new Date().getTime() - tm0;
       testSpeed[0] += 1;
       if (testSpeed[0] > 30) {
@@ -249,6 +285,7 @@ export function close() {
 
 export function newConn() {
   window.curConn?.close();
+  resetRenderState();
   const conn = new Connection();
   setConn(conn);
   return conn;
@@ -530,13 +567,14 @@ window.init = async () => {
   if (yuvWorker) {
     yuvWorker.onmessage = (e) => {
       if (e.data?.error) {
-        console.error('video: yuv worker error:', e.data.error);
+        renderError(e.data.error);
         return;
       }
       window.onRgba(0, e.data);
+      if (e.data) onFrameDrawn();
     }
     yuvWorker.onerror = (e) => {
-      console.error('video: yuv worker error:', e.message);
+      renderError(e.message || 'yuv worker failed to load');
     }
   }
   opusWorker.onmessage = (e) => {
