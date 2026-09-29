@@ -81,7 +81,7 @@ import {
   isDesktop, msgbox, pushEvent, setConn, getConn, close, newConn,
   verify, genBoxKeyPair, genSecretKey, seal, encrypt, decrypt,
   getPeers, copyToClipboard, draw, sendOffCanvas, initAudio, playAudio,
-  initSodium,
+  initSodium, resetRendererForTest,
 } from "./globals";
 
 describe("isDesktop", () => {
@@ -545,6 +545,7 @@ describe("video rendering status", () => {
     onGlobalEvent = vi.fn();
     (window as any).onGlobalEvent = onGlobalEvent;
     (window as any).onRgba = vi.fn();
+    resetRendererForTest();
     newConn();
   });
 
@@ -576,16 +577,20 @@ describe("video rendering status", () => {
     expect(msgboxes(onGlobalEvent)).toHaveLength(2);
   });
 
-  it("shows an error when the software renderer fails to load", () => {
+  it("shows an error with the first frame when the software renderer failed to load", () => {
     yuvWorker().onmessage({ data: { error: "yuv.wasm: HTTP 404" } });
     expect((window as any).onRgba).not.toHaveBeenCalled();
+    expect(msgboxes(onGlobalEvent)).toEqual([]);
+    draw(frame);
     expect(msgboxes(onGlobalEvent)).toEqual([
       expect.objectContaining({ type: "custom-nocancel-error", text: "video_render_error_tip" }),
     ]);
   });
 
-  it("shows an error when the renderer worker fails", () => {
+  it("shows an error with the first frame when the renderer worker failed", () => {
     yuvWorker().onerror({ message: "404" });
+    newConn();
+    draw(frame);
     expect(msgboxes(onGlobalEvent)).toEqual([
       expect.objectContaining({ type: "custom-nocancel-error", text: "video_render_error_tip" }),
     ]);

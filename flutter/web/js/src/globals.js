@@ -171,6 +171,11 @@ let testSpeed = [0, 0];
 const RENDER_TIMEOUT_MS = 5000;
 const NOTICE_DELAY_MS = 1000; // Flutter dismisses dialogs when the first image arrives.
 let renderState;
+let rendererLoadError; // the worker loads with the page; report it once video arrives
+
+export function resetRendererForTest() {
+  rendererLoadError = undefined;
+}
 
 function resetRenderState() {
   clearTimeout(renderState?.timer);
@@ -179,6 +184,7 @@ function resetRenderState() {
 resetRenderState();
 
 function onFrameDecoded() {
+  if (rendererLoadError) renderError(rendererLoadError);
   if (renderState.drawn || renderState.timer) return;
   renderState.timer = setTimeout(() => {
     if (!renderState.drawn) renderError(`no frame drawn ${RENDER_TIMEOUT_MS} ms after the first decoded frame`);
@@ -567,14 +573,16 @@ window.init = async () => {
   if (yuvWorker) {
     yuvWorker.onmessage = (e) => {
       if (e.data?.error) {
-        renderError(e.data.error);
+        rendererLoadError = e.data.error;
+        console.error('video: software renderer failed to load:', rendererLoadError);
         return;
       }
       window.onRgba(0, e.data);
       if (e.data) onFrameDrawn();
     }
     yuvWorker.onerror = (e) => {
-      renderError(e.message || 'yuv worker failed to load');
+      rendererLoadError = e.message || 'yuv worker failed to load';
+      console.error('video: software renderer failed to load:', rendererLoadError);
     }
   }
   opusWorker.onmessage = (e) => {
