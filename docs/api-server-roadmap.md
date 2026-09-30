@@ -70,7 +70,7 @@ Make authentication fast and auditable.
 ### Native Client Login with PKCE
 - [ ] Native clients use the authorization code flow with PKCE and a loopback redirect (RFC 8252); the api-server fully validates the ID token (signature via JWKS, `nonce`)
 - [ ] Chart setting to turn off the polling login flow
-- **Depends on:** shipping our own native client builds
+- **Depends on:** shipping our own native client builds ([native-client-roadmap.md](native-client-roadmap.md))
 
 ## Phase 3: Policy & Control
 
@@ -95,12 +95,13 @@ Data loss prevention controls for regulated environments.
 ### Clipboard Direction Control
 - [ ] Enforce clipboard copy direction per policy — disable copy-from-remote, copy-to-remote, or both
 - [x] Design doc exists (`docs/design-clipboard-direction.md`)
-- **Depends on:** our own native client builds — RustDesk's `one-way-clipboard-redirection` is a built-in setting that strategy options and `RustDesk2.toml` cannot set
+- **Depends on:** our own native client builds ([native-client-roadmap.md](native-client-roadmap.md)) — RustDesk's `one-way-clipboard-redirection` is a built-in setting that strategy options and `RustDesk2.toml` cannot set
 
 ### Client Attestation
 - [ ] Verify connecting clients are corporate-managed builds
 - [ ] hbbs validates client identity before allowing connections
 - [x] Design doc exists (`docs/design-trusted-builds.md`)
+- **Depends on:** our own native client builds ([native-client-roadmap.md](native-client-roadmap.md))
 
 ## Multi-Replica
 
