@@ -2,8 +2,10 @@
 
 ## Problem
 
-Server settings like `one-way-clipboard-redirection` are stored in `RustDesk2.toml`.
+Server settings like `enable-clipboard` are stored in `RustDesk2.toml`.
 Users with admin or file access can edit this file and disable security controls.
+Built-in settings such as `one-way-clipboard-redirection` cannot be set there at all; they come
+only from a signed `custom.txt` or the source (see design-clipboard-direction.md).
 
 ## Goal
 
@@ -62,18 +64,19 @@ sudo chattr +i /root/.config/rustdesk/RustDesk2.toml  # immutable flag (Linux)
 
 ```json
 {
-  "one-way-clipboard-redirection": "Y",
-  "allow-websocket": "Y",
-  "disable-udp": "Y",
   "override-settings": {
+    "one-way-clipboard-redirection": "Y",
+    "allow-websocket": "Y",
+    "disable-udp": "Y",
     "custom-rendezvous-server": "rustdesk.example.com",
     "key": "<server-public-key>"
   }
 }
 ```
 
-Hard settings (top-level keys like `one-way-clipboard-redirection`) cannot be changed
-or seen by the user. Override settings are visible but locked.
+Override settings are visible but locked. Top-level keys become hard settings
+(`HARD_SETTINGS`), which RustDesk reads only for a few keys such as `password` and
+`conn-type`; other options placed there have no effect.
 
 ### Option 3: Hardcode in Source (custom build)
 
@@ -84,7 +87,8 @@ Simpler to implement but requires rebuilding to change any setting.
 
 ## Recommendation
 
-- **Secured machines** (Mac, no admin): Option 1 (file permissions) is sufficient
+- **Secured machines** (Mac, no admin): Option 1 (file permissions) is sufficient for normal
+  options; built-in settings need Option 2 or 3
 - **Admin-access machines**: Option 2 (custom.txt signing) provides the strongest
   enforcement within the application. Combine with hbbs attestation
   (see design-trusted-builds.md) to prevent binary replacement.

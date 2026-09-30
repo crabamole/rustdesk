@@ -94,9 +94,8 @@ Data loss prevention controls for regulated environments.
 
 ### Clipboard Direction Control
 - [ ] Enforce clipboard copy direction per policy — disable copy-from-remote, copy-to-remote, or both
-- [ ] Controlled via strategy options
 - [x] Design doc exists (`docs/design-clipboard-direction.md`)
-- **Depends on:** Control Role Enforcement, Strategy Push
+- **Depends on:** our own native client builds — RustDesk's `one-way-clipboard-redirection` is a built-in setting that strategy options and `RustDesk2.toml` cannot set
 
 ### Client Attestation
 - [ ] Verify connecting clients are corporate-managed builds

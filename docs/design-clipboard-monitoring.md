@@ -166,9 +166,9 @@ Same domain as hbbs/hbbr/web client — the web client's nginx routes `/api/` to
 
 Beyond clipboard monitoring, deploying the api-server enables:
 
-- **Remote config push** — heartbeat response can set device options, potentially
-  replacing `RustDesk2.toml` preseed and providing remote enforcement of settings
-  like `one-way-clipboard-redirection` (see design-config-enforcement.md)
+- **Remote config push** — heartbeat response can set normal device options such as
+  `enable-clipboard`; built-in settings like `one-way-clipboard-redirection` still need
+  `custom.txt` (see design-config-enforcement.md)
 - **Device inventory** — sysinfo gives visibility into all deployed devices
 - **Connection audit** — already built-in, no client patch needed
 - **Address book** — shared device lists for users
@@ -176,7 +176,6 @@ Beyond clipboard monitoring, deploying the api-server enables:
 
 ## Open Questions
 
-- Does the heartbeat config push fully replace the need for custom.txt enforcement?
 - Retention policy for audit logs?
 - Do we need the web admin UI exposed externally, or internal only?
 

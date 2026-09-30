@@ -24,6 +24,9 @@ fn can_sub_clipboard_service(&self) -> bool {
 }
 ```
 
+It is a built-in setting (`KEYS_BUILDIN_SETTINGS`): `get_builtin_option()` reads only
+`BUILTIN_SETTINGS`, which is filled only from a signed `custom.txt` (`src/common.rs:2180`).
+
 When set to `"Y"`:
 - Server does NOT subscribe to its local clipboard service
 - Server never sends clipboard data to the client
@@ -31,26 +34,23 @@ When set to `"Y"`:
 
 ## How to Enable
 
-### Option A: RustDesk2.toml (no custom build)
+### Not possible: RustDesk2.toml or strategy push
 
-Set on the server device:
+`one-way-clipboard-redirection = 'Y'` under `[options]` in `RustDesk2.toml` is ignored, and so is
+the same key in a strategy push (both write normal options, not `BUILTIN_SETTINGS`).
+Verified 2026-10-01 on a stock 1.4.9 Linux host: with the option set, text copied on the host
+still reached the web client.
 
-```toml
-[options]
-one-way-clipboard-redirection = 'Y'
-```
+### Option B: custom.txt (requires custom build)
 
-- Works with stock upstream builds
-- User can modify if they have admin/file access
-- Suitable for secured machines (no admin access)
-
-### Option B: custom.txt hard setting (requires custom build)
-
-Bake into `custom.txt` as a hard setting (user cannot override):
+Put the key under `override-settings` (or `default-settings`) in `custom.txt`. Top-level keys
+go to `HARD_SETTINGS`, which this check does not read:
 
 ```json
 {
-  "one-way-clipboard-redirection": "Y"
+  "override-settings": {
+    "one-way-clipboard-redirection": "Y"
+  }
 }
 ```
 
@@ -64,10 +64,8 @@ Requires building the desktop app from our fork.
 
 ## Recommendation
 
-Start with **Option A** (RustDesk2.toml) for secured Mac servers. No custom build needed.
-
-If enforcement on admin-access machines becomes a requirement, upgrade to Option B or C,
-which depend on creating a custom build (see design-trusted-builds.md).
+Every working option needs our own native build (see design-trusted-builds.md). Option B
+keeps the setting out of the binary, so it can differ per deployment; Option C is simpler.
 
 ## Verification
 
