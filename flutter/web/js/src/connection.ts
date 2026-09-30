@@ -39,6 +39,8 @@ export default class Connection {
   _decoderNotReadyWarned: boolean | undefined;
   _decodeFailureWarned: boolean | undefined;
   _unsupportedCodecWarned: boolean | undefined;
+  _clipboardAllowed: boolean;
+  _lastClipboard: string | undefined;
   //_cursors: { [name: number]: any };
 
   constructor() {
@@ -48,6 +50,7 @@ export default class Connection {
     this._id = "";
     this._videoTestSpeed = [0, 0];
     this._decoderGeneration = 0;
+    this._clipboardAllowed = true;
     //this._cursors = {};
   }
 
@@ -276,7 +279,8 @@ export default class Connection {
           cb.content = c;
         }
         try {
-          globals.copyToClipboard(new TextDecoder().decode(cb.content));
+          this._lastClipboard = new TextDecoder().decode(cb.content);
+          globals.copyToClipboard(this._lastClipboard);
         } catch (e) {
           console.error(e);
         }
@@ -535,6 +539,7 @@ export default class Connection {
           break;
         case message.PermissionInfo_Permission.Clipboard:
           name = "clipboard";
+          this._clipboardAllowed = p.enabled;
           break;
         case message.PermissionInfo_Permission.Audio:
           name = "audio";
@@ -616,6 +621,17 @@ export default class Connection {
       key_event.modifiers = this.getMod(true, true, false, false);
     }
     this._ws?.sendMessage({ key_event });
+  }
+
+  sendClipboard(text: string) {
+    if (!text || text == this._lastClipboard) return;
+    if (!this._clipboardAllowed || this._options["disable-clipboard"]) return;
+    this._lastClipboard = text;
+    const clipboard = message.Clipboard.fromPartial({
+      content: new TextEncoder().encode(text),
+      format: message.ClipboardFormat.Text,
+    });
+    this._ws?.sendMessage({ clipboard });
   }
 
   inputString(seq: string) {

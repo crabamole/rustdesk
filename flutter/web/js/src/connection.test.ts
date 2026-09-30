@@ -26,6 +26,8 @@ vi.mock("./message.js", () => ({
   },
   ImageQuality: { Low: 0, Best: 1, Balanced: 2 },
   PermissionInfo_Permission: { Keyboard: 1, Clipboard: 2, Audio: 3 },
+  Clipboard: { fromPartial: vi.fn((v: any) => v) },
+  ClipboardFormat: { Text: 0 },
 }));
 
 vi.mock("./rendezvous.js", () => ({
@@ -477,6 +479,48 @@ describe("Connection", () => {
         displays: [{ x: 0, y: 0, width: 1920, height: 1080 }],
       } as any);
       expect(conn.getOption("password")).toBeUndefined();
+    });
+  });
+
+  describe("sendClipboard", () => {
+    const sent = () => mockWs.sendMessage.mock.calls.map((c: any[]) => c[0].clipboard).filter(Boolean);
+    const text = (cb: any) => new TextDecoder().decode(cb.content);
+
+    it("sends the text as a clipboard message", () => {
+      conn.sendClipboard("hello");
+      expect(sent().map(text)).toEqual(["hello"]);
+      expect(sent()[0].format).toBe(0);
+    });
+
+    it("skips empty and unchanged text", () => {
+      conn.sendClipboard("");
+      conn.sendClipboard("a");
+      conn.sendClipboard("a");
+      expect(sent().map(text)).toEqual(["a"]);
+    });
+
+    it("skips text the host just sent", async () => {
+      mockWs.next
+        .mockResolvedValueOnce({ clipboard: { compress: false, content: new TextEncoder().encode("from-host") } })
+        .mockResolvedValueOnce({ misc: { close_reason: "done" } });
+      await conn.msgLoop();
+      conn.sendClipboard("from-host");
+      expect(sent()).toEqual([]);
+    });
+
+    it("sends nothing while the host disables clipboard", () => {
+      conn.handleMisc({ permission_info: { permission: 2, enabled: false } } as any);
+      conn.sendClipboard("a");
+      expect(sent()).toEqual([]);
+      conn.handleMisc({ permission_info: { permission: 2, enabled: true } } as any);
+      conn.sendClipboard("a");
+      expect(sent().map(text)).toEqual(["a"]);
+    });
+
+    it("sends nothing with disable-clipboard set locally", () => {
+      (conn as any)._options["disable-clipboard"] = true;
+      conn.sendClipboard("a");
+      expect(sent()).toEqual([]);
     });
   });
 
