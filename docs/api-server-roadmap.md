@@ -3,7 +3,7 @@
 Corporate deployment features for [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api).
 
 **Base:** sctgdesk-api-server (AGPL-3.0)  
-**Updated:** 2026-09-29
+**Updated:** 2026-09-30
 
 ## Architecture Context
 
@@ -58,7 +58,7 @@ Make authentication fast and auditable.
 ### JWT Token Verification
 - [ ] Replace per-connection HTTP roundtrip to `/api/currentUser` with local JWT verification at hbbs
 - [ ] API server issues signed JWTs at login; hbbs verifies using public key
-- [ ] Eliminates the localhost HTTP coupling
+- [ ] Eliminates hbbs's HTTP call to the api-server per connection
 - **Depends on:** Persistent Sessions
 
 ### Audit Logging
@@ -80,6 +80,7 @@ Enforce organizational policies on client behavior during remote sessions.
 - [x] Heartbeat response delivers `StrategyOptions.config_options` (one global policy, Pro send-on-change semantics, re-push)
 - [x] Controls: the client's Permissions settings (allow-list in the api-server)
 - [ ] Named policies assigned to devices, users and device groups
+
 ### Control Role Enforcement
 - [ ] hbbs decides permission policy per connection (based on user/group)
 - [ ] Sends `ControlPermissions` bitmask to client
@@ -94,13 +95,13 @@ Data loss prevention controls for regulated environments.
 ### Clipboard Direction Control
 - [ ] Enforce clipboard copy direction per policy — disable copy-from-remote, copy-to-remote, or both
 - [ ] Controlled via strategy options
-- [ ] Design doc exists
+- [x] Design doc exists (`docs/design-clipboard-direction.md`)
 - **Depends on:** Control Role Enforcement, Strategy Push
 
 ### Client Attestation
 - [ ] Verify connecting clients are corporate-managed builds
 - [ ] hbbs validates client identity before allowing connections
-- [ ] Design doc exists
+- [x] Design doc exists (`docs/design-trusted-builds.md`)
 
 ## Multi-Replica
 

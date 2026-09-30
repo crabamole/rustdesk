@@ -1,6 +1,6 @@
 # RustDesk OSS Web Client Roadmap
 
-**Updated:** 2026-09-24
+**Updated:** 2026-09-30
 
 Upstream RustDesk removed the open-source web client in favor of a closed-source Pro offering. This roadmap tracks our effort to revive and maintain the web client against the OSS rendezvous server (hbbs/hbbr).
 
@@ -37,7 +37,7 @@ The web client shares ~68K lines of Dart with native clients. The web-specific l
 
 Establish test coverage as a foundation for opinionated development.
 
-- [x] **JS unit tests (vitest)**: vitest in `flutter/web/js/` — 7 suites (url, globals, connection, websock, codec, common, ui), ~84% coverage. Original priority targets:
+- [x] **JS unit tests (vitest)**: vitest in `flutter/web/js/` — 8 suites (url, globals, connection, websock, codec, common, lang, ui), ~80% line coverage. Original priority targets:
   - `getrUriFromRs()` / `getDefaultUri()` — URI construction logic
   - `jsonfyForDart()` — payload serialization
   - `getByName`/`setByName` option handlers — defaults, read/write, server config blocking
@@ -63,7 +63,7 @@ Establish test coverage as a foundation for opinionated development.
 
 ### Phase 4: Operations
 
-- [x] CI/CD pipeline: auto-build Docker image on tag push (`web-client-<version>`)
+- [x] CI/CD pipeline: pushes to master build the Docker image; a version bump in `flutter/web/js/package.json` publishes it and tags `web-client-<version>`
 - [x] Helm chart: `oci://ghcr.io/crabamole/charts/rustdesk` with webclient deployment, configmap, and nginx config
 - [x] Health check endpoint or readiness probe (liveness/readiness probes in the Helm chart's webclient Deployment)
 - [ ] Documentation: deployment guide, config.json reference, architecture diagram
