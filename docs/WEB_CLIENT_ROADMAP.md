@@ -30,7 +30,7 @@ The web client shares ~68K lines of Dart with native clients. The web-specific l
 - [x] Fix JS build for modern Node.js/TypeScript
 - [x] Make server settings UI read-only on web
 - [x] Force English locale for web client
-- [x] Add Dockerfile and docker-compose for containerized builds
+- [x] Add a Dockerfile for containerized builds
 - [x] Remove untested wss:// support (to revisit later)
 
 ### Phase 1: Testing Infrastructure
@@ -94,5 +94,4 @@ Reviewed for feature inspiration (none have strong traction):
 | `flutter/lib/models/web_model.dart` | Web platform FFI |
 | `flutter/lib/mobile/widgets/dialog.dart` | Server settings dialog (read-only on web) |
 | `flutter/web/config.json` | Server config (host/relay/key) |
-| `Dockerfile.web` | Containerized web build |
-| `scripts/build-web.sh` | Build helper script |
+| `docker/web-client/Dockerfile` | Web client image: browser codecs, Flutter web build, nginx |
