@@ -2,6 +2,8 @@
 
 Automated installation of RustDesk on Linux with pre-configured settings, so the client registers to a custom rendezvous server on first boot with no manual configuration.
 
+> **If the pre-seed is incomplete, the device registers with RustDesk's public server** (`rs-ny.rustdesk.com`) and overwrites your pre-staged config within a second. Follow [Where the Config Must Be](#where-the-config-must-be) and check the result with [Verification](#verification).
+
 ## Prerequisites
 
 - RustDesk `.deb` installer (e.g. `rustdesk-1.4.9-x86_64.deb`)
@@ -31,32 +33,40 @@ enable-lan-discovery = 'N'
 verification-method = 'use-permanent-password'
 ```
 
+`RustDesk2.toml` holds the `[options]`. Do not copy a `RustDesk.toml` between machines: it holds the device's ID and key pair, so every copy would be the same device.
+
 ### Option reference
 
 | Option | Purpose |
 |---|---|
 | `custom-rendezvous-server` | Your hbbs server address |
-| `api-server` | Set to `https://...` to trigger WSS (not plain WS) |
+| `api-server` | Your API server; the client logs in, sends heartbeats and receives the device policy through it. An `https://` URL also makes WebSocket connections use WSS |
 | `key` | Server public key (from hbbs keypair) |
 | `allow-websocket` | Register via WebSocket instead of UDP — required when hbbs is behind a reverse proxy |
 | `disable-udp` | Node-side, disables ALL UDP traffic |
-| `direct-server` | Enable direct TCP connections to this node |
+| `direct-server` | Enable direct IP access to this node |
 | `enable-udp-punch` | Disable UDP hole punching |
 | `enable-lan-discovery` | Disable LAN peer discovery |
 | `verification-method` | `use-permanent-password` for unattended access |
 
-## Why Config Must Be in Two Paths
+## Where the Config Must Be
 
-RustDesk runs as two processes on Linux:
+RustDesk runs as two processes on Linux, each with its own config:
 
-| Process | User | Config Path |
+| Process | Runs as | Config path |
 |---|---|---|
 | `rustdesk --service` | root | `/root/.config/rustdesk/` |
-| `rustdesk --server` | display user (e.g. `lightdm`) | `/var/lib/lightdm/.config/rustdesk/` |
+| `rustdesk --server` | the logged-in desktop user, or the display manager's user (e.g. `lightdm`) at the login screen | that user's `~/.config/rustdesk/` |
 
-The `--server` process loads its config from the display user's home directory **before** IPC sync from root runs. If the display user has no config file, it starts with defaults (connecting to `rs-ny.rustdesk.com`), then pushes those defaults back to root — overwriting any root-only pre-staged config within seconds.
+On first install, root has no device ID yet, so `--server` does not copy root's config. If its own user has no config file, it starts with defaults, registers with `rs-ny.rustdesk.com`, and pushes those defaults back to root, overwriting the pre-staged config.
 
-**Both paths must have the config file before installation.**
+**Before installing, put the config in:**
+
+- `/root/.config/rustdesk/`
+- the display manager user's home (used at the login screen)
+- the home of every user logged in to a desktop at that moment (auto-login counts)
+
+Users who log in later need nothing: once the device has an ID, their `--server` copies root's config on start.
 
 ## Display User Detection
 
@@ -85,6 +95,8 @@ for user in lightdm gdm gdm3 sddm; do
   getent passwd "$user" >/dev/null 2>&1 && echo "$user"
 done
 ```
+
+Logged-in users: `loginctl list-sessions --no-legend` (third column).
 
 ## Install Script
 
@@ -137,34 +149,45 @@ detect_display_user() {
   esac
 }
 
+stage_for_user() {
+  local user="$1" home
+  home=$(getent passwd "$user" | cut -d: -f6)
+  [ -n "$home" ] || return 0
+  mkdir -p "$home/.config/rustdesk"
+  cp "$CONFIG" "$home/.config/rustdesk/RustDesk2.toml"
+  chown -R "$user:$(id -gn "$user")" "$home/.config/rustdesk"
+  echo "  $home/.config/rustdesk/RustDesk2.toml"
+}
+
 DISPLAY_USER=$(detect_display_user)
-DISPLAY_HOME=$(getent passwd "$DISPLAY_USER" | cut -d: -f6)
-
-echo "Display user: $DISPLAY_USER (home: $DISPLAY_HOME)"
-
-# Pre-stage config in both paths
-for dir in "/root/.config/rustdesk" "$DISPLAY_HOME/.config/rustdesk"; do
-  mkdir -p "$dir"
-  cp "$CONFIG" "$dir/RustDesk2.toml"
-done
-chown -R "$DISPLAY_USER:$(id -gn "$DISPLAY_USER")" "$DISPLAY_HOME/.config/rustdesk"
+echo "Display user: $DISPLAY_USER"
 
 echo "Config staged in:"
+mkdir -p /root/.config/rustdesk
+cp "$CONFIG" /root/.config/rustdesk/RustDesk2.toml
 echo "  /root/.config/rustdesk/RustDesk2.toml"
-echo "  $DISPLAY_HOME/.config/rustdesk/RustDesk2.toml"
+stage_for_user "$DISPLAY_USER"
+# Users logged in now run --server as themselves as soon as the service starts.
+for user in $(loginctl list-sessions --no-legend | awk '{print $3}' | sort -u); do
+  [ "$user" = root ] || [ "$user" = "$DISPLAY_USER" ] || stage_for_user "$user"
+done
 
 # Install
 dpkg -i "$INSTALLER" || apt-get install -f -y
 
 # Verify
-sleep 5
-if ps -eo user,args | grep -q "[r]ustdesk --server"; then
-  echo "RustDesk service running."
-  SERVER=$(grep 'custom-rendezvous-server' /root/.config/rustdesk/RustDesk2.toml | head -1)
-  echo "Config check: $SERVER"
-else
-  echo "Warning: RustDesk service not running yet."
+sleep 10
+# Skip the root `sudo ... -u <user> rustdesk --server` wrapper.
+SERVER_USER=$(ps -eo user,args | awk '$2 ~ /rustdesk$/ && $3 == "--server" {print $1}' | head -1 || true)
+if [ -z "$SERVER_USER" ]; then
+  echo "Warning: RustDesk server process not running yet."
+  exit 0
 fi
+SERVER_HOME=$(getent passwd "$SERVER_USER" | cut -d: -f6)
+echo "--server runs as $SERVER_USER; it connected to:"
+grep -h "start rendezvous mediator" "$SERVER_HOME"/.local/share/logs/RustDesk/server/*.log 2>/dev/null | tail -1 || true
+echo "Check that this names your server, not rs-ny.rustdesk.com."
+
 ```
 
 ### Usage
@@ -173,40 +196,53 @@ fi
 sudo bash install-rustdesk.sh rustdesk-1.4.9-x86_64.deb RustDesk2.toml
 ```
 
-## Verification
+### Permanent password
 
-After installation, confirm the config survived:
+For unattended access, set the password after installing (as root):
 
 ```bash
-# Check both configs still have custom server
-sudo grep custom-rendezvous-server /root/.config/rustdesk/RustDesk2.toml
-sudo cat /var/lib/lightdm/.config/rustdesk/RustDesk2.toml | grep custom-rendezvous-server
-
-# Check --server is connecting to your server (not rs-ny.rustdesk.com)
-sudo cat /var/lib/lightdm/.local/share/logs/RustDesk/server/rustdesk_rCURRENT.log \
-  | grep "start rendezvous mediator"
-
-# Check hbbs registration
-sudo cat /var/lib/lightdm/.local/share/logs/RustDesk/server/rustdesk_rCURRENT.log \
-  | grep "start tcp"
+sudo rustdesk --password '<password>'
 ```
 
-Expected output:
+It prints `Done!` and is stored per device, hashed, in `RustDesk.toml`.
+
+## Verification
+
+After installation, confirm every copy kept your server:
+
+```bash
+sudo grep -H custom-rendezvous-server /root/.config/rustdesk/RustDesk2.toml \
+  /var/lib/*/.config/rustdesk/RustDesk2.toml /home/*/.config/rustdesk/RustDesk2.toml
+
+# Who runs --server, and which server it connected to
+ps -eo user,args | grep "[r]ustdesk --server"
+sudo grep -h "start rendezvous mediator\|start tcp" \
+  /home/*/.local/share/logs/RustDesk/server/*.log \
+  /var/lib/*/.local/share/logs/RustDesk/server/*.log 2>/dev/null | tail -2
+```
+
+Expected output of the last command:
 ```
 start rendezvous mediator of your-server.example.com
 start tcp: wss://your-server.example.com/ws/id
 ```
 
+If it shows `rs-ny.rustdesk.com`, a copy was missing: [uninstall](#uninstall) and install again with the config in every place listed above.
+
 ## Uninstall
 
+`dpkg --purge` removes only root's config. Each user's config (including the device ID in `RustDesk.toml`), logs and autostart entry remain, and a reinstall picks them up. Run this as a script file, not as a `bash -c '...'` one-liner: stopping the service runs `pkill -f "rustdesk --"`, which also kills a shell whose command line contains that text.
+
 ```bash
-sudo systemctl stop rustdesk.service
-sudo dpkg --purge rustdesk
-sudo rm -rf /root/.config/rustdesk
-sudo rm -rf /var/lib/lightdm/.config/rustdesk  # adjust for your display user
+#!/bin/bash
+systemctl stop rustdesk
+dpkg --purge rustdesk
+pkill -f "rustdesk --" || true
+for h in /root /home/* /var/lib/lightdm /var/lib/gdm3 /var/lib/gdm /var/lib/sddm; do
+  [ -d "$h" ] || continue
+  rm -rf "$h/.config/rustdesk" "$h/.local/share/logs/RustDesk"
+  find "$h/.config/autostart" -maxdepth 1 -iname 'rustdesk*.desktop' -delete 2>/dev/null
+done
 ```
 
-## To Be Investigated
-
-- **`api-server` side effects** — Setting `api-server = 'https://...'` triggers WSS protocol selection (checked in `websocket.rs:391`), but it also causes the client to send periodic `/api/heartbeat` and `/api/switch-grant` requests to that URL. Document the side effects or find a cleaner way to trigger WSS.
-- **Password pre-staging** — The install script pre-stages `RustDesk2.toml` but not `RustDesk.toml`. The permanent password lives in `RustDesk.toml` and is hashed on first load (plain text → `00` + base64(SHA256)). Server-side password push is not possible without custom client builds — the strategy push mechanism (`config_options`) only covers `[options]` fields, not the password. Add a post-install step to pre-stage `RustDesk.toml` with a plain text password, or use `RustDesk --password <pw>` after install (requires working IPC service).
+Session recordings, if any, stay in each user's `~/Videos/RustDesk`. Removing `RustDesk.toml` gives the device a new ID on reinstall; back up `/root/.config/rustdesk/RustDesk.toml` first to keep it.
