@@ -24,6 +24,7 @@ drm = ["wayland"]
 mediacodec = ["ndk"]
 linux-pkg-config = ["dep:pkg-config"]
 hwcodec = ["dep:hwcodec"]
+screencapturekit = []
 vram = ["hwcodec/vram"]
 
 [dependencies]
@@ -60,6 +61,7 @@ quest = "0.3"
 target_build_utils = "0.3"
 bindgen = "0.72.1"
 pkg-config = { version = "0.3.27", optional = true }
+cc = "1"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 dbus = { version = "0.9", optional = true }

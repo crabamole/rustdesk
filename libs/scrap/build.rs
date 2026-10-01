@@ -260,6 +260,17 @@ fn main() {
     } else if cfg!(target_os = "macos") {
         // Quartz is second because macOS is the (annoying) exception.
         println!("cargo:rustc-cfg=quartz");
+
+        if env::var("CARGO_FEATURE_SCREENCAPTUREKIT").is_ok() {
+            cc::Build::new()
+                .file("src/quartz/sc_capturer.m")
+                .flag("-fobjc-arc")
+                .flag("-fmodules")
+                .compile("sc_capturer");
+            println!("cargo:rustc-link-lib=framework=ScreenCaptureKit");
+            println!("cargo:rustc-link-lib=framework=CoreMedia");
+            println!("cargo:rustc-link-lib=framework=CoreVideo");
+        }
     } else if cfg!(unix) {
         // On UNIX we pray that X11 (with XCB) is available.
         println!("cargo:rustc-cfg=x11");
