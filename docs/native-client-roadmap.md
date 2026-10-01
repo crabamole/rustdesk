@@ -9,7 +9,7 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 The native-client workflows were archived in `.github/workflows-archive/` (only the web client image is built); `flutter-build.yml` there is the starting point.
 
 - [ ] CI builds for Linux (`.deb`), Windows and macOS from this fork
-- [ ] Our own `custom.txt` signing key: replace RustDesk's public key in `read_custom_client` (`src/common.rs`), keep the private key out of git, sign `custom.txt` per deployment
+- [x] `custom.txt` signing key is a required build parameter (`RUSTDESK_CUSTOM_CLIENT_PK`, base64 Ed25519 public key); builds fail without it and never trust RustDesk's key. Sign with `rustdesk-utils signcustom` (rustdesk-server)
 - [ ] macOS: Apple Developer ID signing and notarization (Gatekeeper)
 - [ ] Windows: code-signing certificate (SmartScreen)
 - [ ] Release process: versioning, publishing, tracking upstream releases
