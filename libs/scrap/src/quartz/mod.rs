@@ -9,8 +9,6 @@ mod config;
 mod display;
 pub mod ffi;
 mod frame;
-#[cfg(feature = "screencapturekit")]
-pub mod sc_ffi;
 
 use std::sync::{Arc, Mutex};
 

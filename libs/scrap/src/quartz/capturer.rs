@@ -66,11 +66,6 @@ impl Capturer {
             stream
         };
 
-        if stream.is_null() {
-            unsafe { dispatch_release(queue) };
-            return Err(CGError::CannotComplete);
-        }
-
         match unsafe { CGDisplayStreamStart(stream) } {
             CGError::Success => Ok(Capturer {
                 stream,
