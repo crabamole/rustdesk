@@ -58,7 +58,7 @@ Linux needs no signing, so a Linux-only build is the cheapest way to prove the f
 - **Today:** users pick the OIDC button
 
 ### ScreenCaptureKit on macOS ([#26](https://github.com/crabamole/rustdesk/issues/26))
-- [x] ScreenCaptureKit video backend behind the `screencapturekit` feature (c998152a9)
+- [ ] ScreenCaptureKit video backend behind the `screencapturekit` feature, parked on branch `feat/screencapturekit`
 - [ ] Re-check whether it is still needed: stock 1.4.9 captured fine on macOS 15 in later tests
 
 ## Not Blocked on Our Builds
