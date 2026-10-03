@@ -1,21 +1,38 @@
 # Native Client Build Roadmap
 
-**Updated:** 2026-10-01
+**Updated:** 2026-10-03
 
 Stock RustDesk clients work with our server stack, but some features need a client built from this fork. This roadmap tracks what shipping our own Windows, macOS and Linux builds requires, and the features waiting on it.
 
 ## Build Pipeline
 
-The native-client workflows were archived in `.github/workflows-archive/` (only the web client image is built); `flutter-build.yml` there is the starting point.
+`.github/workflows/windows-build.yml` builds Windows x64 on manual dispatch; the other archived workflows in `.github/workflows-archive/` are the starting point for Linux and macOS.
 
-- [ ] CI builds for Linux (`.deb`), Windows and macOS from this fork
+- [x] Windows x64: unsigned MSI, verified on a Windows 10 VM (install, device ID kept, web client session, our `custom.txt` applied, one signed with another key ignored)
+- [ ] Linux `.deb`
+- [ ] macOS
+- [ ] CI speed: vcpkg cache not effective (12–15 min per run); pinned actions still on Node 20
 - [x] `custom.txt` signing key is a required build parameter (`RUSTDESK_CUSTOM_CLIENT_PK`, base64 Ed25519 public key); builds fail without it and never trust RustDesk's key. Sign with `rustdesk-utils signcustom` (rustdesk-server)
-- [ ] macOS: Apple Developer ID signing and notarization (Gatekeeper)
-- [ ] Windows: code-signing certificate (SmartScreen)
+- [ ] macOS: Apple Developer ID signing and notarization (Gatekeeper); Developer Program enrolled, activation pending
+- [ ] Windows: code-signing certificate (SmartScreen); deferred, candidates Certum (about €49/yr) or SignPath (free for open source)
 - [ ] Release process: versioning, publishing, tracking upstream releases
 - [ ] Pre-seed guides updated for our packages (`linux-preseed-install.md`, `macos-preseed-install.md`)
 
 Linux needs no signing, so a Linux-only build is the cheapest way to prove the features below.
+
+## Deployment Model
+
+Two builds per platform, differing only in their signed `custom.txt`:
+
+| Build | `custom.txt` | Installed on |
+|---|---|---|
+| `crabamole-rustdesk-service` | `conn-type: incoming`, `disable-unlock-pin`, one-way clipboard | managed devices that are controlled (MDM) |
+| `crabamole-rustdesk-client` | `conn-type: outgoing`, `app-name: RustDesk Client` | viewer machines (internal app store) |
+
+- macOS: two signed app bundles; Windows: two MSIs (`preprocess.py --custom --conn-type --app-name`)
+- Server addresses and key: `rustdesk --config <string>` after install, so one public build serves every deployment
+- [ ] Windows distribution through an internal Chocolatey feed
+- [ ] Keep system info sync in the outgoing-only build: `start_all()` exits before it, so viewer machines never report a hostname and are missing from the device list
 
 ## Features Waiting on Our Builds
 
@@ -35,7 +52,12 @@ Linux needs no signing, so a Linux-only build is the cheapest way to prove the f
 - [ ] hbbs accepts device registrations only from our builds
 - Needs a token in our builds and a check in hbbs (rustdesk-server)
 - **Today:** none
-- Design: [design-trusted-builds.md](design-trusted-builds.md)
+- Design: [design-trusted-builds.md](design-trusted-builds.md); device admission ([design-device-admission.md](design-device-admission.md)) layers on top of it and needs no client change
+
+### Viewer Identity in Audit Records
+- [ ] The viewer reports its hostname and local addresses; the host includes them in its `authorized` audit record
+- Device-reported values: trustworthy only on managed devices running attested builds
+- **Today:** the server-side address (resolved through trusted proxies) and the viewer's name (`display-name`, logged-in user or OS user)
 
 ### Native Login with PKCE
 - [ ] Native clients log in with the authorization code flow, PKCE and a loopback redirect (RFC 8252)
@@ -45,7 +67,8 @@ Linux needs no signing, so a Linux-only build is the cheapest way to prove the f
 
 ### WebSocket Port for Hostnames ([#30](https://github.com/crabamole/rustdesk/issues/30))
 - [ ] Keep a non-default port when the rendezvous server is a hostname (`check_ws()` in `hbb_common`)
-- **Today:** serve WebSocket on port 80 (ws) or 443 (wss)
+- [ ] Do not treat a relay address `<host>:443` as the rendezvous server: `check_ws()` classifies by port, so the relay connection goes to `/ws/id`. Same function, one fix covers both
+- **Today:** serve WebSocket on port 80 (ws) or 443 (wss); configure the rendezvous server as a hostname without port and leave the relay server blank
 
 ### Clipboard Audit
 - [ ] Hosts report clipboard transfers to the api-server

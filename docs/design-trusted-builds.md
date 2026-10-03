@@ -17,7 +17,7 @@ on the corporate hbbs, using network-level enforcement.
 
 - All RustDesk traffic routed through corporate hbbs/hbbr (e.g. WSS on port 443)
 - All other RustDesk ports blocked at the network level
-- Corporate hbbs is our fork (rophy/rustdesk-server)
+- Corporate hbbs is our fork (crabamole/rustdesk-server)
 
 ## Design: Shared Secret Attestation
 
@@ -151,9 +151,9 @@ hbbs:
 | Repo | Files Changed | Lines |
 |------|--------------|-------|
 | `libs/hbb_common` | `protos/rendezvous.proto` | ~1 |
-| `rophy/rustdesk-server` | `src/rendezvous_server.rs` | ~15 |
-| `rophy/rustdesk` | `src/rendezvous_mediator.rs`, `src/config.rs` | ~20 |
-| `rophy/rustdesk-charts` | `charts/values.yaml` | ~3 |
+| `crabamole/rustdesk-server` | `src/rendezvous_server.rs` | ~15 |
+| `crabamole/rustdesk` | `src/rendezvous_mediator.rs`, `src/config.rs` | ~20 |
+| `crabamole/rustdesk-charts` | `charts/values.yaml` | ~3 |
 
 Total: ~40 lines of code across 4 repos.
 
@@ -169,7 +169,7 @@ rustdesk fork
       └── APPLE_DEVELOPER_CERT (macOS signing)
 ```
 
-Windows server builds are not planned — servers are Mac/Linux only.
+Windows builds run in `.github/workflows/windows-build.yml` (see [native-client-roadmap.md](native-client-roadmap.md)).
 
 ## Rollout
 

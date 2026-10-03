@@ -3,7 +3,7 @@
 Corporate deployment features for [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api).
 
 **Base:** sctgdesk-api-server (AGPL-3.0)  
-**Updated:** 2026-09-30
+**Updated:** 2026-10-03
 
 ## Architecture Context
 
@@ -27,6 +27,7 @@ Core infrastructure that unblocks everything else.
 ### Persistent Sessions
 - [x] Move token store from in-memory `RwLock<HashMap<Token, AccessTokenInfo>>` to the `session` table
 - [x] Tokens survive restart and can be shared across replicas (OIDC logins in progress are still in memory; see Multi-Replica)
+- [x] Expired sessions are purged at login; deleting a user removes their sessions
 
 ### Proto Update
 - [x] Both repos use the same `hbb_common` submodule — protos already match
@@ -60,12 +61,22 @@ Make authentication fast and auditable.
 - [ ] API server issues signed JWTs at login; hbbs verifies using public key
 - [ ] Eliminates hbbs's HTTP call to the api-server per connection
 - **Depends on:** Persistent Sessions
+- **Trade-off:** hbbs can no longer see a revoked session until its JWT expires; keep JWT lifetimes short
 
 ### Audit Logging
-- [x] Implement write path for existing `audit_conn`, `audit_file`, `audit_alarm` tables
-- [x] Add route handlers: `POST /api/audit/conn`, `/file`, `/alarm` + `GET /api/audit/conn/active`
-- [x] Client audit payloads now persisted with nonce-based deduplication
-- **Note:** DB tables and indexes already exist in schema
+Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdesk-api/blob/main/docs/audit-api-spec.md)
+- [x] Connection lifecycle (`new`, `authorized`, `close`) recorded as one row per connection, with nonce-based deduplication
+- [x] Client address resolved through trusted proxies (see Trusted Client Address)
+- [ ] Session notes (spec §4, §8)
+- [ ] Authentication on `GET /api/audit/conn/active`
+- [ ] Error replies for `POST /api/audit/file` and `/alarm` per the spec
+- [ ] Viewer **user** attribution: hbbs sends `ControlledContext` (spec §11)
+- [ ] Admin read API `GET /api/audits/{kind}` and a console page
+
+### Trusted Client Address
+- [x] The chart's nginx resolves the client address from trusted proxies (`realIp.trustedProxies`, `realIp.header`) and overwrites `X-Real-IP` / `X-Forwarded-For` toward hbbs, hbbr and the api-server
+- [x] hbbs, hbbr and the api-server honour forwarded headers only from `TRUSTED_PROXIES`
+- [x] hbbs registration rate limits configurable (`IP_BLOCK_PER_MINUTE`, `IP_BLOCK_IDS_PER_DAY`); hbbr checks its blocklist against the resolved address
 
 ### Native Client Login with PKCE
 - [ ] Native clients use the authorization code flow with PKCE and a loopback redirect (RFC 8252); the api-server fully validates the ID token (signature via JWKS, `nonce`)
@@ -76,6 +87,9 @@ Make authentication fast and auditable.
 
 Enforce organizational policies on client behavior during remote sessions.
 
+### Client Config Endpoint
+- [ ] `GET /api/client-config` (no login) returns the client settings this deployment expects (rendezvous server, relay, api-server, key), so users and support can check a `RustDesk2.toml` against it
+
 ### Strategy Push
 - [x] Heartbeat response delivers `StrategyOptions.config_options` (one global policy, Pro send-on-change semantics, re-push)
 - [x] Controls: the client's Permissions settings (allow-list in the api-server)
@@ -84,7 +98,7 @@ Enforce organizational policies on client behavior during remote sessions.
 ### Control Role Enforcement
 - [ ] hbbs decides permission policy per connection (based on user/group)
 - [ ] Sends `ControlPermissions` bitmask to client
-- [ ] Client enforces: clipboard, file transfer, keyboard, terminal, camera, privacy mode, block input
+- Stock clients already enforce the bitmask (clipboard, file transfer, keyboard, terminal, camera, privacy mode, block input), so this is server-side work only; not yet tested end to end
 - [ ] Design doc complete
 - **Depends on:** Strategy Push
 
@@ -93,7 +107,7 @@ Enforce organizational policies on client behavior during remote sessions.
 Data loss prevention controls for regulated environments.
 
 ### Clipboard Direction Control
-- [ ] Enforce clipboard copy direction per policy — disable copy-from-remote, copy-to-remote, or both
+- [ ] Enforce clipboard copy direction per deployment (signed `custom.txt`) — disable copy-from-remote, copy-to-remote, or both
 - [x] Design doc exists (`docs/design-clipboard-direction.md`)
 - **Depends on:** our own native client builds ([native-client-roadmap.md](native-client-roadmap.md)) — RustDesk's `one-way-clipboard-redirection` is a built-in setting that strategy options and `RustDesk2.toml` cannot set
 
@@ -102,6 +116,11 @@ Data loss prevention controls for regulated environments.
 - [ ] hbbs validates client identity before allowing connections
 - [x] Design doc exists (`docs/design-trusted-builds.md`)
 - **Depends on:** our own native client builds ([native-client-roadmap.md](native-client-roadmap.md))
+
+### Device Admission
+- [ ] Only devices whose hostname is on an admin-managed list can be controlled; others act as viewers at most
+- [ ] Each admitted hostname bound to one device (ID + key) on first use
+- [ ] Design doc under review (`docs/design-device-admission.md`); works with stock clients, layers on Client Attestation where clients are unmanaged
 
 ## Multi-Replica
 
