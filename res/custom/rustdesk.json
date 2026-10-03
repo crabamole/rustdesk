@@ -1,0 +1,22 @@
+{
+  "app-name": "cRustDesk",
+  "override-settings": {
+    "allow-websocket": "Y",
+    "direct-server": "N",
+    "one-way-clipboard-redirection": "Y",
+    "enable-file-transfer": "N",
+    "enable-remote-printer": "N",
+    "enable-record-session": "N",
+    "enable-tunnel": "N",
+    "enable-remote-restart": "N",
+    "enable-camera": "N",
+    "enable-terminal": "N",
+    "disable-unlock-pin": "Y",
+    "disable-change-id": "Y",
+    "hide-security-settings": "Y",
+    "hide-network-settings": "Y",
+    "hide-server-settings": "Y",
+    "hide-websocket-settings": "Y",
+    "hide-proxy-settings": "Y"
+  }
+}

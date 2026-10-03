@@ -1,0 +1,11 @@
+{
+  "app-name": "cRustDeskClient",
+  "conn-type": "outgoing",
+  "override-settings": {
+    "allow-websocket": "Y",
+    "hide-server-settings": "Y",
+    "hide-network-settings": "Y",
+    "hide-websocket-settings": "Y",
+    "hide-proxy-settings": "Y"
+  }
+}
