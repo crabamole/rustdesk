@@ -1,0 +1,233 @@
+# macOS arm64 build of the cRustDesk and cRustDeskClient variants, derived from build-for-macOS
+# in workflows-archive/flutter-build.yml. Signed, notarized and stapled DMGs as workflow artifacts.
+name: macOS build
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MAC_RUST_VERSION: "1.81"
+  FLUTTER_VERSION: "3.24.5"
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+  VCPKG_COMMIT_ID: "120deac3062162151622ca4860575a33844ba10b"
+  VERSION: "1.4.9"
+  RUSTDESK_CUSTOM_CLIENT_PK: ${{ vars.RUSTDESK_CUSTOM_CLIENT_PK }}
+
+jobs:
+  check-signing-key:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the custom.txt signing key
+        # A malformed key still compiles, and the client would then ignore every custom.txt.
+        run: |
+          if [ "$(printf '%s' "$RUSTDESK_CUSTOM_CLIENT_PK" | base64 -d 2>/dev/null | wc -c)" != 32 ]; then
+            echo "::error::RUSTDESK_CUSTOM_CLIENT_PK must be a base64 Ed25519 public key (32 bytes)"
+            exit 1
+          fi
+
+      - name: Checkout source code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Verify the custom.txt files against the key
+        # Fails before the long build if the committed custom.txt was signed with another key.
+        run: |
+          bash res/custom/verify.sh res/custom/rustdesk.txt res/custom/rustdesk.json "$RUSTDESK_CUSTOM_CLIENT_PK"
+          bash res/custom/verify.sh res/custom/client.txt res/custom/client.json "$RUSTDESK_CUSTOM_CLIENT_PK"
+
+  generate-bridge:
+    needs: [check-signing-key]
+    uses: ./.github/workflows/bridge.yml
+
+  build:
+    needs: [check-signing-key, generate-bridge]
+    runs-on: macos-14
+    steps:
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Checkout source code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          submodules: recursive
+
+      - name: Import the codesign cert
+        uses: apple-actions/import-codesign-certs@253ddeeac23f2bdad1646faac5c8c2832e800071 # v1
+        with:
+          p12-file-base64: ${{ secrets.MACOS_P12_BASE64 }}
+          p12-password: ${{ secrets.MACOS_P12_PASSWORD }}
+          keychain: rustdesk
+
+      - name: Check sign and import sign key
+        run: |
+          security default-keychain -s rustdesk.keychain
+          security find-identity -v
+
+      - name: Import notarize key
+        uses: timheuer/base64-to-file@adaa40c0c581f276132199d4cf60afa07ce60eac # v1.2
+        with:
+          # https://gregoryszorc.com/docs/apple-codesign/stable/apple_codesign_rcodesign.html#notarizing-and-stapling
+          fileName: notarize.json
+          fileDir: ${{ runner.temp }}
+          encodedString: ${{ secrets.MACOS_NOTARIZE_JSON }}
+
+      - name: Install rcodesign tool
+        shell: bash
+        run: |
+          pushd /tmp
+          wget https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.22.0/apple-codesign-0.22.0-macos-universal.tar.gz
+          tar -zxvf apple-codesign-0.22.0-macos-universal.tar.gz
+          mv apple-codesign-0.22.0-macos-universal/rcodesign /usr/local/bin
+          popd
+
+      - name: Install build runtime
+        run: |
+          brew install llvm create-dmg
+          # The runner image may already ship pkg-config.
+          if command -v pkg-config &>/dev/null; then
+              echo "pkg-config is already installed"
+          else
+              brew install pkg-config
+          fi
+
+      - name: Install NASM
+        # brew installs NASM 3.x, whose CLI is incompatible with the multimedia libraries' build.
+        run: |
+          wget https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/macosx/nasm-2.16.03-macosx.zip
+          unzip nasm-2.16.03-macosx.zip
+          sudo cp nasm-2.16.03/nasm /usr/local/bin/nasm
+          nasm --version
+
+      - name: Install flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          channel: "stable"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Patch flutter
+        run: |
+          cd "$(dirname "$(dirname "$(which flutter)")")"
+          git apply "$GITHUB_WORKSPACE/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff"
+
+      - name: Workaround for flutter issue
+        shell: bash
+        run: |
+          cd "$(dirname "$(which flutter)")"
+          # https://github.com/flutter/flutter/issues/133533
+          sed -i -e 's/_setFramesEnabledState(false);/\/\/_setFramesEnabledState(false);/g' ../packages/flutter/lib/src/scheduler/binding.dart
+          grep -n '_setFramesEnabledState(false);' ../packages/flutter/lib/src/scheduler/binding.dart
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          toolchain: ${{ env.MAC_RUST_VERSION }}
+          targets: aarch64-apple-darwin
+          components: "rustfmt"
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          prefix-key: macos-14
+
+      - name: Restore bridge files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: bridge-artifact
+          path: ./
+
+      - name: Setup vcpkg with Github Actions binary cache
+        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11
+        with:
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
+          doNotCache: false
+
+      - name: Install vcpkg dependencies
+        run: |
+          if ! "$VCPKG_ROOT/vcpkg" \
+            install \
+            --x-install-root="$VCPKG_ROOT/installed"; then
+            find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
+              echo "$_1:"
+              echo "======"
+              cat "$_1"
+              echo "======"
+              echo ""
+            done
+            exit 1
+          fi
+
+      - name: Build rustdesk
+        run: |
+          MIN_MACOS_VERSION="12.3"
+          sed -i -e "s/MACOSX_DEPLOYMENT_TARGET\=[0-9]*.[0-9]*/MACOSX_DEPLOYMENT_TARGET=${MIN_MACOS_VERSION}/" build.py
+          sed -i -e "s/platform :osx, '.*'/platform :osx, '${MIN_MACOS_VERSION}'/" flutter/macos/Podfile
+          sed -i -e "s/osx_minimum_system_version = \"[0-9]*.[0-9]*\"/osx_minimum_system_version = \"${MIN_MACOS_VERSION}\"/" Cargo.toml
+          sed -i -e "s/MACOSX_DEPLOYMENT_TARGET = [0-9]*.[0-9]*;/MACOSX_DEPLOYMENT_TARGET = ${MIN_MACOS_VERSION};/" flutter/macos/Runner.xcodeproj/project.pbxproj
+          ./build.py --flutter --hwcodec --unix-file-copy-paste --screencapturekit
+
+      - name: Package the variants
+        run: |
+          src=./flutter/build/macos/Build/Products/Release/RustDesk.app
+          bash res/macos/package-variant.sh "$src" res/custom/rustdesk.txt cRustDesk io.github.crabamole.rustdesk dist
+          bash res/macos/package-variant.sh "$src" res/custom/client.txt cRustDeskClient io.github.crabamole.rustdesk-client dist
+
+      - name: Codesign, create and notarize the DMGs
+        env:
+          MACOS_P12_PASSWORD: ${{ secrets.MACOS_P12_PASSWORD }}
+          MACOS_CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
+          NOTARIZE_KEY: ${{ runner.temp }}/notarize.json
+        run: |
+          # More unmount attempts; the runner is slow to release the image.
+          CREATE_DMG="$(readlink -f "$(command -v create-dmg)")"
+          sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG"
+          security default-keychain -s rustdesk.keychain
+          security unlock-keychain -p "$MACOS_P12_PASSWORD" rustdesk.keychain
+          for name in cRustDesk cRustDeskClient; do
+            dmg="$name-$VERSION-aarch64.dmg"
+            codesign --force --options runtime --timestamp -s "$MACOS_CODESIGN_IDENTITY" --deep --strict "dist/$name.app" -vvv
+            create-dmg --icon "$name.app" 200 190 --hide-extension "$name.app" --window-size 800 400 --app-drop-link 600 185 "$dmg" "dist/$name.app"
+            codesign --force --options runtime --timestamp -s "$MACOS_CODESIGN_IDENTITY" --deep --strict "$dmg" -vvv
+            rcodesign notary-submit --api-key-path "$NOTARIZE_KEY" --staple "$dmg"
+          done
+
+      - name: Verify the DMGs
+        run: |
+          set -euo pipefail
+          check() {
+            local name=$1 bundle_id=$2 custom=$3
+            local dmg="$name-$VERSION-aarch64.dmg"
+            local mnt="$RUNNER_TEMP/mnt-$name"
+            xcrun stapler validate "$dmg"
+            mkdir -p "$mnt"
+            hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$dmg"
+            local app="$mnt/$name.app"
+            codesign --verify --deep --strict --verbose=2 "$app"
+            spctl --assess --type execute -vv "$app" 2>&1 | tee "$RUNNER_TEMP/spctl-$name.txt"
+            grep -q 'source=Notarized Developer ID' "$RUNNER_TEMP/spctl-$name.txt"
+            test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Contents/Info.plist")" = "$bundle_id"
+            cmp "$app/Contents/Resources/custom.txt" "$custom"
+            hdiutil detach "$mnt"
+            echo "OK $dmg"
+          }
+          check cRustDesk io.github.crabamole.rustdesk res/custom/rustdesk.txt
+          check cRustDeskClient io.github.crabamole.rustdesk-client res/custom/client.txt
+
+      - name: Upload cRustDesk DMG
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cRustDesk-macos-aarch64
+          path: cRustDesk-${{ env.VERSION }}-aarch64.dmg
+          retention-days: 30
+
+      - name: Upload cRustDeskClient DMG
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cRustDeskClient-macos-aarch64
+          path: cRustDeskClient-${{ env.VERSION }}-aarch64.dmg
+          retention-days: 30
