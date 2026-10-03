@@ -158,7 +158,9 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
     return Text(
       _svcStopped.value
           ? translate("Service is not running")
-          : stateGlobal.svcStatus.value == SvcStatus.connecting
+          : stateGlobal.svcStatus.value == SvcStatus.notConfigured
+              ? translate('server_not_configured_tip')
+              : stateGlobal.svcStatus.value == SvcStatus.connecting
               ? translate("connecting_status")
               : stateGlobal.svcStatus.value == SvcStatus.notReady
                   ? translate("not_ready_status")
@@ -177,6 +179,8 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
       stateGlobal.svcStatus.value = SvcStatus.notReady;
     } else if (statusNum == 1) {
       stateGlobal.svcStatus.value = SvcStatus.ready;
+    } else if (statusNum == -2) {
+      stateGlobal.svcStatus.value = SvcStatus.notConfigured;
     } else {
       stateGlobal.svcStatus.value = SvcStatus.notReady;
     }
@@ -319,6 +323,7 @@ class _ConnectionPageState extends State<ConnectionPage>
             Expanded(child: PeerTabPage()),
           ],
         ).paddingOnly(left: 12.0)),
+        if (isOutgoingOnly && !isWeb) const _ServerNotConfiguredTip(),
         if (!isOutgoingOnly) const Divider(height: 1),
         if (!isOutgoingOnly) OnlineStatusWidget()
       ],
@@ -612,5 +617,65 @@ class _ConnectionPageState extends State<ConnectionPage>
     );
     return Container(
         constraints: const BoxConstraints(maxWidth: 600), child: w);
+  }
+}
+
+/// Outgoing-only builds have no service status line to say this.
+class _ServerNotConfiguredTip extends StatefulWidget {
+  const _ServerNotConfiguredTip();
+
+  @override
+  State<_ServerNotConfiguredTip> createState() =>
+      _ServerNotConfiguredTipState();
+}
+
+class _ServerNotConfiguredTipState extends State<_ServerNotConfiguredTip> {
+  final _configured = true.obs;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = periodic_immediate(Duration(seconds: 1), () async {
+      _configured.value = bind.mainIsServerConfigured();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const em = 14.0;
+    return Obx(() => Offstage(
+          offstage: _configured.value,
+          child: Column(
+            children: [
+              const Divider(height: 1),
+              SizedBox(
+                height: em * 3,
+                child: Row(
+                  children: [
+                    Container(
+                      height: 8,
+                      width: 8,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        color: Color.fromARGB(255, 224, 79, 95),
+                      ),
+                    ).marginSymmetric(horizontal: em),
+                    Flexible(
+                      child: Text(translate('server_not_configured_tip'),
+                          style: TextStyle(fontSize: em)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ));
   }
 }

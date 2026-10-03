@@ -114,6 +114,7 @@ impl RendezvousMediator {
     }
 
     pub async fn start_all() {
+        wait_for_server_config().await;
         crate::test_nat_type();
         if config::is_outgoing_only() {
             loop {
@@ -831,6 +832,17 @@ impl RendezvousMediator {
             relay_server = crate::increase_port(&self.host, 1);
         }
         relay_server
+    }
+}
+
+// Unconfigured, upstream would fall back to the public rustdesk.com servers.
+async fn wait_for_server_config() {
+    if crate::is_server_configured() {
+        return;
+    }
+    log::warn!("No server configured, waiting before connecting anywhere");
+    while !crate::is_server_configured() {
+        sleep(1.).await;
     }
 }
 

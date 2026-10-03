@@ -777,5 +777,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Browser didn't open? Use the url below to sign in.", "Is de browser niet geopend? Gebruik onderstaande URL om in te loggen."),
         ("software_rendering_tip", ""),
         ("video_render_error_tip", ""),
+        ("server_not_configured_tip", "Server niet geconfigureerd. Neem contact op met uw beheerder."),
     ].iter().cloned().collect();
 }
