@@ -67,11 +67,16 @@ Make authentication fast and auditable.
 Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdesk-api/blob/main/docs/audit-api-spec.md)
 - [x] Connection lifecycle (`new`, `authorized`, `close`) recorded as one row per connection, with nonce-based deduplication
 - [x] Client address resolved through trusted proxies (see Trusted Client Address)
-- [ ] Session notes (spec §4, §8)
-- [ ] Authentication on `GET /api/audit/conn/active`
-- [ ] Error replies for `POST /api/audit/file` and `/alarm` per the spec
-- [ ] Viewer **user** attribution: hbbs sends `ControlledContext` (spec §11)
-- [ ] Admin read API `GET /api/audits/{kind}` and a console page
+- [x] Session notes (spec §4, §8)
+- [x] Authentication on `GET /api/audit/conn/active`
+- [x] Error replies for `POST /api/audit/file` and `/alarm` per the spec
+- [x] Viewer **user** attribution: hbbs sends `ControlledContext` (spec §11)
+- [x] Admin read API `GET /api/audits/{kind}` and a console page
+- [ ] Console page: disconnect an active connection
+- [ ] CSV export of the audit log
+- [ ] Log retention (purge after N days)
+- [ ] Console (admin action) logging
+- [ ] End a device's open rows whose `close` record was lost (e.g. the Linux client restarting `--server` right after the last connection closes), by diffing against heartbeat `conns`
 
 ### Trusted Client Address
 - [x] The chart's nginx resolves the client address from trusted proxies (`realIp.trustedProxies`, `realIp.header`) and overwrites `X-Real-IP` / `X-Forwarded-For` toward hbbs, hbbr and the api-server
