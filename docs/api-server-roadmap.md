@@ -76,7 +76,7 @@ Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdes
 - [ ] CSV export of the audit log
 - [ ] Log retention (purge after N days)
 - [ ] Console (admin action) logging
-- [ ] End a device's open rows whose `close` record was lost (e.g. the Linux client restarting `--server` right after the last connection closes), by diffing against heartbeat `conns`
+- [x] End a device's open rows whose `close` record was lost (e.g. the Linux client restarting `--server` right after the last connection closes), by diffing against heartbeat `conns`
 
 ### Trusted Client Address
 - [x] The chart's nginx resolves the client address from trusted proxies (`realIp.trustedProxies`, `realIp.header`) and overwrites `X-Real-IP` / `X-Forwarded-For` toward hbbs, hbbr and the api-server
