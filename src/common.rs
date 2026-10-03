@@ -1097,10 +1097,18 @@ pub fn is_server_configured() -> bool {
             return true;
         }
     }
-    !Config::get_option(keys::OPTION_CUSTOM_RENDEZVOUS_SERVER)
-        .trim()
-        .is_empty()
+    let key = keys::OPTION_CUSTOM_RENDEZVOUS_SERVER;
+    // The UI process's Config is not reloaded when the server process changes options.
+    let value = if crate::ui_interface::option_synced() {
+        get_option(key)
+    } else {
+        Config::get_option(key)
+    };
+    !value.trim().is_empty()
 }
+
+#[cfg(test)]
+pub(crate) static CUSTOM_RENDEZVOUS_SERVER_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 #[inline]
 pub fn is_public(url: &str) -> bool {
@@ -3123,8 +3131,6 @@ mod tests {
         assert_eq!(combined_mask >> 3, MOUSE_BUTTON_LEFT | MOUSE_BUTTON_RIGHT);
     }
 
-    static CUSTOM_RENDEZVOUS_SERVER_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
     #[test]
     fn test_is_server_configured() {
         struct Restore(String);
@@ -3155,6 +3161,7 @@ mod tests {
     fn test_server_not_configured_is_not_retried() {
         let retry = |text| crate::client::check_if_retry("error", "Connection Error", text, false);
         assert!(!retry("server_not_configured_tip"));
+        assert!(!retry("Public server is not allowed"));
         assert!(retry("Timeout"));
     }
 }

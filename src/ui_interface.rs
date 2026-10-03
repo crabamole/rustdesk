@@ -1778,4 +1778,38 @@ mod tests {
         );
         assert_eq!(validate_windows_service_video_save_directory("  "), None);
     }
+
+    #[test]
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    fn synced_option_decides_server_configured() {
+        use super::{Config, OPTIONS, OPTION_SYNCED};
+        use hbb_common::config::keys::OPTION_CUSTOM_RENDEZVOUS_SERVER as KEY;
+
+        struct Restore(String, std::collections::HashMap<String, String>, bool);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                Config::set_option(KEY.to_string(), self.0.clone());
+                *OPTIONS.lock().unwrap() = self.1.clone();
+                *OPTION_SYNCED.lock().unwrap() = self.2;
+            }
+        }
+
+        let _lock = crate::common::CUSTOM_RENDEZVOUS_SERVER_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _restore = Restore(
+            Config::get_option(KEY),
+            OPTIONS.lock().unwrap().clone(),
+            *OPTION_SYNCED.lock().unwrap(),
+        );
+        *OPTION_SYNCED.lock().unwrap() = true;
+
+        Config::set_option(KEY.to_string(), "".to_string());
+        OPTIONS.lock().unwrap().insert(KEY.to_string(), "rs.example.com".to_string());
+        assert!(crate::is_server_configured(), "configured via another process");
+
+        Config::set_option(KEY.to_string(), "rs.example.com".to_string());
+        OPTIONS.lock().unwrap().insert(KEY.to_string(), " ".to_string());
+        assert!(!crate::is_server_configured(), "cleared via another process");
+    }
 }
