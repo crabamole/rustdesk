@@ -778,5 +778,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("software_rendering_tip", ""),
         ("video_render_error_tip", ""),
         ("server_not_configured_tip", "Ο διακομιστής δεν έχει ρυθμιστεί. Επικοινωνήστε με τον διαχειριστή σας."),
+        ("Public server is not allowed", "Ο δημόσιος διακομιστής δεν επιτρέπεται"),
     ].iter().cloned().collect();
 }
