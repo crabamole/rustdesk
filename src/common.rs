@@ -1012,6 +1012,22 @@ pub fn is_rustdesk() -> bool {
     hbb_common::config::APP_NAME.read().unwrap().eq("RustDesk")
 }
 
+/// Rewrite a template's app-name tokens, then the bundle id, without the name
+/// pass corrupting a bundle id that itself contains "rustdesk" (macOS plists).
+pub fn correct_app_name_str(s: &str, app_name: &str, bundle_id: Option<&str>) -> String {
+    const BUNDLE_ID_PLACEHOLDER: &str = "@@CRABAMOLE_BUNDLE_ID@@";
+    let mut s = s.to_owned();
+    if bundle_id.is_some() {
+        s = s.replace("com.carriez.rustdesk", BUNDLE_ID_PLACEHOLDER);
+    }
+    s = s.replace("rustdesk", &app_name.to_lowercase());
+    s = s.replace("RustDesk", app_name);
+    if let Some(bundle_id) = bundle_id {
+        s = s.replace(BUNDLE_ID_PLACEHOLDER, bundle_id);
+    }
+    s
+}
+
 #[inline]
 pub fn get_uri_prefix() -> String {
     format!("{}://", get_app_name().to_lowercase())
@@ -2748,6 +2764,37 @@ mod tests {
             Instant::now() + Duration::from_secs(1),
             Duration::from_secs(1),
         )
+    }
+
+    #[test]
+    fn correct_app_name_str_stock_is_unchanged() {
+        let input = "<string>com.carriez.rustdesk</string><string>RustDesk</string><string>rustdesk</string>";
+        let out = correct_app_name_str(input, "RustDesk", Some("com.carriez.rustdesk"));
+        assert_eq!(out, input);
+    }
+
+    #[test]
+    fn correct_app_name_str_renamed_app_keeps_bundle_id() {
+        let input = "<string>com.carriez.rustdesk</string><string>RustDesk</string><string>rustdesk</string>";
+        let out = correct_app_name_str(input, "cRustDesk", Some("io.github.crabamole.rustdesk"));
+        assert_eq!(
+            out,
+            "<string>io.github.crabamole.rustdesk</string><string>cRustDesk</string><string>crustdesk</string>"
+        );
+    }
+
+    #[test]
+    fn correct_app_name_str_client_variant_keeps_hyphenated_bundle_id() {
+        let input = "<string>com.carriez.rustdesk</string><string>RustDesk</string><string>rustdesk</string>";
+        let out = correct_app_name_str(
+            input,
+            "cRustDeskClient",
+            Some("io.github.crabamole.rustdesk-client"),
+        );
+        assert_eq!(
+            out,
+            "<string>io.github.crabamole.rustdesk-client</string><string>cRustDeskClient</string><string>crustdeskclient</string>"
+        );
     }
 
     #[test]
