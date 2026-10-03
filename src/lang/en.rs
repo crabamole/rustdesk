@@ -287,5 +287,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "Your IP is blocked by the peer"),
         ("software_rendering_tip", "WebGL is not available in this browser, so video is rendered in software and may be slow. Enable graphics acceleration in the browser settings for better performance."),
         ("video_render_error_tip", "Video is being received but cannot be displayed in this browser. Enable graphics acceleration (WebGL) in the browser settings, or try another browser."),
+        ("server_not_configured_tip", "Server not configured. Contact your administrator."),
     ].iter().cloned().collect();
 }

@@ -589,7 +589,11 @@ pub fn check_mouse_time() {
 #[inline]
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 pub fn get_connect_status() -> UiStatus {
-    UI_STATUS.lock().unwrap().clone()
+    let mut status = UI_STATUS.lock().unwrap().clone();
+    if !crate::is_server_configured() {
+        status.status_num = -2;
+    }
+    status
 }
 
 #[inline]

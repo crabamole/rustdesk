@@ -869,6 +869,10 @@ class RustdeskImpl {
         'true');
   }
 
+  bool mainIsServerConfigured({dynamic hint}) {
+    return true;
+  }
+
   Future<void> mainDiscover({dynamic hint}) {
     return Future.value();
   }

@@ -581,6 +581,9 @@ impl Drop for CheckTestNatType {
 }
 
 pub fn test_nat_type() {
+    if !is_server_configured() {
+        return;
+    }
     test_ipv6_sync();
     use std::sync::atomic::{AtomicBool, Ordering};
     std::thread::spawn(move || {
@@ -1080,7 +1083,23 @@ fn get_api_server_(api: String, custom: String) -> String {
             return format!("http://{}", s);
         }
     }
+    if !is_server_configured() {
+        return "".to_owned();
+    }
     "https://admin.rustdesk.com".to_owned()
+}
+
+/// Our builds never fall back to the public rustdesk.com servers.
+pub fn is_server_configured() -> bool {
+    #[cfg(windows)]
+    if let Ok(lic) = crate::platform::get_license_from_exe_name() {
+        if !lic.host.is_empty() {
+            return true;
+        }
+    }
+    !Config::get_option(keys::OPTION_CUSTOM_RENDEZVOUS_SERVER)
+        .trim()
+        .is_empty()
 }
 
 #[inline]
@@ -2912,6 +2931,9 @@ mod tests {
 
     #[test]
     fn test_get_tcp_proxy_addr_normalizes_bare_ipv6_host() {
+        let _lock = CUSTOM_RENDEZVOUS_SERVER_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         struct RestoreCustomRendezvousServer(String);
 
         impl Drop for RestoreCustomRendezvousServer {
@@ -3099,5 +3121,40 @@ mod tests {
         let combined_mask = MOUSE_TYPE_DOWN | ((MOUSE_BUTTON_LEFT | MOUSE_BUTTON_RIGHT) << 3);
         assert_eq!(combined_mask & MOUSE_TYPE_MASK, MOUSE_TYPE_DOWN);
         assert_eq!(combined_mask >> 3, MOUSE_BUTTON_LEFT | MOUSE_BUTTON_RIGHT);
+    }
+
+    static CUSTOM_RENDEZVOUS_SERVER_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    #[test]
+    fn test_is_server_configured() {
+        struct Restore(String);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                Config::set_option(
+                    keys::OPTION_CUSTOM_RENDEZVOUS_SERVER.to_string(),
+                    self.0.clone(),
+                );
+            }
+        }
+
+        let _lock = CUSTOM_RENDEZVOUS_SERVER_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let key = keys::OPTION_CUSTOM_RENDEZVOUS_SERVER;
+        let _restore = Restore(Config::get_option(key));
+        for blank in ["", " ", " \t\n"] {
+            Config::set_option(key.to_string(), blank.to_string());
+            assert!(!is_server_configured(), "{blank:?} must not count");
+            assert_eq!(get_api_server_(String::new(), String::new()), "");
+        }
+        Config::set_option(key.to_string(), "rs.example.com".to_string());
+        assert!(is_server_configured());
+    }
+
+    #[test]
+    fn test_server_not_configured_is_not_retried() {
+        let retry = |text| crate::client::check_if_retry("error", "Connection Error", text, false);
+        assert!(!retry("server_not_configured_tip"));
+        assert!(retry("Timeout"));
     }
 }

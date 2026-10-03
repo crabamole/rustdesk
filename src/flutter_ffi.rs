@@ -1147,6 +1147,10 @@ pub fn main_is_using_public_server() -> bool {
     crate::using_public_server()
 }
 
+pub fn main_is_server_configured() -> SyncReturn<bool> {
+    SyncReturn(crate::is_server_configured())
+}
+
 pub fn main_discover() {
     discover();
 }

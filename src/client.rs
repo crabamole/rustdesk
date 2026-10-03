@@ -291,6 +291,9 @@ impl Client {
         } else {
             (peer, "", key, token)
         };
+        if other_server.is_empty() && !crate::is_server_configured() {
+            bail!("server_not_configured_tip");
+        }
         let (rendezvous_server, servers, contained) = if other_server.is_empty() {
             crate::get_rendezvous_server(1_000).await
         } else {
@@ -4031,7 +4034,8 @@ pub fn check_if_retry(msgtype: &str, title: &str, text: &str, retry_for_relay: b
                 && !text.to_lowercase().contains("mismatch")
                 && !text.to_lowercase().contains("manually")
                 && !text.to_lowercase().contains("restricted")
-                && !text.to_lowercase().contains("not allowed")))
+                && !text.to_lowercase().contains("not allowed")
+                && !text.contains("server_not_configured_tip")))
 }
 
 pub async fn hc_connection(
@@ -4138,6 +4142,9 @@ pub mod peer_online {
     }
 
     async fn create_online_stream() -> ResultType<Stream> {
+        if !crate::is_server_configured() {
+            bail!("server_not_configured_tip");
+        }
         let (rendezvous_server, _servers, _contained) =
             crate::get_rendezvous_server(READ_TIMEOUT).await;
         let tmp: Vec<&str> = rendezvous_server.split(":").collect();
