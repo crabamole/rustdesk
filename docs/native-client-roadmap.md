@@ -34,7 +34,7 @@ Two builds per platform, differing only in their signed `custom.txt`:
 
 - OA (`cRustDeskClient`) is client-only (`conn-type: outgoing`): it never registers with hbbs or sends a heartbeat, so it cannot be controlled.
 - DC (`cRustDesk`) works in both directions (it can be controlled and can control); its data-out locks (one-way clipboard, disabled file transfer/printer/recording/tunnel/remote-restart/camera/terminal) live in `res/custom/rustdesk.json`.
-- Neither build has a public-server fallback: without a configured server, an install just waits — `rustdesk --config <string>` is required before it runs its usual background services.
+- No build of this fork has a public-server fallback: without a configured server, an install just waits — `rustdesk --config <string>` is required before it runs its usual background services.
 - macOS: two signed, notarized app bundles (arm64); Windows: two MSIs (`preprocess.py --custom --conn-type --app-name`)
 - Server addresses and key: `rustdesk --config <string>` after install, so one public build serves every deployment
 - [ ] Windows distribution through an internal Chocolatey feed
