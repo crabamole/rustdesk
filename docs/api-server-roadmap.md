@@ -9,8 +9,8 @@ Corporate deployment features for [crabamole/rustdesk-api](https://github.com/cr
 
 - rustdesk-api (Rust/Rocket) and hbbs run as separate deployments (separate pods in the Helm chart) sharing one PostgreSQL database; hbbs reads/writes only the `peer` table
 - The api-server owns the schema (sqlx migrations); hbbs never runs DDL and waits at startup until the schema exists
-- hbbs calls the api-server over HTTP (`API_SERVER`, the apiserver Service) to validate tokens when `LOGGED_IN_ONLY=Y`
-- Both crabamole/rustdesk and crabamole/rustdesk-server use the same `hbb_common` submodule (from `rustdesk/hbb_common`); protos are in sync
+- hbbs calls the api-server over HTTP (`API_SERVER`, the apiserver Service) for every connection request that carries a token: `POST /api/audit/ref` validates it and returns the audit reference; with `LOGGED_IN_ONLY=Y` a missing or rejected token is refused
+- crabamole/rustdesk and crabamole/rustdesk-server pin the same `hbb_common` commit (`69cea8d`, from `rustdesk/hbb_common`), so their protos match
 - lejianwen/rustdesk-api was evaluated and rejected (AGPL violation, DMCA history)
 
 ## Phase 1: Foundation
@@ -30,8 +30,8 @@ Core infrastructure that unblocks everything else.
 - [x] Expired sessions are purged at login; deleting a user removes their sessions
 
 ### Proto Update
-- [x] Both repos use the same `hbb_common` submodule — protos already match
-- **Note:** Upstream `hbb_common` has newer commits (WebRTC, ICE, security fixes) — bump submodule when a feature needs them
+- [x] rustdesk-server's `hbb_common` bumped from `2985cd8` to the client's `69cea8d` (2026-10-03), which adds `ControlledContext` for audit attribution; no server behaviour change
+- **Note:** bump both repos together when a feature needs newer upstream commits
 
 ### Fix Known Auth Bugs
 - [x] JWT `aud` must be string (not array) — fixed with custom `deserialize_aud`
@@ -62,6 +62,7 @@ Make authentication fast and auditable.
 - [ ] Eliminates hbbs's HTTP call to the api-server per connection
 - **Depends on:** Persistent Sessions
 - **Trade-off:** hbbs can no longer see a revoked session until its JWT expires; keep JWT lifetimes short
+- **Conflict:** the same call now mints the stored audit reference (`/api/audit/ref`); removing it needs a self-contained signed reference instead (audit spec §13)
 
 ### Audit Logging
 Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdesk-api/blob/main/docs/audit-api-spec.md)
@@ -76,6 +77,8 @@ Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdes
 - [ ] CSV export of the audit log
 - [ ] Log retention (purge after N days)
 - [ ] Console (admin action) logging
+- [ ] Reject audit records from unregistered devices (spec §12.1); bind audit references to the target device
+- [ ] hbbs raw-TCP proxy for api-server calls (spec §2.2; only with `USE_RAW_TCP_FOR_API=Y` or api-server errors)
 - [x] End a device's open rows whose `close` record was lost (e.g. the Linux client restarting `--server` right after the last connection closes), by diffing against heartbeat `conns`
 
 ### Trusted Client Address
@@ -137,7 +140,7 @@ Data loss prevention controls for regulated environments.
 
 ## Already Working
 
-- [x] **Login Enforcement** — `LOGGED_IN_ONLY=Y` rejects unauthenticated connections at punch hole (verified with Playwright)
+- [x] **Login Enforcement** — `LOGGED_IN_ONLY=Y` rejects unauthenticated connections at punch hole and relay requests (verified with Playwright and protocol-level e2e)
 - [x] **WebSocket Mode** — single-port on 443 via `/ws/id` and `/ws/relay`, was Pro-only, our fork enables it
 - [x] **Web Client** — Flutter web client restored from OSS, deployed via Helm with nginx; loads nothing from the internet
 - [x] **Helm Chart & K8s** — separate deployments for hbbs, hbbr, webclient, api-server, plus bundled PostgreSQL StatefulSet; published to `oci://ghcr.io/crabamole/charts/rustdesk`

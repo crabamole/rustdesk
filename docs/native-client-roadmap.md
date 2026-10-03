@@ -57,7 +57,7 @@ Two builds per platform, differing only in their signed `custom.txt`:
 ### Viewer Identity in Audit Records
 - [ ] The viewer reports its hostname and local addresses; the host includes them in its `authorized` audit record
 - Device-reported values: trustworthy only on managed devices running attested builds
-- **Today:** the server-side address (resolved through trusted proxies) and the viewer's name (`display-name`, logged-in user or OS user)
+- **Today:** the server-side address (resolved through trusted proxies), the viewer's name (`display-name`, logged-in user or OS user) and, for logged-in viewers, their account (via hbbs's audit reference, stock clients)
 
 ### Native Login with PKCE
 - [ ] Native clients log in with the authorization code flow, PKCE and a loopback redirect (RFC 8252)
