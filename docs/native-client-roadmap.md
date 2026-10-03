@@ -1,6 +1,6 @@
 # Native Client Build Roadmap
 
-**Updated:** 2026-10-03
+**Updated:** 2026-10-04
 
 Stock RustDesk clients work with our server stack, but some features need a client built from this fork. This roadmap tracks what shipping our own Windows, macOS and Linux builds requires, and the features waiting on it.
 
@@ -10,13 +10,16 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 
 - [x] Windows x64: unsigned MSI, verified on a Windows 10 VM (install, device ID kept, web client session, our `custom.txt` applied, one signed with another key ignored)
 - [ ] Linux `.deb`
-- [ ] macOS
+- [x] macOS arm64: signed, notarized `cRustDesk`/`cRustDeskClient` app bundles, manual workflow `.github/workflows/macos-build.yml`
+- [ ] macOS x86_64
 - [ ] CI speed: vcpkg cache not effective (12–15 min per run); pinned actions still on Node 20
 - [x] `custom.txt` signing key is a required build parameter (`RUSTDESK_CUSTOM_CLIENT_PK`, base64 Ed25519 public key); builds fail without it and never trust RustDesk's key. Sign with `rustdesk-utils signcustom` (rustdesk-server)
-- [ ] macOS: Apple Developer ID signing and notarization (Gatekeeper); Developer Program enrolled, activation pending
+- [x] macOS: Apple Developer ID signing and notarization (Gatekeeper)
 - [ ] Windows: code-signing certificate (SmartScreen); deferred, candidates Certum (about €49/yr) or SignPath (free for open source)
 - [ ] Release process: versioning, publishing, tracking upstream releases
 - [ ] Pre-seed guides updated for our packages (`linux-preseed-install.md`, `macos-preseed-install.md`)
+- [ ] macOS: optional `hide-stop-service` lock for the `cRustDesk` (DC) build, so the service can't be stopped from its UI; pending decision
+- [ ] Windows: once a custom build is configured and auto-update is on, the updater still queries the update server for new versions
 
 Linux needs no signing, so a Linux-only build is the cheapest way to prove the features below.
 
@@ -24,12 +27,15 @@ Linux needs no signing, so a Linux-only build is the cheapest way to prove the f
 
 Two builds per platform, differing only in their signed `custom.txt`:
 
-| Build | `custom.txt` | Installed on |
-|---|---|---|
-| `crabamole-rustdesk-service` | `conn-type: incoming`, `disable-unlock-pin`, one-way clipboard | managed devices that are controlled (MDM) |
-| `crabamole-rustdesk-client` | `conn-type: outgoing`, `app-name: RustDesk Client` | viewer machines (internal app store) |
+| Build | App name | Bundle ID | `custom.txt` source | Installed on |
+|---|---|---|---|---|
+| DC (service) | `cRustDesk` | `io.github.crabamole.rustdesk` | [`res/custom/rustdesk.json`](../res/custom/rustdesk.json) | managed devices that are controlled (MDM) |
+| OA (client) | `cRustDeskClient` | `io.github.crabamole.rustdesk-client` | [`res/custom/client.json`](../res/custom/client.json) | viewer machines (internal app store) |
 
-- macOS: two signed app bundles; Windows: two MSIs (`preprocess.py --custom --conn-type --app-name`)
+- OA (`cRustDeskClient`) is client-only (`conn-type: outgoing`): it never registers with hbbs or sends a heartbeat, so it cannot be controlled.
+- DC (`cRustDesk`) works in both directions (it can be controlled and can control); its data-out locks (one-way clipboard, disabled file transfer/printer/recording/tunnel/remote-restart/camera/terminal) live in `res/custom/rustdesk.json`.
+- Neither build has a public-server fallback: without a configured server, an install just waits — `rustdesk --config <string>` is required before it runs its usual background services.
+- macOS: two signed, notarized app bundles (arm64); Windows: two MSIs (`preprocess.py --custom --conn-type --app-name`)
 - Server addresses and key: `rustdesk --config <string>` after install, so one public build serves every deployment
 - [ ] Windows distribution through an internal Chocolatey feed
 - [ ] Keep system info sync in the outgoing-only build: `start_all()` exits before it, so viewer machines never report a hostname and are missing from the device list
