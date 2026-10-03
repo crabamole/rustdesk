@@ -294,6 +294,9 @@ impl Client {
         if other_server.is_empty() && !crate::is_server_configured() {
             bail!("server_not_configured_tip");
         }
+        if other_server == PUBLIC_SERVER {
+            bail!("Public server is not allowed");
+        }
         let (rendezvous_server, servers, contained) = if other_server.is_empty() {
             crate::get_rendezvous_server(1_000).await
         } else {
