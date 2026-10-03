@@ -545,7 +545,8 @@ export default class Connection {
           name = "audio";
           break;
         default:
-          return;
+          // Not shown on web; returning falsy would end the message loop.
+          return true;
       }
       globals.pushEvent("permission", { [name]: p.enabled });
     } else if (misc.switch_display) {

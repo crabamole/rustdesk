@@ -555,9 +555,13 @@ describe("Connection", () => {
       expect(globals.pushEvent).toHaveBeenCalledWith("permission", { audio: false });
     });
 
-    it("returns undefined for unknown permission", () => {
-      const result = conn.handleMisc({ permission_info: { permission: 99, enabled: true } } as any);
-      expect(result).toBeUndefined();
+    it("keeps the session running for permissions it does not show", () => {
+      // File (4), Restart (5), Recording (6): hosts report them disabled at login.
+      for (const permission of [4, 5, 6, 99]) {
+        const result = conn.handleMisc({ permission_info: { permission, enabled: false } } as any);
+        expect(result).toBe(true);
+      }
+      expect(globals.pushEvent).not.toHaveBeenCalled();
     });
 
     it("handles switch_display", () => {
