@@ -7,7 +7,8 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # A new dispatch must not kill a run in the middle of notarization.
+  cancel-in-progress: false
 
 env:
   MAC_RUST_VERSION: "1.81"
@@ -63,6 +64,7 @@ jobs:
         with:
           p12-file-base64: ${{ secrets.MACOS_P12_BASE64 }}
           p12-password: ${{ secrets.MACOS_P12_PASSWORD }}
+          keychain-password: ${{ secrets.MACOS_P12_PASSWORD }}
           keychain: rustdesk
 
       - name: Check sign and import sign key
@@ -190,7 +192,7 @@ jobs:
           security unlock-keychain -p "$MACOS_P12_PASSWORD" rustdesk.keychain
           for name in cRustDesk cRustDeskClient; do
             dmg="$name-$VERSION-aarch64.dmg"
-            codesign --force --options runtime --timestamp -s "$MACOS_CODESIGN_IDENTITY" --deep --strict "dist/$name.app" -vvv
+            bash .github/scripts/sign-macos-app.sh "dist/$name.app" "$MACOS_CODESIGN_IDENTITY" flutter/macos/Runner/Release.entitlements
             create-dmg --icon "$name.app" 200 190 --hide-extension "$name.app" --window-size 800 400 --app-drop-link 600 185 "$dmg" "dist/$name.app"
             codesign --force --options runtime --timestamp -s "$MACOS_CODESIGN_IDENTITY" --deep --strict "$dmg" -vvv
             rcodesign notary-submit --api-key-path "$NOTARIZE_KEY" --staple "$dmg"
@@ -208,6 +210,9 @@ jobs:
             hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$dmg"
             local app="$mnt/$name.app"
             codesign --verify --deep --strict --verbose=2 "$app"
+            local ents
+            ents=$(codesign -d --entitlements :- "$app" 2>/dev/null)
+            test "$(plutil -extract 'com\.apple\.security\.device\.audio-input' raw - <<<"$ents")" = true
             spctl --assess --type execute -vv "$app" 2>&1 | tee "$RUNNER_TEMP/spctl-$name.txt"
             grep -q 'source=Notarized Developer ID' "$RUNNER_TEMP/spctl-$name.txt"
             test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Contents/Info.plist")" = "$bundle_id"
