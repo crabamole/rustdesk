@@ -778,5 +778,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("software_rendering_tip", ""),
         ("video_render_error_tip", ""),
         ("server_not_configured_tip", "Server pole seadistatud. Võtke ühendust oma administraatoriga."),
+        ("Public server is not allowed", "Avalik server pole lubatud"),
     ].iter().cloned().collect();
 }

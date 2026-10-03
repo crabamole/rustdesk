@@ -778,5 +778,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("software_rendering_tip", ""),
         ("video_render_error_tip", ""),
         ("server_not_configured_tip", "未配置服务器。请联系管理员。"),
+        ("Public server is not allowed", "不允许使用公共服务器"),
     ].iter().cloned().collect();
 }

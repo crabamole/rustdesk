@@ -778,5 +778,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("software_rendering_tip", ""),
         ("video_render_error_tip", ""),
         ("server_not_configured_tip", "Zerbitzaria ez dago konfiguratuta. Jarri harremanetan administratzailearekin."),
+        ("Public server is not allowed", "Zerbitzari publikoa ez dago baimenduta"),
     ].iter().cloned().collect();
 }
