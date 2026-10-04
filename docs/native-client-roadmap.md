@@ -22,7 +22,7 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 
 Linux needs no signing, so a Linux-only build is the cheapest way to prove the features below.
 
-### macOS naming and packaging (done, 2026-10-04)
+### macOS naming and packaging (2026-10-04)
 
 - [x] One app name, `cRustDesk`, for both variants; the client-only variant differs only in its signed `custom.txt`. Installing one replaces the other, so a machine never holds both
 - [x] Our own prefix instead of upstream's `com.carriez`, set at runtime (`ORG`), following stock's pattern (bundle ID lowercase, folder and labels in the app name's case):
@@ -34,7 +34,7 @@ Linux needs no signing, so a Linux-only build is the cheapest way to prove the f
   | launchd labels | `com.carriez.RustDesk_service` / `_server` | `io.github.crabamole.cRustDesk_service` / `_server` |
 
 - [x] Publish a signed, notarized and stapled `.app` (zip) instead of a DMG. Organisations wrap it in their own `.pkg`/`.dmg` (e.g. for Jamf) and add their server config there
-- [x] Deep links use `rustdesk://` (upstream derives `<appname>://` from the app name), including the Windows registry keys for the URL protocol
+- [x] Deep links use `rustdesk://` (upstream derives `<appname>://` from the app name), including the Windows registry keys for the URL protocol (Windows part untested until the Windows build)
 - [x] `hide-stop-service` in the DC build, so the service can't be stopped from its UI
 - [x] Change ID needs a configured server; an unconfigured install would otherwise contact the public server
 - [x] Pre-seeded config verified on macOS: config staged in the user and root folders before install, registers without `--option` steps
@@ -53,9 +53,9 @@ Two builds per platform, named `cRustDesk` (bundle ID `io.github.crabamole.crust
 - Public builds carry no deployment data; organisations package them and supply server config (pre-seeded config or `--config`)
 - OA (client variant) is client-only (`conn-type: outgoing`): it never registers with hbbs or sends a heartbeat, so it cannot be controlled.
 - DC (service variant) works in both directions (it can be controlled and can control); its data-out locks (one-way clipboard, disabled file transfer/printer/recording/tunnel/remote-restart/camera/terminal) live in `res/custom/rustdesk.json`.
-- No build of this fork has a public-server fallback: without a configured server, an install just waits — `rustdesk --config <string>` is required before it runs its usual background services.
+- No build of this fork has a public-server fallback: without a configured server, an install just waits until it gets a server config (pre-seeded config, or `cRustDesk --config <string>`) before it runs its usual background services.
 - macOS: two signed, notarized, stapled `cRustDesk` app bundles (arm64), shipped as a zip; Windows: two MSIs planned (`preprocess.py --custom --conn-type --app-name`)
-- Server addresses and key: `rustdesk --config <string>` after install, so one public build serves every deployment
+- Server addresses and key: a pre-seeded config (verified on macOS) or `cRustDesk --config <string>` after install (upstream's documented method, not yet tested on our builds), so one public build serves every deployment
 - [ ] Windows distribution through an internal Chocolatey feed
 - [ ] Keep system info sync in the outgoing-only build: `start_all()` exits before it, so viewer machines never report a hostname and are missing from the device list
 
