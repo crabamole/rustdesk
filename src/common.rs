@@ -1012,14 +1012,15 @@ pub fn is_rustdesk() -> bool {
     hbb_common::config::APP_NAME.read().unwrap().eq("RustDesk")
 }
 
-/// Rewrite a template's app-name tokens, then the bundle id, without the name
+/// Rewrite a template's org prefix and app-name tokens, then the bundle id, without the name
 /// pass corrupting a bundle id that itself contains "rustdesk" (macOS plists).
-pub fn correct_app_name_str(s: &str, app_name: &str, bundle_id: Option<&str>) -> String {
+pub fn correct_app_name_str(s: &str, app_name: &str, org: &str, bundle_id: Option<&str>) -> String {
     const BUNDLE_ID_PLACEHOLDER: &str = "@@CRABAMOLE_BUNDLE_ID@@";
     let mut s = s.to_owned();
     if bundle_id.is_some() {
         s = s.replace("com.carriez.rustdesk", BUNDLE_ID_PLACEHOLDER);
     }
+    s = s.replace("com.carriez.", &format!("{}.", org));
     s = s.replace("rustdesk", &app_name.to_lowercase());
     s = s.replace("RustDesk", app_name);
     if let Some(bundle_id) = bundle_id {
@@ -1030,7 +1031,8 @@ pub fn correct_app_name_str(s: &str, app_name: &str, bundle_id: Option<&str>) ->
 
 #[inline]
 pub fn get_uri_prefix() -> String {
-    format!("{}://", get_app_name().to_lowercase())
+    // Fixed so existing rustdesk:// links keep working whatever the app name.
+    "rustdesk://".to_owned()
 }
 
 #[cfg(target_os = "macos")]
@@ -2301,6 +2303,12 @@ pub fn read_custom_client(config: &str) {
     if let Some(app_name) = data.remove("app-name") {
         if let Some(app_name) = app_name.as_str() {
             *config::APP_NAME.write().unwrap() = app_name.to_owned();
+            // Keeps our config folder and launchd labels apart from stock RustDesk's.
+            #[cfg(target_os = "macos")]
+            {
+                const CUSTOM_CLIENT_ORG: &str = "io.github.crabamole";
+                *config::ORG.write().unwrap() = CUSTOM_CLIENT_ORG.to_owned();
+            }
         }
     }
 
@@ -2768,32 +2776,44 @@ mod tests {
 
     #[test]
     fn correct_app_name_str_stock_is_unchanged() {
-        let input = "<string>com.carriez.rustdesk</string><string>RustDesk</string><string>rustdesk</string>";
-        let out = correct_app_name_str(input, "RustDesk", Some("com.carriez.rustdesk"));
+        let input = "<string>com.carriez.RustDesk_service</string><string>com.carriez.rustdesk</string><string>/Library/Preferences/com.carriez.RustDesk/</string><string>rustdesk</string>";
+        let out = correct_app_name_str(
+            input,
+            "RustDesk",
+            "com.carriez",
+            Some("com.carriez.rustdesk"),
+        );
         assert_eq!(out, input);
     }
 
     #[test]
     fn correct_app_name_str_renamed_app_keeps_bundle_id() {
-        let input = "<string>com.carriez.rustdesk</string><string>RustDesk</string><string>rustdesk</string>";
-        let out = correct_app_name_str(input, "cRustDesk", Some("io.github.crabamole.rustdesk"));
+        let input = "<string>com.carriez.RustDesk_service</string><string>com.carriez.rustdesk</string><string>rustdesk</string>";
+        let out = correct_app_name_str(
+            input,
+            "cRustDesk",
+            "io.github.crabamole",
+            Some("io.github.crabamole.crustdesk"),
+        );
         assert_eq!(
             out,
-            "<string>io.github.crabamole.rustdesk</string><string>cRustDesk</string><string>crustdesk</string>"
+            "<string>io.github.crabamole.cRustDesk_service</string><string>io.github.crabamole.crustdesk</string><string>crustdesk</string>"
         );
     }
 
     #[test]
-    fn correct_app_name_str_client_variant_keeps_hyphenated_bundle_id() {
-        let input = "<string>com.carriez.rustdesk</string><string>RustDesk</string><string>rustdesk</string>";
+    fn correct_app_name_str_renamed_app_moves_prefs_path_to_org() {
+        let input =
+            r#"set prefs_dir to "/Users/" & user & "/Library/Preferences/com.carriez.RustDesk/""#;
         let out = correct_app_name_str(
             input,
-            "cRustDeskClient",
-            Some("io.github.crabamole.rustdesk-client"),
+            "cRustDesk",
+            "io.github.crabamole",
+            Some("io.github.crabamole.crustdesk"),
         );
         assert_eq!(
             out,
-            "<string>io.github.crabamole.rustdesk-client</string><string>cRustDeskClient</string><string>crustdeskclient</string>"
+            r#"set prefs_dir to "/Users/" & user & "/Library/Preferences/io.github.crabamole.cRustDesk/""#
         );
     }
 
