@@ -779,5 +779,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("video_render_error_tip", ""),
         ("server_not_configured_tip", "Servern är inte konfigurerad. Kontakta din administratör."),
         ("Public server is not allowed", "Offentlig server är inte tillåten"),
+        ("stock_rustdesk_installed_tip", ""),
     ].iter().cloned().collect();
 }

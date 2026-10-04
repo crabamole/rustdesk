@@ -779,5 +779,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("video_render_error_tip", ""),
         ("server_not_configured_tip", "Máy chủ chưa được cấu hình. Hãy liên hệ với quản trị viên."),
         ("Public server is not allowed", "Không cho phép máy chủ công cộng"),
+        ("stock_rustdesk_installed_tip", ""),
     ].iter().cloned().collect();
 }

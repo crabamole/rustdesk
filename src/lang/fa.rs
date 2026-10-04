@@ -779,5 +779,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("video_render_error_tip", ""),
         ("server_not_configured_tip", "سرور پیکربندی نشده است. با مدیر سیستم تماس بگیرید."),
         ("Public server is not allowed", "سرور عمومی مجاز نیست"),
+        ("stock_rustdesk_installed_tip", ""),
     ].iter().cloned().collect();
 }

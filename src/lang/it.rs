@@ -779,5 +779,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("video_render_error_tip", ""),
         ("server_not_configured_tip", "Server non configurato. Contatta l'amministratore."),
         ("Public server is not allowed", "Il server pubblico non è consentito"),
+        ("stock_rustdesk_installed_tip", "RustDesk standard è installato. Disinstallalo prima."),
     ].iter().cloned().collect();
 }

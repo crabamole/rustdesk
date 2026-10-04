@@ -160,6 +160,8 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
           ? translate("Service is not running")
           : stateGlobal.svcStatus.value == SvcStatus.notConfigured
               ? translate('server_not_configured_tip')
+              : stateGlobal.svcStatus.value == SvcStatus.stockInstalled
+              ? translate('stock_rustdesk_installed_tip')
               : stateGlobal.svcStatus.value == SvcStatus.connecting
               ? translate("connecting_status")
               : stateGlobal.svcStatus.value == SvcStatus.notReady
@@ -181,6 +183,8 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
       stateGlobal.svcStatus.value = SvcStatus.ready;
     } else if (statusNum == -2) {
       stateGlobal.svcStatus.value = SvcStatus.notConfigured;
+    } else if (statusNum == -3) {
+      stateGlobal.svcStatus.value = SvcStatus.stockInstalled;
     } else {
       stateGlobal.svcStatus.value = SvcStatus.notReady;
     }

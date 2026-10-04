@@ -182,7 +182,15 @@ impl RendezvousMediator {
                         SHOULD_EXIT.store(true, Ordering::SeqCst);
                     }));
                 }
+                // Stock appearing while registered must end the connections too.
+                let stock_watch = tokio::spawn(async {
+                    while !crate::stock_guard::stock_rustdesk_present() {
+                        sleep(1.).await;
+                    }
+                    SHOULD_EXIT.store(true, Ordering::SeqCst);
+                });
                 join_all(futs).await;
+                stock_watch.abort();
             } else {
                 server.write().unwrap().close_connections();
             }
@@ -838,12 +846,17 @@ impl RendezvousMediator {
 
 // Unconfigured, upstream would fall back to the public rustdesk.com servers.
 async fn wait_for_server_config() {
-    if crate::is_server_configured() {
-        return;
+    if !crate::is_server_configured() {
+        log::warn!("No server configured, waiting before connecting anywhere");
+        while !crate::is_server_configured() {
+            sleep(1.).await;
+        }
     }
-    log::warn!("No server configured, waiting before connecting anywhere");
-    while !crate::is_server_configured() {
-        sleep(1.).await;
+    if crate::stock_guard::stock_rustdesk_present() {
+        log::warn!("Stock RustDesk is installed, waiting until it is removed");
+        while crate::stock_guard::stock_rustdesk_present() {
+            sleep(1.).await;
+        }
     }
 }
 

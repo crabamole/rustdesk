@@ -593,6 +593,9 @@ pub fn get_connect_status() -> UiStatus {
     if !crate::is_server_configured() {
         status.status_num = -2;
     }
+    if crate::stock_guard::stock_rustdesk_present() {
+        status.status_num = -3;
+    }
     status
 }
 

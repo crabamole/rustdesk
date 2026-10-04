@@ -779,5 +779,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("video_render_error_tip", ""),
         ("server_not_configured_tip", "Server nije podešen. Obratite se administratoru."),
         ("Public server is not allowed", "Javni server nije dozvoljen"),
+        ("stock_rustdesk_installed_tip", ""),
     ].iter().cloned().collect();
 }
