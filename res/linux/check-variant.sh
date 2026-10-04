@@ -37,5 +37,8 @@ done
 
 [ -z "$(find . -name '*rustdesk*' ! -name '*crustdesk*' ! -name librustdesk.so)" ] || fail "unrenamed paths: $(find . -name '*rustdesk*' ! -name '*crustdesk*' ! -name librustdesk.so | tr '\n' ' ')"
 
+[ "$(find . -type f ! -path './DEBIAN/*' -printf '/%P\n' | sort)" = "$(awk '{print substr($0, 35)}' DEBIAN/md5sums | sort)" ] || fail "DEBIAN/md5sums does not list exactly the payload files"
+sed 's|  /|  |' DEBIAN/md5sums | md5sum --quiet -c - >&2 || fail "DEBIAN/md5sums does not match the files"
+
 [ $rc -eq 0 ] && echo "PASS: $deb"
 exit $rc

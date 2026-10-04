@@ -26,5 +26,7 @@ sed -i '/^Package:/a Conflicts: rustdesk, rustdesk-unattended-wayland' DEBIAN/co
 # Display names only; the link scheme stays rustdesk.
 sed -i 's/^Name=RustDesk$/Name=cRustDesk/' usr/share/applications/crustdesk*.desktop
 sed -i 's/^Description=RustDesk$/Description=cRustDesk/' usr/share/crustdesk/files/systemd/crustdesk.service
+# Upstream lists absolute paths; the edits above changed file contents, so the sums are regenerated.
+find . -type f ! -path './DEBIAN/*' -printf '%P\0' | sort -z | xargs -0 md5sum | sed 's|  |  /|' > DEBIAN/md5sums
 cd - >/dev/null
 dpkg-deb --root-owner-group -b "$work/pkg" "$out"
