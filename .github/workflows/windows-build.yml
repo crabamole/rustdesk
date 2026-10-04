@@ -154,28 +154,6 @@ jobs:
           Remove-Item -Path "usbmmidd_v2\deviceinstaller64.exe", "usbmmidd_v2\deviceinstaller.exe", "usbmmidd_v2\usbmmidd.bat"
           mv -Force .\usbmmidd_v2 ./rustdesk
 
-          # Printer driver, prebuilt by RustDesk; optional
-          try {
-            Invoke-WebRequest -Uri https://github.com/rustdesk/hbb_common/releases/download/driver/rustdesk_printer_driver_v4-1.4.zip -OutFile rustdesk_printer_driver_v4-1.4.zip
-            Invoke-WebRequest -Uri https://github.com/rustdesk/hbb_common/releases/download/driver/printer_driver_adapter.zip -OutFile printer_driver_adapter.zip
-            Invoke-WebRequest -Uri https://github.com/rustdesk/hbb_common/releases/download/driver/sha256sums -OutFile sha256sums
-            $checksum_driver = (Select-String -Path .\sha256sums -Pattern '^([a-fA-F0-9]{64}) \*rustdesk_printer_driver_v4-1.4\.zip$').Matches.Groups[1].Value
-            $downloadsum_driver = Get-FileHash -Path rustdesk_printer_driver_v4-1.4.zip -Algorithm SHA256
-            $checksum_adapter = (Select-String -Path .\sha256sums -Pattern '^([a-fA-F0-9]{64}) \*printer_driver_adapter\.zip$').Matches.Groups[1].Value
-            $downloadsum_adapter = Get-FileHash -Path printer_driver_adapter.zip -Algorithm SHA256
-            if ($checksum_driver -eq $downloadsum_driver.Hash -and $checksum_adapter -eq $downloadsum_adapter.Hash) {
-                Expand-Archive rustdesk_printer_driver_v4-1.4.zip -DestinationPath .
-                mkdir ./rustdesk/drivers
-                mv -Force .\rustdesk_printer_driver_v4-1.4 ./rustdesk/drivers/RustDeskPrinterDriver
-                Expand-Archive printer_driver_adapter.zip -DestinationPath .
-                mv -Force .\printer_driver_adapter.dll ./rustdesk
-            } else {
-                Write-Output "Printer driver checksums do not match, skipping it."
-            }
-          } catch {
-              Write-Host "Skipping the printer driver: $_"
-          }
-
       - name: Download RustDeskTempTopMostWindow artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
@@ -259,6 +237,7 @@ jobs:
             if ($vi.CompanyName -ne 'crabamole' -or $vi.ProductName -ne 'cRustDesk' -or $vi.OriginalFilename -ne 'rustdesk.exe') {
               throw "unexpected version info: $($vi.CompanyName) / $($vi.ProductName) / $($vi.OriginalFilename)"
             }
+            if ((Get-ChildItem $target -Recurse -Filter printer_driver_adapter.dll) -or (Get-ChildItem $target -Recurse -Directory -Filter RustDeskPrinterDriver)) { throw "printer files shipped in $msi" }
             Write-Output "OK $msi"
           }
           Check (Resolve-Path SignOutput/cRustDesk-${{ env.VERSION }}-x86_64.msi).Path (Resolve-Path res/custom/rustdesk.txt).Path
