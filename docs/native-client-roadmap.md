@@ -1,6 +1,6 @@
 # Native Client Build Roadmap
 
-**Updated:** 2026-10-04
+**Updated:** 2026-10-05
 
 Stock RustDesk clients work with our server stack, but some features need a client built from this fork. This roadmap tracks what shipping our own Windows, macOS and Linux builds requires, and the features waiting on it.
 
@@ -20,9 +20,7 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 - [ ] Pre-seed guides updated for our packages (`linux-preseed-install.md`, `macos-preseed-install.md`)
 - [ ] Windows: once a custom build is configured and auto-update is on, the updater still queries the update server for new versions
 
-Linux needs no signing, so a Linux-only build is the cheapest way to prove the features below.
-
-### macOS naming and packaging (2026-10-04)
+### Naming and packaging (2026-10-04)
 
 - [x] One app name, `cRustDesk`, for both variants; the client-only variant differs only in its signed `custom.txt`. Installing one replaces the other, so a machine never holds both
 - [x] Our own prefix instead of upstream's `com.carriez`, set at runtime (`ORG`), following stock's pattern (bundle ID lowercase, folder and labels in the app name's case):
@@ -39,8 +37,8 @@ Linux needs no signing, so a Linux-only build is the cheapest way to prove the f
 - [x] Change ID needs a configured server; an unconfigured install would otherwise contact the public server
 - [x] Pre-seeded config verified on macOS: config staged in the user and root folders before install, registers without `--option` steps
 - [x] The Windows MSI registers `rustdesk://` too
-- [ ] Uninstalling stock RustDesk's MSI removes the shared `rustdesk://` handler even when cRustDesk stays installed; cRustDesk needs a repair or reinstall to get its links back
 - [x] Remote printer removed from our Windows builds: the MSIs ship without upstream's prebuilt printer adapter and driver (the closed adapter exits the process when initialised under a renamed app name), and both variants hide the printer settings
+- [ ] The Linux client `.deb` still installs and starts the service like the device variant (it never registers, but a client-only package should not run a service)
 
 ## Deployment Model
 
@@ -59,18 +57,22 @@ Two builds per platform, named `cRustDesk` (bundle ID `io.github.crabamole.crust
 - macOS: two signed, notarized, stapled `cRustDesk` app bundles (arm64), shipped as a zip; Windows: two unsigned MSIs (`preprocess.py --custom --conn-type --app-name`); Linux: two `.deb` packages (Ubuntu x86_64, X11)
 - Server addresses and key: a pre-seeded config (verified on macOS, Windows under the LocalService profile, and Linux for root and the session user) or `cRustDesk --config <string>` after install (upstream's documented method), so one public build serves every deployment
 - [ ] Windows distribution through an internal Chocolatey feed
-- [ ] The Linux client `.deb` still installs and starts the service like the device variant (it never registers, but a client-only package should not run a service)
-- [ ] Direct IP access (`direct_server`) is not paused by the runtime guard; our DC build locks direct access off, so only builds that enable it are affected
 - [ ] Keep system info sync in the outgoing-only build: `start_all()` exits before it, so viewer machines never report a hostname and are missing from the device list
+
+### One RustDesk per machine
+
+- [x] Guard against stock RustDesk on every platform: installer guards (Linux `Conflicts:`, Windows MSI launch condition that refuses while stock's service exists) plus a runtime guard: while stock is installed the service stays idle (no registration, no heartbeats, open sessions closed) and resumes within seconds once stock is removed
+- [ ] Direct IP access (`direct_server`) is not paused by the runtime guard; our DC build locks direct access off, so only builds that enable it are affected
+- [ ] Uninstalling stock RustDesk's MSI removes the shared `rustdesk://` handler even when cRustDesk stays installed; cRustDesk needs a repair or reinstall to get its links back
 
 ## Testing
 
 - [x] macOS: e2e spec for the custom builds (locks, direct IP off, one-way clipboard, audit, refused session types, outgoing-only client) against the DC install
 - [x] Windows and Linux builds of both variants: Windows as unsigned MSIs (CompanyName `crabamole`, `OriginalFilename`/`InternalName` unchanged as `rustdesk.exe`/`rustdesk`); Linux as a `.deb` (Ubuntu, x86_64, X11 only) renamed to `crustdesk`
 - [x] Install/uninstall scripts per platform, with pre-seeded config (in the test suite)
-- [x] Guard against stock RustDesk on every platform: installer guards (Linux `Conflicts:`, Windows MSI launch condition that refuses while stock's service exists) plus a runtime guard: while stock is installed the service stays idle (no registration, no heartbeats, open sessions closed) and resumes within seconds once stock is removed
 - [x] Test machines moved from stock RustDesk to `cRustDesk`, resting in the DC variant as devices; `npm test` runs the existing specs (web client, policy, audit, clipboard) against them instead of hard-coded stock peer IDs
-- [x] Combinatorial e2e runs as a separate, longer command (guard checks likewise): each platform once as client and once as device, with a clean uninstall between runs:
+- [x] Guard checks (installer and runtime, on every platform) run with the matrix command
+- [x] Combinatorial e2e runs as a separate, longer command: each platform once as client and once as device, with a clean uninstall between runs:
 
   | Client | Device |
   |---|---|
@@ -81,15 +83,14 @@ Two builds per platform, named `cRustDesk` (bundle ID `io.github.crabamole.crust
 ## Features Waiting on Our Builds
 
 ### One-Way Clipboard
-- [ ] Hosts never send their clipboard to viewers; viewers can still paste into hosts
+- [x] Hosts never send their clipboard to viewers; viewers can still paste into hosts. The DC build sets it in its signed `custom.txt`; verified with the web client and with native clients on macOS, Windows and Linux
 - `one-way-clipboard-redirection` is a built-in setting: only a signed `custom.txt` (under `override-settings`) or a compile-time default sets it. `RustDesk2.toml` and strategy push are ignored
-- **Today:** turn clipboard off entirely (`enable-clipboard=N`, pushable by policy)
+- Stock clients: turn clipboard off entirely (`enable-clipboard=N`, pushable by policy)
 - Design: [design-clipboard-direction.md](design-clipboard-direction.md)
 
 ### Locked Settings
-- [ ] Security settings that local admins cannot change
-- Needs our `custom.txt` signing key (`override-settings`) or compile-time defaults
-- **Today:** file permissions, `chattr +i`, MDM; strategy push re-applies policy options when the policy changes
+- [x] Security settings that local admins cannot change: the DC build locks them in its signed `custom.txt` (`override-settings`), verified on macOS by the e2e suite (same `custom.txt` on every platform)
+- Stock clients: file permissions, `chattr +i`, MDM; strategy push re-applies policy options when the policy changes
 - Design: [design-config-enforcement.md](design-config-enforcement.md)
 
 ### Client Attestation
