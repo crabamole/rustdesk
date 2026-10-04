@@ -19,6 +19,7 @@
     "hide-websocket-settings": "Y",
     "hide-proxy-settings": "Y",
     "hide-stop-service": "Y",
-    "hide-remote-printer-settings": "Y"
+    "hide-remote-printer-settings": "Y",
+    "allow-auto-update": "N"
   }
 }
