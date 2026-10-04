@@ -18,6 +18,7 @@
     "hide-server-settings": "Y",
     "hide-websocket-settings": "Y",
     "hide-proxy-settings": "Y",
-    "hide-stop-service": "Y"
+    "hide-stop-service": "Y",
+    "hide-remote-printer-settings": "Y"
   }
 }
