@@ -12,6 +12,14 @@
 
 		<PropertyRef Id="AddRemovePropertiesFile" />
 
+		<?if $(var.Product) != "RustDesk" ?>
+		<!-- Renamed builds must not run next to the stock service. -->
+		<Property Id="STOCK_RUSTDESK_SERVICE">
+			<RegistrySearch Id="StockRustDeskService" Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\RustDesk" Name="ImagePath" Type="raw" />
+		</Property>
+		<Launch Condition="Installed OR NOT STOCK_RUSTDESK_SERVICE" Message="RustDesk is installed. Uninstall it first." />
+		<?endif?>
+
 		<Media Id="1" Cabinet="cab1.cab" EmbedCab="yes" CompressionLevel="high" />
 		<Icon Id="AppIcon" SourceFile="Resources\icon.ico" />
 

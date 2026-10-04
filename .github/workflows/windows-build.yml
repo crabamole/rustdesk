@@ -1,5 +1,5 @@
 # Windows x64 client build, derived from build-for-windows-flutter in workflows-archive/flutter-build.yml.
-# Unsigned; uploads the app folder and the MSI as workflow artifacts.
+# Builds the cRustDesk device and client variants as MSIs, uploaded as workflow artifacts.
 name: Windows build
 
 on:
@@ -17,6 +17,8 @@ env:
   VCPKG_COMMIT_ID: "120deac3062162151622ca4860575a33844ba10b"
   VERSION: "1.4.9"
   RUSTDESK_CUSTOM_CLIENT_PK: ${{ vars.RUSTDESK_CUSTOM_CLIENT_PK }}
+  # Off until a code-signing certificate exists.
+  HAS_SIGNING_CERT: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 != '' }}
 
 jobs:
   check-signing-key:
@@ -29,6 +31,15 @@ jobs:
             echo "::error::RUSTDESK_CUSTOM_CLIENT_PK must be a base64 Ed25519 public key (32 bytes)"
             exit 1
           fi
+
+      - name: Checkout source code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Verify the custom.txt files against the key
+        # Fails before the long build if the committed custom.txt was signed with another key.
+        run: |
+          bash res/custom/verify.sh res/custom/rustdesk.txt res/custom/rustdesk.json "$RUSTDESK_CUSTOM_CLIENT_PK"
+          bash res/custom/verify.sh res/custom/client.txt res/custom/client.json "$RUSTDESK_CUSTOM_CLIENT_PK"
 
   generate-bridge:
     needs: [check-signing-key]
@@ -171,29 +182,94 @@ jobs:
           name: topmostwindow-artifacts-x64
           path: "./rustdesk"
 
-      - name: Upload app folder
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: rustdesk-unsigned-windows-x86_64
-          path: rustdesk
+      - name: Package the variants
+        # Both variants share the app name, so each gets its own folder.
+        run: |
+          pwsh res/windows/package-variant.ps1 -Src ./rustdesk -CustomTxt res/custom/rustdesk.txt -AppName cRustDesk -Out ./dist/dc
+          pwsh res/windows/package-variant.ps1 -Src ./rustdesk -CustomTxt res/custom/client.txt -AppName cRustDesk -Out ./dist/client
+
+      - name: Import the signing certificate
+        if: env.HAS_SIGNING_CERT == 'true'
+        run: |
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\codesign.pfx", [Convert]::FromBase64String($env:PFX_BASE64))
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName | Select-Object -Last 1
+          "SIGNTOOL=$($signtool.FullName)" >> $env:GITHUB_ENV
+        env:
+          PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
+
+      - name: Sign the app files
+        if: env.HAS_SIGNING_CERT == 'true'
+        run: |
+          $files = Get-ChildItem dist/*/cRustDesk.exe, dist/*/*.dll
+          & $env:SIGNTOOL sign /fd sha256 /tr http://timestamp.digicert.com /td sha256 /f "$env:RUNNER_TEMP\codesign.pfx" /p $env:PFX_PASSWORD $files.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        env:
+          PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PFX_PASSWORD }}
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
-      - name: Build msi
+      - name: Build the MSIs
         run: |
-          pushd ./res/msi
-          python preprocess.py --arp -d ../../rustdesk
-          nuget restore msi.sln
-          msbuild msi.sln -p:Configuration=Release -p:Platform=x64 /p:TargetVersion=Windows10
-          $msi = Get-ChildItem ./Package/bin/*/Release/en-us/Package.msi | Select-Object -First 1
-          mkdir ../../SignOutput
-          mv $msi.FullName ../../SignOutput/rustdesk-${{ env.VERSION }}-x86_64.msi
-          popd
-          sha256sum ./SignOutput/rustdesk-*.msi
+          mkdir SignOutput
+          $variants = @(
+            @{ Dist = 'dc'; Prefix = 'cRustDesk'; Extra = @() },
+            @{ Dist = 'client'; Prefix = 'cRustDesk-client'; Extra = @('--conn-type', 'outgoing') }
+          )
+          foreach ($v in $variants) {
+            pushd ./res/msi
+            git checkout -- .   # preprocess.py edits the WiX sources in place; start each variant clean
+            python preprocess.py --arp --custom --app-name cRustDesk -m crabamole @($v.Extra) -d ../../dist/$($v.Dist)
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            nuget restore msi.sln
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            msbuild msi.sln -p:Configuration=Release -p:Platform=x64 /p:TargetVersion=Windows10
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $msi = Get-ChildItem ./Package/bin/*/Release/en-us/Package.msi | Select-Object -First 1
+            mv $msi.FullName ../../SignOutput/$($v.Prefix)-${{ env.VERSION }}-x86_64.msi
+            popd
+          }
+          sha256sum ./SignOutput/*.msi
 
-      - name: Upload msi
+      - name: Sign the MSIs
+        if: env.HAS_SIGNING_CERT == 'true'
+        run: |
+          $files = Get-ChildItem SignOutput/*.msi
+          & $env:SIGNTOOL sign /fd sha256 /tr http://timestamp.digicert.com /td sha256 /f "$env:RUNNER_TEMP\codesign.pfx" /p $env:PFX_PASSWORD $files.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        env:
+          PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PFX_PASSWORD }}
+
+      - name: Verify the MSIs
+        run: |
+          function Check($msi, $custom) {
+            $target = Join-Path $env:RUNNER_TEMP ([IO.Path]::GetRandomFileName())
+            $p = Start-Process msiexec -ArgumentList '/a', "`"$msi`"", '/qn', "TARGETDIR=`"$target`"" -Wait -PassThru
+            if ($p.ExitCode -ne 0) { throw "msiexec failed for ${msi}: $($p.ExitCode)" }
+            $exe = Get-ChildItem $target -Recurse -Filter cRustDesk.exe | Select-Object -First 1
+            if (-not $exe) { throw "cRustDesk.exe missing in $msi" }
+            $dir = $exe.Directory
+            if ($dir.Name -ne 'cRustDesk') { throw "unexpected install folder $($dir.FullName)" }
+            if ((Get-FileHash (Join-Path $dir 'custom.txt')).Hash -ne (Get-FileHash $custom).Hash) { throw "custom.txt differs in $msi" }
+            $vi = $exe.VersionInfo
+            if ($vi.CompanyName -ne 'crabamole' -or $vi.ProductName -ne 'cRustDesk' -or $vi.OriginalFilename -ne 'rustdesk.exe') {
+              throw "unexpected version info: $($vi.CompanyName) / $($vi.ProductName) / $($vi.OriginalFilename)"
+            }
+            Write-Output "OK $msi"
+          }
+          Check (Resolve-Path SignOutput/cRustDesk-${{ env.VERSION }}-x86_64.msi).Path (Resolve-Path res/custom/rustdesk.txt).Path
+          Check (Resolve-Path SignOutput/cRustDesk-client-${{ env.VERSION }}-x86_64.msi).Path (Resolve-Path res/custom/client.txt).Path
+
+      - name: Upload cRustDesk msi
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: rustdesk-unsigned-windows-x86_64-msi
-          path: SignOutput/rustdesk-*.msi
+          name: cRustDesk-windows-x86_64-msi
+          path: SignOutput/cRustDesk-${{ env.VERSION }}-x86_64.msi
+          retention-days: 30
+
+      - name: Upload cRustDesk client msi
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cRustDesk-client-windows-x86_64-msi
+          path: SignOutput/cRustDesk-client-${{ env.VERSION }}-x86_64.msi
+          retention-days: 30
