@@ -1,5 +1,5 @@
-# macOS arm64 build of the cRustDesk and cRustDeskClient variants, derived from build-for-macOS
-# in workflows-archive/flutter-build.yml. Signed, notarized and stapled DMGs as workflow artifacts.
+# macOS arm64 build of the cRustDesk device and client variants, derived from build-for-macOS
+# in workflows-archive/flutter-build.yml. Signed, notarized and stapled apps zipped as workflow artifacts.
 name: macOS build
 
 on:
@@ -91,7 +91,7 @@ jobs:
 
       - name: Install build runtime
         run: |
-          brew install llvm create-dmg
+          brew install llvm
           # The runner image may already ship pkg-config.
           if command -v pkg-config &>/dev/null; then
               echo "pkg-config is already installed"
@@ -174,65 +174,67 @@ jobs:
           ./build.py --flutter --hwcodec --unix-file-copy-paste --screencapturekit
 
       - name: Package the variants
+        # Both variants share app name and bundle ID, so each gets its own output dir.
         run: |
           src=./flutter/build/macos/Build/Products/Release/RustDesk.app
-          bash res/macos/package-variant.sh "$src" res/custom/rustdesk.txt cRustDesk io.github.crabamole.rustdesk dist
-          bash res/macos/package-variant.sh "$src" res/custom/client.txt cRustDeskClient io.github.crabamole.rustdesk-client dist
+          bash res/macos/package-variant.sh "$src" res/custom/rustdesk.txt cRustDesk io.github.crabamole.crustdesk dist/dc
+          bash res/macos/package-variant.sh "$src" res/custom/client.txt cRustDesk io.github.crabamole.crustdesk dist/client
 
-      - name: Codesign, create and notarize the DMGs
+      - name: Codesign, notarize and zip the apps
         env:
           MACOS_P12_PASSWORD: ${{ secrets.MACOS_P12_PASSWORD }}
           MACOS_CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
           NOTARIZE_KEY: ${{ runner.temp }}/notarize.json
         run: |
-          # More unmount attempts; the runner is slow to release the image.
-          CREATE_DMG="$(readlink -f "$(command -v create-dmg)")"
-          sed -i -e 's/MAXIMUM_UNMOUNTING_ATTEMPTS=3/MAXIMUM_UNMOUNTING_ATTEMPTS=7/' "$CREATE_DMG"
+          set -euo pipefail
           security default-keychain -s rustdesk.keychain
           security unlock-keychain -p "$MACOS_P12_PASSWORD" rustdesk.keychain
-          for name in cRustDesk cRustDeskClient; do
-            dmg="$name-$VERSION-aarch64.dmg"
-            bash .github/scripts/sign-macos-app.sh "dist/$name.app" "$MACOS_CODESIGN_IDENTITY" flutter/macos/Runner/Release.entitlements
-            create-dmg --icon "$name.app" 200 190 --hide-extension "$name.app" --window-size 800 400 --app-drop-link 600 185 "$dmg" "dist/$name.app"
-            codesign --force --options runtime --timestamp -s "$MACOS_CODESIGN_IDENTITY" --deep --strict "$dmg" -vvv
-            rcodesign notary-submit --api-key-path "$NOTARIZE_KEY" --staple "$dmg"
+          for variant in dc client; do
+            app="dist/$variant/cRustDesk.app"
+            zip="dist/$variant/notarize.zip"
+            bash .github/scripts/sign-macos-app.sh "$app" "$MACOS_CODESIGN_IDENTITY" flutter/macos/Runner/Release.entitlements
+            ditto -c -k --keepParent "$app" "$zip"
+            # A zip cannot hold a ticket: notarize the zip, staple the app, then zip again.
+            rcodesign notary-submit --api-key-path "$NOTARIZE_KEY" --wait "$zip"
+            xcrun stapler staple "$app"
+            rm "$zip"
           done
+          ditto -c -k --keepParent dist/dc/cRustDesk.app "dist/cRustDesk-$VERSION-aarch64.zip"
+          ditto -c -k --keepParent dist/client/cRustDesk.app "dist/cRustDesk-client-$VERSION-aarch64.zip"
 
-      - name: Verify the DMGs
+      - name: Verify the zips
         run: |
           set -euo pipefail
           check() {
-            local name=$1 bundle_id=$2 custom=$3
-            local dmg="$name-$VERSION-aarch64.dmg"
-            local mnt="$RUNNER_TEMP/mnt-$name"
-            xcrun stapler validate "$dmg"
-            mkdir -p "$mnt"
-            hdiutil attach -nobrowse -readonly -mountpoint "$mnt" "$dmg"
-            local app="$mnt/$name.app"
+            local zip=$1 custom=$2
+            local dir
+            dir=$(mktemp -d "$RUNNER_TEMP/verify.XXXXXX")
+            ditto -x -k "$zip" "$dir"
+            local app="$dir/cRustDesk.app"
             codesign --verify --deep --strict --verbose=2 "$app"
+            spctl -a -vv -t exec "$app" 2>&1 | tee "$dir/spctl.txt"
+            grep -q 'source=Notarized Developer ID' "$dir/spctl.txt"
+            xcrun stapler validate "$app"
+            test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Contents/Info.plist")" = io.github.crabamole.crustdesk
+            cmp "$app/Contents/Resources/custom.txt" "$custom"
             local ents
             ents=$(codesign -d --entitlements :- "$app" 2>/dev/null)
             test "$(plutil -extract 'com\.apple\.security\.device\.audio-input' raw - <<<"$ents")" = true
-            spctl --assess --type execute -vv "$app" 2>&1 | tee "$RUNNER_TEMP/spctl-$name.txt"
-            grep -q 'source=Notarized Developer ID' "$RUNNER_TEMP/spctl-$name.txt"
-            test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Contents/Info.plist")" = "$bundle_id"
-            cmp "$app/Contents/Resources/custom.txt" "$custom"
-            hdiutil detach "$mnt"
-            echo "OK $dmg"
+            echo "OK $zip"
           }
-          check cRustDesk io.github.crabamole.rustdesk res/custom/rustdesk.txt
-          check cRustDeskClient io.github.crabamole.rustdesk-client res/custom/client.txt
+          check "dist/cRustDesk-$VERSION-aarch64.zip" res/custom/rustdesk.txt
+          check "dist/cRustDesk-client-$VERSION-aarch64.zip" res/custom/client.txt
 
-      - name: Upload cRustDesk DMG
+      - name: Upload cRustDesk zip
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cRustDesk-macos-aarch64
-          path: cRustDesk-${{ env.VERSION }}-aarch64.dmg
+          path: dist/cRustDesk-${{ env.VERSION }}-aarch64.zip
           retention-days: 30
 
-      - name: Upload cRustDeskClient DMG
+      - name: Upload cRustDesk client zip
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: cRustDeskClient-macos-aarch64
-          path: cRustDeskClient-${{ env.VERSION }}-aarch64.dmg
+          name: cRustDesk-client-macos-aarch64
+          path: dist/cRustDesk-client-${{ env.VERSION }}-aarch64.zip
           retention-days: 30
