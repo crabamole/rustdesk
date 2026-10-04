@@ -1,5 +1,5 @@
 {
-  "app-name": "cRustDeskClient",
+  "app-name": "cRustDesk",
   "conn-type": "outgoing",
   "override-settings": {
     "allow-websocket": "Y",

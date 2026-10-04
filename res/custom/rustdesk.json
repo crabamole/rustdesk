@@ -17,6 +17,7 @@
     "hide-network-settings": "Y",
     "hide-server-settings": "Y",
     "hide-websocket-settings": "Y",
-    "hide-proxy-settings": "Y"
+    "hide-proxy-settings": "Y",
+    "hide-stop-service": "Y"
   }
 }
