@@ -10,6 +10,7 @@ fail() { echo "FAIL: $*" >&2; rc=1; }
 has() { grep -qE -- "$2" "$1" 2>/dev/null || fail "$1: missing $2"; }
 
 has DEBIAN/control '^Package: crustdesk$'
+has DEBIAN/control '^Description: .*RustDesk fork'
 has DEBIAN/control '^Conflicts: rustdesk, rustdesk-unattended-wayland$'
 has DEBIAN/control '^Maintainer: crabamole <https://github.com/crabamole>$'
 ! grep -qE '^(Replaces|Provides):' DEBIAN/control || fail "DEBIAN/control: Replaces/Provides present"
@@ -18,9 +19,12 @@ has DEBIAN/control '^Maintainer: crabamole <https://github.com/crabamole>$'
 cmp -s usr/share/crustdesk/custom.txt "$custom" || fail "custom.txt differs from $custom"
 
 svc=usr/share/crustdesk/files/systemd/crustdesk.service
+has $svc '^Description=cRustDesk$'
 has $svc '^ExecStart=/usr/bin/crustdesk --service$'
 has $svc 'pkill -f "crustdesk --"'
 
+has usr/share/applications/crustdesk.desktop '^Name=cRustDesk$'
+has usr/share/applications/crustdesk-link.desktop '^Name=cRustDesk$'
 has usr/share/applications/crustdesk.desktop '^Exec=crustdesk %u$'
 has usr/share/applications/crustdesk-link.desktop '^Exec=crustdesk %u$'
 has usr/share/applications/crustdesk-link.desktop '^MimeType=x-scheme-handler/rustdesk;$'

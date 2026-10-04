@@ -21,6 +21,10 @@ grep -rlI 'rustdesk' DEBIAN usr/share/crustdesk/files usr/share/applications \
   | xargs sed -i -e 's/x-scheme-handler\/rustdesk/x-scheme-handler\/@@SCHEME@@/' -e 's/\brustdesk\b/crustdesk/g' -e 's/@@SCHEME@@/rustdesk/'
 sed -i -e 's/^Package: .*/Package: crustdesk/' -e 's/^Maintainer: .*/Maintainer: crabamole <https:\/\/github.com\/crabamole>/' \
   -e 's/^Homepage: .*/Homepage: https:\/\/github.com\/crabamole\/rustdesk/' -e '/^Replaces:/d' -e '/^Provides:/d' -e '/^Conflicts:/d' DEBIAN/control
+sed -i '0,/^Description:/s/^Description: .*/Description: cRustDesk, a RustDesk fork by crabamole/' DEBIAN/control
 sed -i '/^Package:/a Conflicts: rustdesk, rustdesk-unattended-wayland' DEBIAN/control
+# Display names only; the link scheme stays rustdesk.
+sed -i 's/^Name=RustDesk$/Name=cRustDesk/' usr/share/applications/crustdesk*.desktop
+sed -i 's/^Description=RustDesk$/Description=cRustDesk/' usr/share/crustdesk/files/systemd/crustdesk.service
 cd - >/dev/null
 dpkg-deb --root-owner-group -b "$work/pkg" "$out"
