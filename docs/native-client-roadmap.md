@@ -18,20 +18,38 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 - [ ] Windows: code-signing certificate (SmartScreen); deferred, candidates Certum (about €49/yr) or SignPath (free for open source)
 - [ ] Release process: versioning, publishing, tracking upstream releases
 - [ ] Pre-seed guides updated for our packages (`linux-preseed-install.md`, `macos-preseed-install.md`)
-- [ ] macOS: optional `hide-stop-service` lock for the `cRustDesk` (DC) build, so the service can't be stopped from its UI; pending decision
 - [ ] Windows: once a custom build is configured and auto-update is on, the updater still queries the update server for new versions
 
 Linux needs no signing, so a Linux-only build is the cheapest way to prove the features below.
 
+### macOS naming and packaging (next, before the macOS branch merges)
+
+- [ ] One app name, `cRustDesk`, for both variants; the client-only variant differs only in its signed `custom.txt`. Installing one replaces the other, so a machine never holds both
+- [ ] Our own prefix instead of upstream's `com.carriez`, set at runtime (`ORG`), following stock's pattern (bundle ID lowercase, folder and labels in the app name's case):
+
+  | | Stock | Ours |
+  |---|---|---|
+  | Bundle ID | `com.carriez.rustdesk` | `io.github.crabamole.crustdesk` |
+  | Config folder | `com.carriez.RustDesk` | `io.github.crabamole.cRustDesk` |
+  | launchd labels | `com.carriez.RustDesk_service` / `_server` | `io.github.crabamole.cRustDesk_service` / `_server` |
+
+- [ ] Publish a signed, notarized and stapled `.app` (zip) instead of a DMG. Organisations wrap it in their own `.pkg`/`.dmg` (e.g. for Jamf) and add their server config there
+- [ ] Deep links use `rustdesk://` (upstream derives `<appname>://` from the app name), including the Windows protocol registration
+- [ ] `hide-stop-service` in the DC build, so the service can't be stopped from its UI
+- [ ] Change ID needs a configured server; an unconfigured install would otherwise contact the public server
+- [ ] Pre-seeded config verified on macOS: config staged in the user and root folders before install, registers without `--option` steps
+
 ## Deployment Model
 
-Two builds per platform, differing only in their signed `custom.txt`:
+Two builds per platform, differing only in their signed `custom.txt`. Current macOS builds still use two app names and bundle IDs; the naming round above makes both `cRustDesk`.
 
-| Build | App name | Bundle ID | `custom.txt` source | Installed on |
+| Build | App name (today) | Bundle ID (today) | `custom.txt` source | Installed on |
 |---|---|---|---|---|
 | DC (service) | `cRustDesk` | `io.github.crabamole.rustdesk` | [`res/custom/rustdesk.json`](../res/custom/rustdesk.json) | managed devices that are controlled (MDM) |
 | OA (client) | `cRustDeskClient` | `io.github.crabamole.rustdesk-client` | [`res/custom/client.json`](../res/custom/client.json) | viewer machines (internal app store) |
 
+- One RustDesk per machine: a machine gets either the DC or the OA build, never both and never next to stock RustDesk. Side by side, our two builds share one machine ID, and all RustDesk installs compete for `rustdesk://` links. Enforce it with MDM (allow only our signer and the variant assigned to the machine group)
+- Public builds carry no deployment data; organisations package them and supply server config (pre-seeded config or `--config`)
 - OA (`cRustDeskClient`) is client-only (`conn-type: outgoing`): it never registers with hbbs or sends a heartbeat, so it cannot be controlled.
 - DC (`cRustDesk`) works in both directions (it can be controlled and can control); its data-out locks (one-way clipboard, disabled file transfer/printer/recording/tunnel/remote-restart/camera/terminal) live in `res/custom/rustdesk.json`.
 - No build of this fork has a public-server fallback: without a configured server, an install just waits — `rustdesk --config <string>` is required before it runs its usual background services.
@@ -39,6 +57,21 @@ Two builds per platform, differing only in their signed `custom.txt`:
 - Server addresses and key: `rustdesk --config <string>` after install, so one public build serves every deployment
 - [ ] Windows distribution through an internal Chocolatey feed
 - [ ] Keep system info sync in the outgoing-only build: `start_all()` exits before it, so viewer machines never report a hostname and are missing from the device list
+
+## Testing
+
+- [x] macOS: e2e spec for the custom builds (locks, direct IP off, one-way clipboard, audit, refused session types, outgoing-only client) and a manual cross-platform matrix against stock peers
+- [ ] Windows and Linux builds of both variants
+- [ ] Install/uninstall scripts per platform, with pre-seeded config
+- [ ] Combinatorial e2e runs, each platform once as client and once as device, with a clean uninstall between runs:
+
+  | Client | Device |
+  |---|---|
+  | macOS | Linux |
+  | Windows | macOS |
+  | Linux | Windows |
+
+- [ ] Move the existing e2e specs (web client, policy) from stock RustDesk peers to the device installed in each run
 
 ## Features Waiting on Our Builds
 
