@@ -6,16 +6,16 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 
 ## Build Pipeline
 
-`.github/workflows/windows-build.yml` builds Windows x64 on manual dispatch; the other archived workflows in `.github/workflows-archive/` are the starting point for Linux and macOS.
+`.github/workflows/windows-build.yml` builds Windows x64, `.github/workflows/linux-build.yml` Linux x86_64 and `.github/workflows/macos-build.yml` macOS arm64, all on manual dispatch.
 
-- [x] Windows x64: unsigned MSI, verified on a Windows 10 VM (install, device ID kept, web client session, our `custom.txt` applied, one signed with another key ignored)
-- [ ] Linux `.deb`
+- [x] Windows x64: two unsigned MSIs per release (`cRustDesk-<ver>-x86_64.msi`, `cRustDesk-client-<ver>-x86_64.msi`), verified on a Windows 10 machine (install, device ID kept, web client session, our `custom.txt` applied, one signed with another key ignored). Installs `C:\Program Files\cRustDesk\cRustDesk.exe` with service `cRustDesk`; version info CompanyName `crabamole`, ProductName `cRustDesk`, OriginalFilename `rustdesk.exe`
+- [x] Linux x86_64: one `.deb` per variant (`crustdesk-<ver>-x86_64.deb`, `crustdesk-client-<ver>-x86_64.deb`), Ubuntu, X11 only. Package `crustdesk`, `Conflicts: rustdesk, rustdesk-unattended-wayland`; upstream's stock-layout package is renamed by a post-build step
 - [x] macOS arm64: signed, notarized, stapled `cRustDesk` app (DC and client variants) shipped as a zip, manual workflow `.github/workflows/macos-build.yml`
 - [ ] macOS x86_64
 - [ ] CI speed: vcpkg cache not effective (12–15 min per run); pinned actions still on Node 20
 - [x] `custom.txt` signing key is a required build parameter (`RUSTDESK_CUSTOM_CLIENT_PK`, base64 Ed25519 public key); builds fail without it and never trust RustDesk's key. Sign with `rustdesk-utils signcustom` (rustdesk-server)
 - [x] macOS: Apple Developer ID signing and notarization (Gatekeeper)
-- [ ] Windows: code-signing certificate (SmartScreen); deferred, candidates Certum (about €49/yr) or SignPath (free for open source)
+- [ ] Windows: code-signing certificate (SmartScreen); deferred, signing steps are ready in the workflow and stay off until a certificate exists; candidates Certum (about €49/yr) or SignPath (free for open source)
 - [ ] Release process: versioning, publishing, tracking upstream releases
 - [ ] Pre-seed guides updated for our packages (`linux-preseed-install.md`, `macos-preseed-install.md`)
 - [ ] Windows: once a custom build is configured and auto-update is on, the updater still queries the update server for new versions
@@ -34,11 +34,13 @@ Linux needs no signing, so a Linux-only build is the cheapest way to prove the f
   | launchd labels | `com.carriez.RustDesk_service` / `_server` | `io.github.crabamole.cRustDesk_service` / `_server` |
 
 - [x] Publish a signed, notarized and stapled `.app` (zip) instead of a DMG. Organisations wrap it in their own `.pkg`/`.dmg` (e.g. for Jamf) and add their server config there
-- [x] Deep links use `rustdesk://` (upstream derives `<appname>://` from the app name), including the Windows registry keys for the URL protocol (Windows part untested until the Windows build)
+- [x] Deep links use `rustdesk://` (upstream derives `<appname>://` from the app name), including the Windows registry keys for the URL protocol
 - [x] `hide-stop-service` in the DC build, so the service can't be stopped from its UI
 - [x] Change ID needs a configured server; an unconfigured install would otherwise contact the public server
 - [x] Pre-seeded config verified on macOS: config staged in the user and root folders before install, registers without `--option` steps
-- [ ] Windows MSI's `rustdesk://` registration (`res/msi/Package/Components/Regs.wxs` still registers the lowercase app name), deferred to the Windows/Linux build plan
+- [x] The Windows MSI registers `rustdesk://` too
+- [ ] Uninstalling stock RustDesk's MSI removes the shared `rustdesk://` handler even when cRustDesk stays installed; cRustDesk needs a repair or reinstall to get its links back
+- [x] Remote printer removed from our Windows builds: the MSIs ship without upstream's prebuilt printer adapter and driver (the closed adapter exits the process when initialised under a renamed app name), and both variants hide the printer settings
 
 ## Deployment Model
 
@@ -54,19 +56,21 @@ Two builds per platform, named `cRustDesk` (bundle ID `io.github.crabamole.crust
 - OA (client variant) is client-only (`conn-type: outgoing`): it never registers with hbbs or sends a heartbeat, so it cannot be controlled.
 - DC (service variant) works in both directions (it can be controlled and can control); its data-out locks (one-way clipboard, disabled file transfer/printer/recording/tunnel/remote-restart/camera/terminal) live in `res/custom/rustdesk.json`.
 - No build of this fork has a public-server fallback: without a configured server, an install just waits until it gets a server config (pre-seeded config, or `cRustDesk --config <string>`) before it runs its usual background services.
-- macOS: two signed, notarized, stapled `cRustDesk` app bundles (arm64), shipped as a zip; Windows: two MSIs planned (`preprocess.py --custom --conn-type --app-name`)
-- Server addresses and key: a pre-seeded config (verified on macOS) or `cRustDesk --config <string>` after install (upstream's documented method, not yet tested on our builds), so one public build serves every deployment
+- macOS: two signed, notarized, stapled `cRustDesk` app bundles (arm64), shipped as a zip; Windows: two unsigned MSIs (`preprocess.py --custom --conn-type --app-name`); Linux: two `.deb` packages (Ubuntu x86_64, X11)
+- Server addresses and key: a pre-seeded config (verified on macOS, Windows under the LocalService profile, and Linux for root and the session user) or `cRustDesk --config <string>` after install (upstream's documented method), so one public build serves every deployment
 - [ ] Windows distribution through an internal Chocolatey feed
+- [ ] The Linux client `.deb` still installs and starts the service like the device variant (it never registers, but a client-only package should not run a service)
+- [ ] Direct IP access (`direct_server`) is not paused by the runtime guard; our DC build locks direct access off, so only builds that enable it are affected
 - [ ] Keep system info sync in the outgoing-only build: `start_all()` exits before it, so viewer machines never report a hostname and are missing from the device list
 
 ## Testing
 
-- [x] macOS: e2e spec for the custom builds (locks, direct IP off, one-way clipboard, audit, refused session types, outgoing-only client) against the DC install, with stock RustDesk kept as a test-only exception on the MacBook
-- [ ] Windows and Linux builds of both variants: Windows as signed MSIs (CompanyName `crabamole`, `OriginalFilename`/`InternalName` unchanged as `rustdesk.exe`/`rustdesk`); Linux as a `.deb` (Ubuntu, x86_64, X11 only) renamed to `crustdesk`
-- [ ] Install/uninstall scripts per platform, with pre-seeded config
-- [ ] Guard against stock RustDesk on every platform: installer guards (Linux `Conflicts:`, Windows MSI launch condition) plus a blocking runtime check that reuses the "no configured server" path while stock is present
-- [ ] Test machines move from stock RustDesk to `cRustDesk`, resting in the DC variant as devices; `npm test` runs the existing specs (web client, policy, audit, clipboard) against that resting device instead of hard-coded stock peer IDs
-- [ ] Combinatorial e2e runs as a separate, longer command: each platform once as client and once as device, with a clean uninstall between runs:
+- [x] macOS: e2e spec for the custom builds (locks, direct IP off, one-way clipboard, audit, refused session types, outgoing-only client) against the DC install
+- [x] Windows and Linux builds of both variants: Windows as unsigned MSIs (CompanyName `crabamole`, `OriginalFilename`/`InternalName` unchanged as `rustdesk.exe`/`rustdesk`); Linux as a `.deb` (Ubuntu, x86_64, X11 only) renamed to `crustdesk`
+- [x] Install/uninstall scripts per platform, with pre-seeded config (in the test suite)
+- [x] Guard against stock RustDesk on every platform: installer guards (Linux `Conflicts:`, Windows MSI launch condition that refuses while stock's service exists) plus a runtime guard: while stock is installed the service stays idle (no registration, no heartbeats, open sessions closed) and resumes within seconds once stock is removed
+- [x] Test machines moved from stock RustDesk to `cRustDesk`, resting in the DC variant as devices; `npm test` runs the existing specs (web client, policy, audit, clipboard) against them instead of hard-coded stock peer IDs
+- [x] Combinatorial e2e runs as a separate, longer command (guard checks likewise): each platform once as client and once as device, with a clean uninstall between runs:
 
   | Client | Device |
   |---|---|
