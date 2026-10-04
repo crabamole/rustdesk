@@ -196,7 +196,9 @@ jobs:
             ditto -c -k --keepParent "$app" "$zip"
             # A zip cannot hold a ticket: notarize the zip, staple the app, then zip again.
             rcodesign notary-submit --api-key-path "$NOTARIZE_KEY" --wait "$zip"
-            xcrun stapler staple "$app"
+            # The ticket can take a moment to become fetchable after acceptance.
+            for i in 1 2 3; do xcrun stapler staple "$app" && break; sleep 30; done
+            xcrun stapler validate "$app"
             rm "$zip"
           done
           ditto -c -k --keepParent dist/dc/cRustDesk.app "dist/cRustDesk-$VERSION-aarch64.zip"
