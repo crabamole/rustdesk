@@ -191,6 +191,9 @@ impl RendezvousMediator {
                 });
                 join_all(futs).await;
                 stock_watch.abort();
+                if crate::stock_guard::stock_rustdesk_present() {
+                    server.write().unwrap().close_connections();
+                }
             } else {
                 server.write().unwrap().close_connections();
             }
