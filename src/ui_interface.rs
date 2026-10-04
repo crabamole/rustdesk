@@ -1502,6 +1502,10 @@ pub async fn change_id_shared(id: String, old_id: String) -> String {
 }
 
 pub async fn change_id_shared_(id: String, old_id: String) -> &'static str {
+    // The new ID can only be registered with a configured server.
+    if !crate::is_server_configured() {
+        return "server_not_configured_tip";
+    }
     if !hbb_common::is_valid_custom_id(&id) {
         log::debug!(
             "debugging invalid id: \"{id}\", len: {}, base64: \"{}\"",
@@ -1811,5 +1815,35 @@ mod tests {
         Config::set_option(KEY.to_string(), "rs.example.com".to_string());
         OPTIONS.lock().unwrap().insert(KEY.to_string(), " ".to_string());
         assert!(!crate::is_server_configured(), "cleared via another process");
+    }
+
+    #[test]
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    fn change_id_refused_without_server() {
+        use super::{Config, OPTION_SYNCED};
+        use hbb_common::config::keys::OPTION_CUSTOM_RENDEZVOUS_SERVER as KEY;
+
+        struct Restore(String, bool);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                Config::set_option(KEY.to_string(), self.0.clone());
+                *OPTION_SYNCED.lock().unwrap() = self.1;
+            }
+        }
+
+        let _lock = crate::common::CUSTOM_RENDEZVOUS_SERVER_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let _restore = Restore(Config::get_option(KEY), *OPTION_SYNCED.lock().unwrap());
+        *OPTION_SYNCED.lock().unwrap() = false;
+        Config::set_option(KEY.to_string(), "".to_string());
+
+        let res = hbb_common::tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(super::change_id_shared_(
+                "newid123".to_owned(),
+                "oldid".to_owned(),
+            ));
+        assert_eq!(res, "server_not_configured_tip");
     }
 }
