@@ -221,15 +221,19 @@ jobs:
             git checkout -- .   # preprocess.py edits the WiX sources in place; start each variant clean
             python preprocess.py --arp --custom --app-name cRustDesk -m crabamole @($v.Extra) -d ../../dist/$($v.Dist)
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            # MSBuild hard-links obj to bin, so a reused obj would rewrite the earlier variant's MSI.
+            Remove-Item -Recurse -Force ./Package/bin, ./Package/obj -ErrorAction SilentlyContinue
             nuget restore msi.sln
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             msbuild msi.sln -p:Configuration=Release -p:Platform=x64 /p:TargetVersion=Windows10
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
             $msi = Get-ChildItem ./Package/bin/*/Release/en-us/Package.msi | Select-Object -First 1
-            mv $msi.FullName ../../SignOutput/$($v.Prefix)-${{ env.VERSION }}-x86_64.msi
+            Copy-Item $msi.FullName ../../SignOutput/$($v.Prefix)-${{ env.VERSION }}-x86_64.msi
             popd
           }
           sha256sum ./SignOutput/*.msi
+          $hashes = Get-ChildItem SignOutput/*.msi | ForEach-Object { (Get-FileHash $_).Hash }
+          if (($hashes | Select-Object -Unique).Count -ne $hashes.Count) { throw "the variant MSIs are identical" }
 
       - name: Sign the MSIs
         if: env.HAS_SIGNING_CERT == 'true'
