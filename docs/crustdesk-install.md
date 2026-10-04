@@ -91,7 +91,7 @@ Uninstall: `sudo apt purge crustdesk`.
 
 ## Verify
 
-As administrator/root, `--get-id` prints the device ID (same command prefix as in [Server config](#a---config-string-after-install)). A DC device then appears in the console's device list. Client builds report heartbeat and system info while the app runs, so they also appear in the list, but they never register or accept connections.
+As administrator/root, `--get-id` prints the device ID (same command prefix as in [Server config](#a---config-string-after-install)). A DC device then appears in the console's device list. Client builds never register or send heartbeats; their machines appear in the console's Viewers section once a user logs in with OIDC.
 
 ## Moving from stock RustDesk
 

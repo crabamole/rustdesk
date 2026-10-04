@@ -7,11 +7,10 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 ## Next
 
 1. Windows code signing: on hold; SignPath asks for a product keyword findable on Google. Revisit when the fork is findable ([Build Pipeline](#build-pipeline))
-2. Re-check whether the Windows updater still queries the update server
-3. Test gaps ([Testing](#testing))
-4. macOS x86_64
-5. CI speed
-6. Release process
+2. Test gaps ([Testing](#testing))
+3. macOS x86_64
+4. CI speed
+5. Release process
 
 ## Build Pipeline
 
@@ -27,7 +26,7 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 - [ ] Windows: code-signing certificate (SmartScreen); stays unsigned for now. SignPath (free for open source) asks for a search keyword that finds the product on Google, so revisit when the fork is findable; Certum (about €49/yr) is the alternative. The workflow's signing steps have never run; before first use, keep the certificate password off signtool's command line, delete the PFX afterwards, and sign only our own binaries
 - [ ] Release process: versioning, publishing, tracking upstream releases
 - [x] Install guide for our packages: [crustdesk-install.md](crustdesk-install.md) (Windows, macOS, Ubuntu; `--config` and pre-seeded config). The stock RustDesk pre-seed guides are kept separately ([Linux](stock-rustdesk-linux-preseed-install.md), [macOS](stock-rustdesk-macos-preseed-install.md))
-- [ ] Windows: re-check whether a configured custom build still queries the update server; `check_software_update()` and the auto-update path already skip custom clients
+- [x] No auto-update in custom builds: both `custom.txt` files lock `"allow-auto-update": "N"` (`override-settings`), so they never download stock RustDesk and the toggle shows as locked. With default settings no update-server contact was observed on Windows; the only path was the toggle
 
 ### Naming and packaging
 
@@ -57,13 +56,13 @@ Two builds per platform, named `cRustDesk` and differing only in their signed `c
 | OA (client) | [`res/custom/client.json`](../res/custom/client.json) | viewer machines (internal app store) |
 
 - Public builds carry no deployment data; organisations package them and supply server config
-- OA (client variant) is client-only (`conn-type: outgoing`): it never registers with hbbs, so it cannot be controlled (it only reports heartbeat and system info)
+- OA (client variant) is client-only (`conn-type: outgoing`): it never registers with hbbs, so it cannot be controlled (it sends no heartbeats)
 - DC (service variant) works in both directions (it can be controlled and can control); its data-out locks (one-way clipboard, disabled file transfer/printer/recording/tunnel/remote-restart/camera/terminal) live in `res/custom/rustdesk.json`
 - No build of this fork has a public-server fallback: without a configured server, an install waits until it gets a server config before it runs its usual background services
 - Server addresses and key: a pre-seeded config (verified on macOS in the user and root folders, Windows under the LocalService profile, and Linux for root and the session user) or `cRustDesk --config <string>` after install (upstream's documented method), so one public build serves every deployment
 - Machines that ran stock RustDesk against the same server keep an old peer row under their natural ID with the old key; our build then registers under a random ID on every reinstall. Remove stale rows when moving a fleet over
 - [ ] Windows distribution through an internal Chocolatey feed
-- [x] Viewers report heartbeat and system info while the app runs, so they appear in the device list; they never register or accept connections. They also receive device-policy pushes, but only settings for incoming sessions, which a viewer never accepts
+- [x] Viewer machines are listed in the console from their OIDC logins (admin `GET /api/viewers`, separate Viewers section on the Devices page; machines that also register as devices are not listed there). The client build sends no heartbeats and never registers
 
 ### One RustDesk per machine
 
