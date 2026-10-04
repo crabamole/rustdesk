@@ -7,6 +7,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 if (Test-Path $Out) { throw "refusing to overwrite $Out" }
+New-Item -ItemType Directory -Force (Split-Path -Parent $Out) | Out-Null
 Copy-Item -Recurse $Src $Out
 Move-Item (Join-Path $Out 'rustdesk.exe') (Join-Path $Out "$AppName.exe")
 Copy-Item $CustomTxt (Join-Path $Out 'custom.txt')
