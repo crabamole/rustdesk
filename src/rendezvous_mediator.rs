@@ -860,6 +860,9 @@ async fn wait_for_server_config() {
         while crate::stock_guard::stock_rustdesk_present() {
             sleep(1.).await;
         }
+        // Stock's uninstall removes the rustdesk:// handler that our install shares.
+        #[cfg(windows)]
+        tokio::spawn(crate::platform::windows::repair_url_protocol_after_stock());
     }
 }
 

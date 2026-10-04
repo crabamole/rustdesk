@@ -1911,6 +1911,48 @@ pub fn is_installed() -> bool {
     std::fs::metadata(exe).is_ok()
 }
 
+/// Points the URL-protocol handler back at the installed exe when missing or changed.
+pub fn ensure_url_protocol() -> ResultType<()> {
+    let (_, _, _, exe) = get_install_info();
+    let current_exe = std::env::current_exe()?;
+    if !is_root() || !current_exe.to_string_lossy().eq_ignore_ascii_case(&exe) {
+        return Ok(());
+    }
+    let scheme = crate::get_uri_prefix().trim_end_matches("://").to_owned();
+    let command = format!("\"{exe}\" \"%1\"");
+    let hkcr = RegKey::predef(HKEY_CLASSES_ROOT);
+    let has_marker = hkcr
+        .open_subkey(&scheme)
+        .and_then(|k| k.get_value::<String, _>("URL Protocol"))
+        .is_ok();
+    let current_command = hkcr
+        .open_subkey(format!("{scheme}\\shell\\open\\command"))
+        .and_then(|k| k.get_value::<String, _>(""));
+    if has_marker && matches!(&current_command, Ok(c) if c.eq_ignore_ascii_case(&command)) {
+        return Ok(());
+    }
+    let (key, _) = hkcr.create_subkey(&scheme)?;
+    key.set_value("URL Protocol", &"")?;
+    let (command_key, _) = key.create_subkey("shell\\open\\command")?;
+    command_key.set_value("", &command)?;
+    log::info!("Restored {scheme}:// handler to {exe}");
+    Ok(())
+}
+
+/// Stock's MSI uninstall can delete the shared handler after its service key is already gone.
+pub async fn repair_url_protocol_after_stock() {
+    for _ in 0..30 {
+        if crate::stock_guard::stock_rustdesk_present() {
+            return;
+        }
+        // A few registry calls take microseconds, so running them inline does not stall the runtime.
+        if let Err(e) = ensure_url_protocol() {
+            log::error!("Failed to restore URL protocol handler: {e}");
+        }
+        sleep(2.).await;
+    }
+}
+
 pub fn get_reg(name: &str) -> String {
     let (subkey, _, _, _) = get_install_info();
     get_reg_of(&subkey, name)
