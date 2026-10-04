@@ -235,12 +235,12 @@ jobs:
           set -euo pipefail
           stock="rustdesk-$VERSION-x86_64.deb"
           bash res/linux/package-variant.sh "$stock" res/custom/rustdesk.txt "crustdesk-$VERSION-x86_64.deb"
-          bash res/linux/package-variant.sh "$stock" res/custom/client.txt "crustdesk-client-$VERSION-x86_64.deb"
+          bash res/linux/package-variant.sh "$stock" res/custom/client.txt "crustdesk-client-$VERSION-x86_64.deb" client
 
       - name: Verify the debs
         run: |
           bash res/linux/check-variant.sh "crustdesk-$VERSION-x86_64.deb" res/custom/rustdesk.txt
-          bash res/linux/check-variant.sh "crustdesk-client-$VERSION-x86_64.deb" res/custom/client.txt
+          bash res/linux/check-variant.sh "crustdesk-client-$VERSION-x86_64.deb" res/custom/client.txt client
 
       - name: Upload crustdesk deb
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

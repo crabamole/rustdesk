@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fails unless the .deb is a correctly renamed crustdesk package carrying the given custom.txt.
 set -euo pipefail
-deb=$(realpath "$1") custom=$(realpath "$2")
+deb=$(realpath "$1") custom=$(realpath "$2") client=${3:-}
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
 dpkg-deb -R "$deb" "$work/pkg"
 cd "$work/pkg"
@@ -19,9 +19,14 @@ has DEBIAN/control '^Maintainer: crabamole <https://github.com/crabamole>$'
 cmp -s usr/share/crustdesk/custom.txt "$custom" || fail "custom.txt differs from $custom"
 
 svc=usr/share/crustdesk/files/systemd/crustdesk.service
-has $svc '^Description=cRustDesk$'
-has $svc '^ExecStart=/usr/bin/crustdesk --service$'
-has $svc 'pkill -f "crustdesk --"'
+if [ "$client" = client ]; then
+  [ ! -e $svc ] || fail "$svc present in client package"
+  ! grep -qE 'systemctl (enable|start)' DEBIAN/postinst || fail "DEBIAN/postinst enables or starts the service"
+else
+  has $svc '^Description=cRustDesk$'
+  has $svc '^ExecStart=/usr/bin/crustdesk --service$'
+  has $svc 'pkill -f "crustdesk --"'
+fi
 
 has usr/share/applications/crustdesk.desktop '^Name=cRustDesk$'
 has usr/share/applications/crustdesk-link.desktop '^Name=cRustDesk$'

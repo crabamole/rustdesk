@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Renames a stock-layout RustDesk .deb to crustdesk and adds the signed custom.txt; upstream's packaging stays untouched.
 set -euo pipefail
-src=$1 custom=$2 out=$3
+src=$1 custom=$2 out=$3 client=${4:-}
 [ -e "$out" ] && { echo "refusing to overwrite $out" >&2; exit 1; }
 src=$(realpath "$src") custom=$(realpath "$custom") out=$(realpath -m "$out")
 work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
@@ -26,6 +26,11 @@ sed -i '/^Package:/a Conflicts: rustdesk, rustdesk-unattended-wayland' DEBIAN/co
 # Display names only; the link scheme stays rustdesk.
 sed -i 's/^Name=RustDesk$/Name=cRustDesk/' usr/share/applications/crustdesk*.desktop
 sed -i 's/^Description=RustDesk$/Description=cRustDesk/' usr/share/crustdesk/files/systemd/crustdesk.service
+if [ "$client" = client ]; then
+  # Outgoing-only clients need no service; prerm already tolerates a missing unit.
+  rm usr/share/crustdesk/files/systemd/crustdesk.service
+  sed -i '/^\tif \[ "systemd"/,/^\tfi$/d' DEBIAN/postinst
+fi
 # Upstream lists absolute paths; the edits above changed file contents, so the sums are regenerated.
 find . -type f ! -path './DEBIAN/*' -printf '%P\0' | sort -z | xargs -0 md5sum | sed 's|  |  /|' > DEBIAN/md5sums
 cd - >/dev/null
