@@ -6,13 +6,12 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 
 ## Next
 
-1. Viewer machines are missing from the device list: the outgoing-only build skips system info sync ([Deployment Model](#deployment-model))
-2. The Linux client `.deb` runs a service ([Naming and packaging](#naming-and-packaging))
-3. Uninstalling stock RustDesk's MSI removes the shared `rustdesk://` handler ([One RustDesk per machine](#one-rustdesk-per-machine))
-4. Pre-seed guides for our packages, including Windows ([Build Pipeline](#build-pipeline))
-5. Windows code signing ([Build Pipeline](#build-pipeline))
-
-Then: re-check the Windows updater item, the test gaps, macOS x86_64, CI speed and the release process.
+1. Windows code signing: on hold; SignPath asks for a product keyword findable on Google. Revisit when the fork is findable ([Build Pipeline](#build-pipeline))
+2. Re-check whether the Windows updater still queries the update server
+3. Test gaps ([Testing](#testing))
+4. macOS x86_64
+5. CI speed
+6. Release process
 
 ## Build Pipeline
 
@@ -25,9 +24,9 @@ Then: re-check the Windows updater item, the test gaps, macOS x86_64, CI speed a
 - [ ] CI speed: vcpkg cache not effective (12–15 min per run); pinned actions still on Node 20
 - [x] `custom.txt` signing key is a required build parameter (`RUSTDESK_CUSTOM_CLIENT_PK`, base64 Ed25519 public key); builds fail without it and never trust RustDesk's key. Sign with `rustdesk-utils signcustom` (rustdesk-server)
 - [x] macOS: Apple Developer ID signing and notarization (Gatekeeper)
-- [ ] Windows: code-signing certificate (SmartScreen); candidates Certum (about €49/yr) or SignPath (free for open source). The workflow's signing steps have never run; before first use, keep the certificate password off signtool's command line, delete the PFX afterwards, and sign only our own binaries
+- [ ] Windows: code-signing certificate (SmartScreen); stays unsigned for now. SignPath (free for open source) asks for a search keyword that finds the product on Google, so revisit when the fork is findable; Certum (about €49/yr) is the alternative. The workflow's signing steps have never run; before first use, keep the certificate password off signtool's command line, delete the PFX afterwards, and sign only our own binaries
 - [ ] Release process: versioning, publishing, tracking upstream releases
-- [ ] Pre-seed guides for our packages: `linux-preseed-install.md` and `macos-preseed-install.md` still describe stock RustDesk (paths, public-server fallback warning); Windows has no guide yet. The recipes are verified (see Deployment Model)
+- [x] Install guide for our packages: [crustdesk-install.md](crustdesk-install.md) (Windows, macOS, Ubuntu; `--config` and pre-seeded config). The stock RustDesk pre-seed guides are kept separately ([Linux](stock-rustdesk-linux-preseed-install.md), [macOS](stock-rustdesk-macos-preseed-install.md))
 - [ ] Windows: re-check whether a configured custom build still queries the update server; `check_software_update()` and the auto-update path already skip custom clients
 
 ### Naming and packaging
@@ -46,7 +45,7 @@ Then: re-check the Windows updater item, the test gaps, macOS x86_64, CI speed a
 - [x] `hide-stop-service` in the DC build, so the service can't be stopped from its UI
 - [x] Change ID needs a configured server; an unconfigured install would otherwise contact the public server
 - [x] Remote printer removed from our Windows builds: the MSIs ship without upstream's prebuilt printer adapter and driver (the closed adapter exits the process when initialised under a renamed app name), and both variants hide the printer settings
-- [ ] The Linux client `.deb` still installs and starts the service like the device variant (it never registers, but a client-only package should not run a service)
+- [x] The Linux client `.deb` installs no service
 
 ## Deployment Model
 
@@ -58,13 +57,13 @@ Two builds per platform, named `cRustDesk` and differing only in their signed `c
 | OA (client) | [`res/custom/client.json`](../res/custom/client.json) | viewer machines (internal app store) |
 
 - Public builds carry no deployment data; organisations package them and supply server config
-- OA (client variant) is client-only (`conn-type: outgoing`): it never registers with hbbs or sends a heartbeat, so it cannot be controlled
+- OA (client variant) is client-only (`conn-type: outgoing`): it never registers with hbbs, so it cannot be controlled (it only reports heartbeat and system info)
 - DC (service variant) works in both directions (it can be controlled and can control); its data-out locks (one-way clipboard, disabled file transfer/printer/recording/tunnel/remote-restart/camera/terminal) live in `res/custom/rustdesk.json`
 - No build of this fork has a public-server fallback: without a configured server, an install waits until it gets a server config before it runs its usual background services
 - Server addresses and key: a pre-seeded config (verified on macOS in the user and root folders, Windows under the LocalService profile, and Linux for root and the session user) or `cRustDesk --config <string>` after install (upstream's documented method), so one public build serves every deployment
 - Machines that ran stock RustDesk against the same server keep an old peer row under their natural ID with the old key; our build then registers under a random ID on every reinstall. Remove stale rows when moving a fleet over
 - [ ] Windows distribution through an internal Chocolatey feed
-- [ ] Keep system info sync in the outgoing-only build: `start_all()` exits before it, so viewer machines never report a hostname and are missing from the device list
+- [x] Viewers report heartbeat and system info while the app runs, so they appear in the device list; they never register or accept connections. They also receive device-policy pushes, but only settings for incoming sessions, which a viewer never accepts
 
 ### One RustDesk per machine
 
@@ -72,7 +71,8 @@ A machine gets either the DC or the OA build, never both and never next to stock
 
 - [x] Guard against stock RustDesk on every platform: installer guards (Linux `Conflicts:`, Windows MSI launch condition that refuses while stock's service exists) plus a runtime guard: while stock is installed the service stays idle (no registration, no heartbeats, open sessions closed) and resumes within seconds once stock is removed
 - [ ] Direct IP access (`direct_server`) is not paused by the runtime guard; our DC build locks direct access off, so only builds that enable it are affected
-- [ ] Uninstalling stock RustDesk's MSI removes the shared `rustdesk://` handler even when cRustDesk stays installed; cRustDesk needs a repair or reinstall to get its links back
+- [x] Uninstalling stock RustDesk's MSI removes the shared `rustdesk://` handler; the cRustDesk service restores it within about a minute while cRustDesk runs
+- [ ] The handler repair is not called at service startup: if the service was down when stock was uninstalled, cRustDesk needs a repair or reinstall to get its links back
 
 ## Testing
 
