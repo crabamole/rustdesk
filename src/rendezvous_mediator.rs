@@ -115,6 +115,9 @@ impl RendezvousMediator {
 
     pub async fn start_all() {
         wait_for_server_config().await;
+        // Stock's uninstall may have removed the shared rustdesk:// handler while we were not running.
+        #[cfg(windows)]
+        allow_err!(crate::platform::windows::ensure_url_protocol());
         crate::test_nat_type();
         if config::is_outgoing_only() {
             loop {
