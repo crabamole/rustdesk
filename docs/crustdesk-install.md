@@ -15,7 +15,7 @@ Our builds never fall back to RustDesk's public server: without server config th
 
 ## Artifacts
 
-Built by the manual GitHub Actions workflows (`windows-build.yml`, `macos-build.yml`, `linux-build.yml`):
+Attached to each [GitHub Release](https://github.com/crabamole/rustdesk/releases) with a `SHA256SUMS` file. `<ver>` is the release version, e.g. `1.4.9-7` (upstream RustDesk version and our build number), shared with the web-client image:
 
 | Platform | Files |
 |---|---|

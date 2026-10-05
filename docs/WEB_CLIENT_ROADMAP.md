@@ -64,7 +64,7 @@ Establish test coverage as a foundation for opinionated development.
 
 ### Phase 4: Operations
 
-- [x] CI/CD pipeline: pushes to master build the Docker image; a version bump in `flutter/web/js/package.json` publishes it and tags `web-client-<version>`
+- [x] CI/CD pipeline: pushes to master build the Docker image; a version bump in `flutter/web/js/package.json` publishes it; the release workflow tags `<version>` for all clients (`web-client-<version>` before 1.4.9-7)
 - [x] Helm chart: `oci://ghcr.io/crabamole/charts/rustdesk` with webclient deployment, configmap, and nginx config
 - [x] Health check endpoint or readiness probe (liveness/readiness probes in the Helm chart's webclient Deployment)
 - [ ] Documentation: deployment guide, config.json reference, architecture diagram

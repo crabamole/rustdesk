@@ -8,11 +8,11 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 
 1. Windows code signing: on hold; SignPath asks for a product keyword findable on Google. Revisit when the fork is findable ([Build Pipeline](#build-pipeline))
 2. CI speed
-3. Release process
+3. Tracking upstream releases
 
 ## Build Pipeline
 
-`.github/workflows/windows-build.yml` builds Windows x64, `.github/workflows/linux-build.yml` Linux x86_64 and `.github/workflows/macos-build.yml` macOS arm64, all on manual dispatch.
+`.github/workflows/windows-build.yml` builds Windows x64, `.github/workflows/linux-build.yml` Linux x86_64 and `.github/workflows/macos-build.yml` macOS arm64, on manual dispatch and from `.github/workflows/release.yml`.
 
 - [x] Windows x64: two unsigned MSIs per release (`cRustDesk-<ver>-x86_64.msi`, `cRustDesk-client-<ver>-x86_64.msi`). Installs `C:\Program Files\cRustDesk\cRustDesk.exe` with service `cRustDesk`; version info CompanyName `crabamole`, ProductName `cRustDesk`, OriginalFilename `rustdesk.exe`, InternalName `rustdesk`
 - [x] Linux x86_64: one `.deb` per variant (`crustdesk-<ver>-x86_64.deb`, `crustdesk-client-<ver>-x86_64.deb`), Ubuntu, X11 only. Package `crustdesk`, `Conflicts: rustdesk, rustdesk-unattended-wayland`; upstream's stock-layout package is renamed by a post-build step
@@ -22,7 +22,8 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 - [x] `custom.txt` signing key is a required build parameter (`RUSTDESK_CUSTOM_CLIENT_PK`, base64 Ed25519 public key); builds fail without it and never trust RustDesk's key. Sign with `rustdesk-utils signcustom` (rustdesk-server)
 - [x] macOS: Apple Developer ID signing and notarization (Gatekeeper)
 - [ ] Windows: code-signing certificate (SmartScreen); stays unsigned for now. SignPath (free for open source) asks for a search keyword that finds the product on Google, so revisit when the fork is findable; Certum (about €49/yr) is the alternative. The workflow's signing steps have never run; before first use, keep the certificate password off signtool's command line, delete the PFX afterwards, and sign only our own binaries
-- [ ] Release process: versioning, publishing, tracking upstream releases
+- [x] Release process: a version bump in `flutter/web/js/package.json` (`<upstream>-<n>`) releases every client under one tag (`release.yml`): the web-client image plus a GitHub Release with the six installers and `SHA256SUMS`
+- [ ] Tracking upstream releases
 - [x] Install guide for our packages: [crustdesk-install.md](crustdesk-install.md) (Windows, macOS, Ubuntu; `--config` and pre-seeded config). The stock RustDesk pre-seed guides are kept separately ([Linux](stock-rustdesk-linux-preseed-install.md), [macOS](stock-rustdesk-macos-preseed-install.md))
 - [x] No auto-update in custom builds: both `custom.txt` files lock `"allow-auto-update": "N"` (`override-settings`), so they never download stock RustDesk and the toggle shows as locked. With default settings no update-server contact was observed on Windows; the only path was the toggle
 
