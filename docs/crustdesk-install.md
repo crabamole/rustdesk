@@ -85,7 +85,11 @@ msiexec /i cRustDesk-<ver>-x86_64.msi /qn
 
 Installs `C:\Program Files\cRustDesk\cRustDesk.exe` and, for the DC variant, the service `cRustDesk` (the client MSI installs no service). Check: `Get-Service cRustDesk`.
 
-If stock RustDesk's MSI is uninstalled while cRustDesk runs, the cRustDesk service restores the `rustdesk://` link handler within about a minute. If the service was down at that time, repair or reinstall cRustDesk.
+Uninstalling stock RustDesk's MSI removes the `rustdesk://` link handler that cRustDesk shares. The DC's service restores it within about a minute, or when the service next starts. The client variant has no service; repair it with the MSI it was installed from:
+
+```powershell
+msiexec /f cRustDesk-client-<ver>-x86_64.msi /qn
+```
 
 Uninstall: Apps & Features, or `msiexec /x <product-code-or-msi>`.
 

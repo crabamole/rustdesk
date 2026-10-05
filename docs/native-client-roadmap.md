@@ -71,7 +71,7 @@ A machine gets either the DC or the OA build, never both and never next to stock
 - [ ] Direct IP access (`direct_server`) is not paused by the runtime guard; our DC build locks direct access off, so only builds that enable it are affected
 - [x] Uninstalling stock RustDesk's MSI removes the shared `rustdesk://` handler; the cRustDesk service restores it within about a minute while cRustDesk runs
 - [ ] The handler repair is not called at service startup: if the service was down when stock was uninstalled, cRustDesk needs a repair or reinstall to get its links back
-- [ ] The Windows client variant has no service, so a later stock install and uninstall leaves `rustdesk://` broken until cRustDesk is repaired or reinstalled
+- The Windows client variant has no service: after a stock install and uninstall, an MSI repair (`msiexec /f`) restores `rustdesk://` (by design; see [crustdesk-install.md](crustdesk-install.md#windows))
 
 ## Testing
 
