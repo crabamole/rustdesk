@@ -63,6 +63,10 @@ Put it in place before installing:
 
 Per-user files must be owned by that user (Linux and macOS: `chown <user>`, mode `0600`).
 
+### Custom port
+
+Our builds also work when the server is reached on a port other than 443/80 (stock clients drop it): give the same port `P` everywhere — `custom-rendezvous-server = '<your-server>:P'`, `api-server = 'http(s)://<your-server>:P'`, and on the server `hbbs.relayAddress` (or hbbs's `-r`) `<your-server>:P`.
+
 ### Client variant
 
 The client variant runs no service, so `--config` (which only writes the calling process's config when no service answers, and needs admin/root) and the service-profile paths above do not reach it. Pre-seed each user's own `cRustDesk2.toml`, owned by that user:

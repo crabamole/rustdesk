@@ -115,9 +115,9 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 - Tracked in [api-server-roadmap.md](api-server-roadmap.md) (Phase 2)
 
 ### WebSocket Port for Hostnames ([#30](https://github.com/crabamole/rustdesk/issues/30))
-- [ ] Keep a non-default port when the rendezvous server is a hostname (`check_ws()` in `hbb_common`)
-- [ ] Do not treat a relay address `<host>:443` as the rendezvous server: `check_ws()` classifies by port, so the relay connection goes to `/ws/id`. Same function, one fix covers both
-- **Today:** serve WebSocket on port 80 (ws) or 443 (wss); configure the rendezvous server as a hostname without port and leave the relay server blank
+- [x] Keep a non-default port when the rendezvous server is a hostname: when `custom-rendezvous-server` and `api-server` name the same host and port, the WebSocket URLs keep that port (`check_ws()` in our `hbb_common` copy, [crabamole/hbb_common](https://github.com/crabamole/hbb_common))
+- [x] Relay connections always go to `/ws/relay`, so a relay address `<host>:443` is no longer treated as the rendezvous server
+- Stock clients: serve WebSocket on port 80 (ws) or 443 (wss), configure the rendezvous server as a hostname without port and leave the relay server blank
 
 ### Clipboard Audit
 - [ ] Hosts report clipboard transfers to the api-server
