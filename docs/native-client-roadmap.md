@@ -7,9 +7,8 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 ## Next
 
 1. Windows code signing: on hold; SignPath asks for a product keyword findable on Google. Revisit when the fork is findable ([Build Pipeline](#build-pipeline))
-2. Test gaps ([Testing](#testing))
-3. CI speed
-4. Release process
+2. CI speed
+3. Release process
 
 ## Build Pipeline
 
@@ -81,7 +80,7 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 - [x] `npm run matrix`: each platform once as client and once as device (macOS → Linux, Windows → macOS, Linux → Windows) with a clean install of the client variant; sessions, refused file transfer, audit, the client never registering, and one-way clipboard with native clients
 - [x] Guard checks with the matrix: Linux `Conflicts:` in both install orders, the Windows MSI launch condition, and the runtime guard on macOS and Windows
 - [x] Viewer recorded from login, Linux client package has no service, Windows handler self-repair after stock removal and at service startup, auto-update locked
-- [ ] Not covered yet: replacing one variant with the other in place (MSI major upgrade, apt reinstall), the Linux runtime guard, the UI status for "stock RustDesk is installed"
+- Not tested, outside the supported setup (one RustDesk per machine, enforced by MDM): replacing one variant with the other in place (MSI major upgrade, apt reinstall), the Linux runtime guard, the UI status for "stock RustDesk is installed"
 
 ## Features Waiting on Our Builds
 
