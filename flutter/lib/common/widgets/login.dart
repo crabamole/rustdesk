@@ -894,14 +894,6 @@ Future<bool?> _openLoginDialog() async {
                 const SizedBox(
                   height: 8.0,
                 ),
-                Center(
-                    child: Text(
-                  translate('or'),
-                  style: TextStyle(fontSize: 16),
-                )),
-                const SizedBox(
-                  height: 8.0,
-                ),
                 LoginWidgetOP(
                   ops: loginOptions
                       .map((e) => ConfigOP(op: e['name'], icon: e['icon']))
@@ -975,23 +967,11 @@ Future<bool?> _openLoginDialog() async {
           const SizedBox(
             height: 8.0,
           ),
-          // The web client ships with our OIDC-only server, which rejects password login.
-          if (!isWeb)
-            LoginWidgetUserPass(
-              username: username,
-              pass: password,
-              usernameMsg: usernameMsg,
-              passMsg: passwordMsg,
-              isInProgress: isInProgress,
-              curOP: curOP,
-              onLogin: onLogin,
-              userFocusNode: userFocusNode,
-            ),
+          // Our api-server accepts OIDC logins only.
           thirdAuthWidget(),
         ],
       ),
       onCancel: onDialogCancel,
-      onSubmit: isWeb ? null : onLogin,
     );
   }).whenComplete(oidcAuth.close);
 
