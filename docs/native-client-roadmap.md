@@ -62,7 +62,7 @@ Two builds per platform, named `cRustDesk` and differing only in their signed `c
 - Server addresses and key: a pre-seeded config (verified on macOS in the user and root folders, Windows under the LocalService profile, and Linux for root and the session user) or `cRustDesk --config <string>` after install (upstream's documented method), so one public build serves every deployment
 - Machines that ran stock RustDesk against the same server keep an old peer row under their natural ID with the old key; our build then registers under a random ID on every reinstall. Remove stale rows when moving a fleet over
 - [ ] Windows distribution through an internal Chocolatey feed
-- [x] Viewer machines are listed in the console from their OIDC logins (admin `GET /api/viewers`, separate Viewers section on the Devices page; machines that also register as devices are not listed there). The client build sends no heartbeats and never registers
+- [x] The console's Viewers list (admin `GET /api/viewers`, separate section on the Devices page) shows view-only machines: machines that log in with the client build and have no device row. Any machine with a device row is a device (devices can also view), including one that once ran stock RustDesk or the DC against the server; it stays out of the list until that stale row is removed (see the stale-row note above). Rows are self-reported at login, not attestation. The client build sends no heartbeats and never registers
 
 ### One RustDesk per machine
 
@@ -72,6 +72,7 @@ A machine gets either the DC or the OA build, never both and never next to stock
 - [ ] Direct IP access (`direct_server`) is not paused by the runtime guard; our DC build locks direct access off, so only builds that enable it are affected
 - [x] Uninstalling stock RustDesk's MSI removes the shared `rustdesk://` handler; the cRustDesk service restores it within about a minute while cRustDesk runs
 - [ ] The handler repair is not called at service startup: if the service was down when stock was uninstalled, cRustDesk needs a repair or reinstall to get its links back
+- [ ] The Windows client variant has no service, so a later stock install and uninstall leaves `rustdesk://` broken until cRustDesk is repaired or reinstalled
 
 ## Testing
 
@@ -80,6 +81,7 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 - [x] `npm test`: web client per platform, device policy, audit, clipboard, and the macOS custom-build spec (locks, direct IP off, one-way clipboard, refused session types)
 - [x] `npm run matrix`: each platform once as client and once as device (macOS → Linux, Windows → macOS, Linux → Windows) with a clean install of the client variant; sessions, refused file transfer, audit, the client never registering, and one-way clipboard with native clients
 - [x] Guard checks with the matrix: Linux `Conflicts:` in both install orders, the Windows MSI launch condition, and the runtime guard on macOS and Windows
+- [x] Viewer recorded from login, Linux client package has no service, Windows handler self-repair after stock removal, auto-update locked
 - [ ] Not covered yet: replacing one variant with the other in place (MSI major upgrade, apt reinstall), the Linux runtime guard, the UI status for "stock RustDesk is installed"
 
 ## Features Waiting on Our Builds

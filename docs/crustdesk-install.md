@@ -37,7 +37,9 @@ Run as administrator/root:
 | Linux | `sudo crustdesk --config <string>` |
 | macOS | `sudo /Applications/cRustDesk.app/Contents/MacOS/cRustDesk --config <string>` |
 
-`<string>` is the JSON `{"host":"<your-server>","relay":"<relay or empty>","api":"https://<your-server>","key":"<server-public-key>"}`, base64-encoded URL-safe without padding, then reversed character by character. The easiest source is a configured client: Settings, Network, copy icon next to "Export Server Config". The command sets `custom-rendezvous-server`, `relay-server`, `api-server` and `key`.
+`<string>` is the JSON `{"host":"<your-server>","relay":"<relay or empty>","api":"https://<your-server>","key":"<server-public-key>"}`, base64-encoded URL-safe without padding, then reversed character by character. Our builds hide the network settings, so take the string from a stock client's "Export Server Config" (Settings, Network), or build it yourself in the format above. The command sets `custom-rendezvous-server`, `relay-server`, `api-server` and `key`.
+
+`--config` and the service-profile paths in B configure the DC service only. The client variant runs no service; see [Client variant](#client-variant).
 
 ### B. Pre-seeded config file (staged before install)
 
@@ -57,7 +59,19 @@ Put it in place before installing:
 |---|---|
 | Windows | `C:\Windows\ServiceProfiles\LocalService\AppData\Roaming\cRustDesk\config\cRustDesk2.toml` |
 | Linux | `/root/.config/crustdesk/cRustDesk2.toml` and `~/.config/crustdesk/cRustDesk2.toml` of every session user, owned by that user |
-| macOS | `/var/root/Library/Preferences/io.github.crabamole.cRustDesk/cRustDesk2.toml` and the user's `~/Library/Preferences/io.github.crabamole.cRustDesk/cRustDesk2.toml` |
+| macOS | `/var/root/Library/Preferences/io.github.crabamole.cRustDesk/cRustDesk2.toml` and the user's `~/Library/Preferences/io.github.crabamole.cRustDesk/cRustDesk2.toml`, the latter owned by that user |
+
+Per-user files must be owned by that user (Linux and macOS: `chown <user>`, mode `0600`).
+
+### Client variant
+
+The client variant runs no service, so `--config` (which only writes the calling process's config when no service answers, and needs admin/root) and the service-profile paths above do not reach it. Pre-seed each user's own `cRustDesk2.toml`, owned by that user:
+
+| Platform | Location |
+|---|---|
+| Windows | `%APPDATA%\cRustDesk\config\cRustDesk2.toml` |
+| Linux | `~/.config/crustdesk/cRustDesk2.toml` |
+| macOS | `~/Library/Preferences/io.github.crabamole.cRustDesk/cRustDesk2.toml` |
 
 ## Windows
 
@@ -75,9 +89,9 @@ Uninstall: Apps & Features, or `msiexec /x <product-code-or-msi>`.
 
 1. Unzip, move `cRustDesk.app` to `/Applications`.
 2. Grant Screen Recording and Accessibility (bundle ID `io.github.crabamole.crustdesk`); fleets use an MDM PPPC profile.
-3. Launch the app once to install the service as upstream does, or install it from the app.
+3. DC only: launch the app once to install the service as upstream does, or install it from the app. The client variant installs no service.
 
-Uninstall: remove the app, the launchd plists `io.github.crabamole.cRustDesk_service` and `io.github.crabamole.cRustDesk_server`, and the preference folders listed above.
+Uninstall: remove the app, the launchd plists `/Library/LaunchDaemons/io.github.crabamole.cRustDesk_service.plist` and `/Library/LaunchAgents/io.github.crabamole.cRustDesk_server.plist` (unload them first), and the preference folders listed above.
 
 ## Ubuntu
 
@@ -91,7 +105,7 @@ Uninstall: `sudo apt purge crustdesk`.
 
 ## Verify
 
-As administrator/root, `--get-id` prints the device ID (same command prefix as in [Server config](#a---config-string-after-install)). A DC device then appears in the console's device list. Client builds never register or send heartbeats; their machines appear in the console's Viewers section once a user logs in with OIDC.
+As administrator/root, `--get-id` prints the device ID (same command prefix as in [Server config](#a---config-string-after-install)). A DC device then appears in the console's device list. Client builds never register or send heartbeats. The console's Viewers list shows view-only machines: machines that log in with the client build and have no device row. Any machine with a device row is a device (devices can also view), including one that once ran stock RustDesk or the DC against the server; it stays out of the Viewers list until that stale row is removed (see [Moving from stock RustDesk](#moving-from-stock-rustdesk)). Viewer rows are self-reported at login, not attestation.
 
 ## Moving from stock RustDesk
 
