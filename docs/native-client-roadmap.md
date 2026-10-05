@@ -8,9 +8,8 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 
 1. Windows code signing: on hold; SignPath asks for a product keyword findable on Google. Revisit when the fork is findable ([Build Pipeline](#build-pipeline))
 2. Test gaps ([Testing](#testing))
-3. macOS x86_64
-4. CI speed
-5. Release process
+3. CI speed
+4. Release process
 
 ## Build Pipeline
 
@@ -19,7 +18,7 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 - [x] Windows x64: two unsigned MSIs per release (`cRustDesk-<ver>-x86_64.msi`, `cRustDesk-client-<ver>-x86_64.msi`). Installs `C:\Program Files\cRustDesk\cRustDesk.exe` with service `cRustDesk`; version info CompanyName `crabamole`, ProductName `cRustDesk`, OriginalFilename `rustdesk.exe`, InternalName `rustdesk`
 - [x] Linux x86_64: one `.deb` per variant (`crustdesk-<ver>-x86_64.deb`, `crustdesk-client-<ver>-x86_64.deb`), Ubuntu, X11 only. Package `crustdesk`, `Conflicts: rustdesk, rustdesk-unattended-wayland`; upstream's stock-layout package is renamed by a post-build step
 - [x] macOS arm64: signed, notarized, stapled `cRustDesk` app (DC and client variants) shipped as a zip
-- [ ] macOS x86_64
+- macOS x86_64 (Intel): not supported; arm64 only
 - [ ] CI speed: vcpkg cache not effective (12–15 min per run); pinned actions still on Node 20
 - [x] `custom.txt` signing key is a required build parameter (`RUSTDESK_CUSTOM_CLIENT_PK`, base64 Ed25519 public key); builds fail without it and never trust RustDesk's key. Sign with `rustdesk-utils signcustom` (rustdesk-server)
 - [x] macOS: Apple Developer ID signing and notarization (Gatekeeper)
