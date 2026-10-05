@@ -70,7 +70,7 @@ A machine gets either the DC or the OA build, never both and never next to stock
 - [x] Guard against stock RustDesk on every platform: installer guards (Linux `Conflicts:`, Windows MSI launch condition that refuses while stock's service exists) plus a runtime guard: while stock is installed the service stays idle (no registration, no heartbeats, open sessions closed) and resumes within seconds once stock is removed
 - [ ] Direct IP access (`direct_server`) is not paused by the runtime guard; our DC build locks direct access off, so only builds that enable it are affected
 - [x] Uninstalling stock RustDesk's MSI removes the shared `rustdesk://` handler; the cRustDesk service restores it within about a minute while cRustDesk runs
-- [ ] The handler repair is not called at service startup: if the service was down when stock was uninstalled, cRustDesk needs a repair or reinstall to get its links back
+- [x] The service also checks the handler when it starts, so a handler removed while the service was down comes back
 - The Windows client variant has no service: after a stock install and uninstall, an MSI repair (`msiexec /f`) restores `rustdesk://` (by design; see [crustdesk-install.md](crustdesk-install.md#windows))
 
 ## Testing
@@ -80,7 +80,7 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 - [x] `npm test`: web client per platform, device policy, audit, clipboard, and the macOS custom-build spec (locks, direct IP off, one-way clipboard, refused session types)
 - [x] `npm run matrix`: each platform once as client and once as device (macOS → Linux, Windows → macOS, Linux → Windows) with a clean install of the client variant; sessions, refused file transfer, audit, the client never registering, and one-way clipboard with native clients
 - [x] Guard checks with the matrix: Linux `Conflicts:` in both install orders, the Windows MSI launch condition, and the runtime guard on macOS and Windows
-- [x] Viewer recorded from login, Linux client package has no service, Windows handler self-repair after stock removal, auto-update locked
+- [x] Viewer recorded from login, Linux client package has no service, Windows handler self-repair after stock removal and at service startup, auto-update locked
 - [ ] Not covered yet: replacing one variant with the other in place (MSI major upgrade, apt reinstall), the Linux runtime guard, the UI status for "stock RustDesk is installed"
 
 ## Features Waiting on Our Builds
