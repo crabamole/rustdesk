@@ -1,0 +1,113 @@
+# Releases every client under one tag: the version in flutter/web/js/package.json (<upstream>-<n>).
+# web-docker.yml publishes the web-client image; this workflow builds the native installers and
+# creates the GitHub Release (and its tag) once all of them exist. A dispatch on any branch is a dry run.
+name: Release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      release: ${{ steps.check.outputs.release }}
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Check if this version is released
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(jq -r .version flutter/web/js/package.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # Release only on a definite "not found"; any other lookup error fails the job.
+          if out=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$version" 2>&1); then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          elif grep -q 'HTTP 404' <<<"$out"; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "$out" >&2
+            exit 1
+          fi
+
+  windows:
+    needs: version
+    if: needs.version.outputs.release == 'true' || github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/windows-build.yml
+    secrets: inherit
+
+  linux:
+    needs: version
+    if: needs.version.outputs.release == 'true' || github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/linux-build.yml
+    secrets: inherit
+
+  macos:
+    needs: version
+    if: needs.version.outputs.release == 'true' || github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/macos-build.yml
+    secrets: inherit
+
+  publish:
+    needs: [version, windows, linux, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      PUBLISH: ${{ needs.version.outputs.release == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+      IMAGE: ghcr.io/crabamole/rustdesk/web-client
+    steps:
+      - name: Download the installers
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: dist
+          pattern: c*
+          merge-multiple: true
+
+      - name: Name the installers after the release version
+        working-directory: dist
+        run: |
+          # The builds name their files after the upstream version (e.g. cRustDesk-1.4.9-x86_64.msi).
+          upstream=${VERSION%-*}
+          for f in *; do mv "$f" "${f/-$upstream-/-$VERSION-}"; done
+          ls -l
+          [ "$(ls | grep -c -- "-$VERSION-")" = 6 ] || { echo "expected 6 installers"; exit 1; }
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Wait for the web-client image
+        if: env.PUBLISH == 'true'
+        run: |
+          for _ in $(seq 90); do
+            docker manifest inspect "$IMAGE:$VERSION" >/dev/null 2>&1 && exit 0
+            sleep 60
+          done
+          echo "$IMAGE:$VERSION was not published within 90 minutes"
+          exit 1
+
+      - name: Create the release
+        if: env.PUBLISH == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cat > notes.md <<EOF
+          Web client image: \`$IMAGE:$VERSION\`
+
+          Installers for the device (\`cRustDesk\`) and client-only (\`cRustDesk-client\`) variants.
+          The Windows MSIs are not code-signed, so SmartScreen warns on first run.
+          Install guide: [docs/crustdesk-install.md](https://github.com/$GITHUB_REPOSITORY/blob/$VERSION/docs/crustdesk-install.md)
+          EOF
+          gh release create "$VERSION" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "cRustDesk $VERSION" --notes-file notes.md
