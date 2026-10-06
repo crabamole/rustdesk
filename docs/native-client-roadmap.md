@@ -109,11 +109,11 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 - Self-reported at login: trustworthy only on managed devices running attested builds (see Client Attestation)
 - Not planned: viewer-reported local addresses or MAC addresses (NAT and randomized MACs make them weak; the hostname matches the inventory)
 
-### Native Login with PKCE
-- [ ] Native clients log in with the authorization code flow, PKCE and a loopback redirect (RFC 8252)
-- [ ] api-server fully validates the ID token; chart setting to turn off the polling login flow
+### Native Login Bound to the App
+- [ ] Our native builds receive their login on a loopback redirect and redeem it with a PKCE verifier, instead of polling; the api-server stays the confidential OIDC client (no new registration at the identity provider)
+- [ ] api-server: `nonce` and PKCE on the provider leg; setting `OIDC_POLLING=N` to refuse polling logins (stock clients can then no longer log in)
 - **Today:** polling login with a confirmation page for logins from native clients
-- Tracked in [api-server-roadmap.md](api-server-roadmap.md) (Phase 2)
+- Design: [design-native-login.md](design-native-login.md); tracked in [api-server-roadmap.md](api-server-roadmap.md) (Phase 2)
 
 ### WebSocket Port for Hostnames ([#30](https://github.com/crabamole/rustdesk/issues/30))
 - [x] Keep a non-default port when the rendezvous server is a hostname: when `custom-rendezvous-server` and `api-server` name the same host and port, the WebSocket URLs keep that port (`check_ws()` in our `hbb_common` copy, [crabamole/hbb_common](https://github.com/crabamole/hbb_common))

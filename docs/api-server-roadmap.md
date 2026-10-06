@@ -89,9 +89,11 @@ Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdes
 - [x] hbbs, hbbr and the api-server honour forwarded headers only from `TRUSTED_PROXIES`
 - [x] hbbs registration rate limits configurable (`IP_BLOCK_PER_MINUTE`, `IP_BLOCK_IDS_PER_DAY`); hbbr checks its blocklist against the resolved address
 
-### Native Client Login with PKCE
-- [ ] Native clients use the authorization code flow with PKCE and a loopback redirect (RFC 8252); the api-server fully validates the ID token (signature via JWKS, `nonce`)
-- [ ] Chart setting to turn off the polling login flow
+### Native Client Login Bound to the App
+- [ ] `POST /api/oidc/auth` accepts a loopback redirect and a PKCE challenge; the callback redirects to the app's loopback with a one-time result; `POST /api/oidc/token` redeems it with the verifier
+- [ ] `nonce` and PKCE toward the identity provider for every login (native, web, console); the ID token comes from the token endpoint over TLS
+- [ ] `OIDC_POLLING=N` (chart `apiserver.env.OIDC_POLLING`) refuses polling logins from native clients
+- Design: [design-native-login.md](design-native-login.md); replaces the earlier public-client plan (no public client registration needed)
 - **Depends on:** shipping our own native client builds ([native-client-roadmap.md](native-client-roadmap.md))
 
 ## Phase 3: Policy & Control
