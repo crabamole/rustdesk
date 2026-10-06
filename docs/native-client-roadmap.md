@@ -8,7 +8,7 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 
 1. Windows code signing: on hold; SignPath asks for a product keyword findable on Google. Revisit when the fork is findable ([Build Pipeline](#build-pipeline))
 2. CI speed
-3. Tracking upstream releases
+3. Tracking upstream releases: upstream 1.5.0 is out ([Build Pipeline](#build-pipeline))
 
 ## Build Pipeline
 
@@ -24,6 +24,7 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 - [ ] Windows: code-signing certificate (SmartScreen); stays unsigned for now. SignPath (free for open source) asks for a search keyword that finds the product on Google, so revisit when the fork is findable; Certum (about €49/yr) is the alternative. The workflow's signing steps have never run; before first use, keep the certificate password off signtool's command line, delete the PFX afterwards, and sign only our own binaries
 - [x] Release process: a version bump in `flutter/web/js/package.json` (`<upstream>-<n>`) releases every client under one tag (`release.yml`): the web-client image plus a GitHub Release with the six installers and `SHA256SUMS`
 - [ ] Tracking upstream releases
+- [ ] Merge upstream 1.5.0 (released 2026-09-30; our last upstream merge is from 2026-08-08): handshake hardening (Kx v1) and security fixes; our `hbb_common` copy merges upstream too. Then lock its new options in `custom.txt` (WebRTC transport, clipboard sync between sessions)
 - [x] Install guide for our packages: [crustdesk-install.md](crustdesk-install.md) (Windows, macOS, Ubuntu; `--config` and pre-seeded config). The stock RustDesk pre-seed guides are kept separately ([Linux](stock-rustdesk-linux-preseed-install.md), [macOS](stock-rustdesk-macos-preseed-install.md))
 - [x] No auto-update in custom builds: both `custom.txt` files lock `"allow-auto-update": "N"` (`override-settings`), so they never download stock RustDesk and the toggle shows as locked. With default settings no update-server contact was observed on Windows; the only path was the toggle
 
@@ -103,9 +104,10 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 - Design: [design-trusted-builds.md](design-trusted-builds.md); device admission ([design-device-admission.md](design-device-admission.md)) layers on top of it and needs no client change
 
 ### Viewer Identity in Audit Records
-- [ ] The viewer reports its hostname and local addresses; the host includes them in its `authorized` audit record
-- Device-reported values: trustworthy only on managed devices running attested builds
-- **Today:** the server-side address (resolved through trusted proxies), the viewer's name (`display-name`, logged-in user or OS user) and, for logged-in viewers, their account (via hbbs's audit reference, stock clients)
+- [x] Connection audit rows name the viewer machine: hostname, OS and login address, copied from the latest native OIDC login of the same user on that viewer ID. Server-side only (api-server, after 3.3.0), no client change; the session's own address (`ip`) stays
+- Viewers only connect logged in (`LOGGED_IN_ONLY=Y`), so the login carries the machine; web viewers have no machine, only their address
+- Self-reported at login: trustworthy only on managed devices running attested builds (see Client Attestation)
+- Not planned: viewer-reported local addresses or MAC addresses (NAT and randomized MACs make them weak; the hostname matches the inventory)
 
 ### Native Login with PKCE
 - [ ] Native clients log in with the authorization code flow, PKCE and a loopback redirect (RFC 8252)
@@ -119,14 +121,15 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 - Stock clients: serve WebSocket on port 80 (ws) or 443 (wss), configure the rendezvous server as a hostname without port and leave the relay server blank
 
 ### Clipboard Audit
-- [ ] Hosts report clipboard transfers to the api-server
-- About 30 lines in `src/server/connection.rs` and `src/server/clipboard_service.rs`
-- **Today:** connection audit only (works with stock clients)
-- Design: [design-clipboard-monitoring.md](design-clipboard-monitoring.md)
+- [ ] Hosts report clipboard arrivals to the api-server (formats and sizes, no content)
+- [ ] The native viewer sends its clipboard like our web client: on Ctrl/Cmd+V in a session and when entering the session view, instead of on every clipboard change
+- Why both: the native viewer pushes every clipboard change to all open sessions, pasted or not (RDP and TigerVNC transfer on paste); our web client already sends only on paste or on entering the view. With the DC's one-way clipboard only viewer → device traffic exists
+- **Today:** connection and file audit only; paused until the current features are tried out
+- Design: [design-clipboard-monitoring.md](design-clipboard-monitoring.md) (predates one-way clipboard)
 
 ### OIDC-Only Login Form
-- [ ] Hide the username/password fields; the api-server accepts OIDC logins only, so password logins from stock clients always fail
-- **Today:** users pick the OIDC button
+- [x] The login dialog shows only the OIDC button (web client and native builds, 1.4.9-7); the api-server accepts OIDC logins only
+- Stock clients still show the password fields; password logins from them always fail
 
 ### ScreenCaptureKit on macOS ([#26](https://github.com/crabamole/rustdesk/issues/26))
 - [ ] ScreenCaptureKit video backend behind the `screencapturekit` feature, parked on branch `feat/screencapturekit`

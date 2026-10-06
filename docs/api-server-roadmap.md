@@ -73,6 +73,9 @@ Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdes
 - [x] Error replies for `POST /api/audit/file` and `/alarm` per the spec
 - [x] Viewer **user** attribution: hbbs sends `ControlledContext` (spec §11)
 - [x] Admin read API `GET /api/audits/{kind}` and a console page
+- [x] Viewer machine on connection rows: hostname, OS and login address from the viewer's latest native login by the same user (self-reported); viewer rows are per machine and user
+- [ ] Login audit: one row per OIDC sign-in (native, web, console) with user, client type, RustDesk ID, hostname, OS, address and outcome, including failures
+- [ ] Device registration audit: first registration, key change and owner change per device ID
 - [ ] Console page: disconnect an active connection
 - [ ] CSV export of the audit log
 - [ ] Log retention (purge after N days)
@@ -115,7 +118,8 @@ Enforce organizational policies on client behavior during remote sessions.
 Data loss prevention controls for regulated environments.
 
 ### Clipboard Direction Control
-- [ ] Enforce clipboard copy direction per deployment (signed `custom.txt`) — disable copy-from-remote, copy-to-remote, or both
+- [x] Device → viewer blocked: the DC's signed `custom.txt` sets `one-way-clipboard-redirection`
+- [ ] Viewer → device blocking per deployment (not built; today only by turning clipboard off)
 - [x] Design doc exists (`docs/design-clipboard-direction.md`)
 - **Depends on:** our own native client builds ([native-client-roadmap.md](native-client-roadmap.md)) — RustDesk's `one-way-clipboard-redirection` is a built-in setting that strategy options and `RustDesk2.toml` cannot set
 
