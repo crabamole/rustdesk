@@ -111,7 +111,8 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 
 ### Native Login Bound to the App
 - [ ] Our native builds receive their login on a loopback redirect and redeem it with a PKCE verifier, instead of polling; the api-server stays the confidential OIDC client (no new registration at the identity provider)
-- [ ] api-server: `nonce` and PKCE on the provider leg; setting `OIDC_POLLING=N` to refuse polling logins (stock clients can then no longer log in)
+- [ ] api-server: `nonce` and PKCE on the provider leg; finishes only logins bound to their browser (cookie) or loopback, so polling-only clients (stock, older builds) can no longer log in
+- [ ] Release notes state the client / api-server version pairing (GitHub Release, chart `UPGRADING.md`)
 - **Today:** polling login with a confirmation page for logins from native clients
 - Design: [design-native-login.md](design-native-login.md); tracked in [api-server-roadmap.md](api-server-roadmap.md) (Phase 2)
 

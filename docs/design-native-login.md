@@ -54,8 +54,7 @@ App                         Browser                  api-server                 
   ("Signed in, you can close this window") and close the listener.
 - Exchange `result` and `code_verifier` at `POST /api/oidc/token`; the response has the
   same body as today's successful `auth-query`, so the rest of the login code stays.
-- Upstream's polling path stays in the code for servers without this flow, behind a check
-  of the `/api/oidc/auth` response (no `loopback` support → poll as today).
+- The polling path is removed; the app needs an api-server with this flow.
 
 ### api-server
 
@@ -66,30 +65,38 @@ App                         Browser                  api-server                 
   the code, and checks the ID token's `nonce` besides `iss`, `aud` and `exp`. The ID token
   comes straight from the token endpoint over TLS, which OIDC Core §3.1.3.7 accepts in place
   of a signature check.
-- For a login with `loopback`, the callback redirects to the loopback address with a
-  one-time `result` (random, valid 60 seconds, single use) instead of finishing the login
-  for polling. The confirmation page is not shown: the result only reaches the machine
-  that started the login.
+- The callback finishes a login only when it is bound to its starter:
+  - **same browser:** the cookie set at `/api/oidc/auth` comes back (web client, console);
+    the login then completes for that browser's `auth-query` as today;
+  - **loopback:** the login was started with `loopback`; the callback redirects to it with a
+    one-time `result` (random, valid 60 seconds, single use).
+
+  Any other login is refused. The confirmation page for logins finished in another browser
+  goes away, and so do logins from clients that only poll (stock RustDesk).
 - `POST /api/oidc/token` issues the bearer token when `result` is known and unused,
   `SHA256(code_verifier)` matches the stored challenge, and `id` and `uuid` match the ones
   given at `/api/oidc/auth`. Any mismatch burns the result.
-- `GET /api/oidc/auth-query` answers nothing for logins started with `loopback`.
-- New setting `OIDC_POLLING` (default `Y`; chart `apiserver.env.OIDC_POLLING`): `N` refuses
-  `/api/oidc/auth` without `loopback` from native clients (`deviceInfo.type: client`) and
-  disables `auth-query`. Stock RustDesk clients can then no longer log in.
+- `GET /api/oidc/auth-query` answers only browser logins bound by the cookie.
 
 ### Web client and console
 
 Unchanged: they start and finish the login in the same browser, bound by the existing
 cookie. They gain the `nonce` and PKCE checks on the provider leg.
 
-## Compatibility
+## Version compatibility
 
-| Client | Server with the flow, `OIDC_POLLING=Y` | `OIDC_POLLING=N` |
-|---|---|---|
-| Our native builds | loopback flow | loopback flow |
-| Stock RustDesk | polling, with the confirmation page | refused |
-| Web client, console | cookie-bound, as today | cookie-bound, as today |
+No backward compatibility (not yet officially released): native clients and the api-server
+change together.
+
+| Client | api-server with this flow |
+|---|---|
+| Our native builds with this flow | loopback flow |
+| Our native builds before it, stock RustDesk | login refused (they only poll) |
+| Web client, console | cookie-bound, as today |
+
+The release that ships it states the pairing: the client GitHub Release notes and the
+chart's `UPGRADING.md` name the minimum client version for the api-server version (and
+the reverse), and that older native builds and stock clients can no longer log in.
 
 ## Alternatives
 
@@ -104,10 +111,10 @@ cookie. They gain the `nonce` and PKCE checks on the provider leg.
 
 - api-server unit and integration tests: loopback validation, one-time `result`, verifier
   and `id`/`uuid` checks, expiry, `nonce`/PKCE/`state` on the provider leg (stub provider),
-  `OIDC_POLLING=N`.
+  refusal of logins bound to neither a browser nor a loopback.
 - e2e: a native client logs in through the mock provider and receives its token on the
-  loopback; a result redeemed without the verifier, or twice, is refused; with
-  `OIDC_POLLING=N` a polling login is refused.
+  loopback; a result redeemed without the verifier, or twice, is refused; a polling-only
+  login is refused; web client and console logins still work.
 
 ## Related
 
