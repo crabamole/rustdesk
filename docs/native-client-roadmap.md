@@ -109,12 +109,11 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 - Self-reported at login: trustworthy only on managed devices running attested builds (see Client Attestation)
 - Not planned: viewer-reported local addresses or MAC addresses (NAT and randomized MACs make them weak; the hostname matches the inventory)
 
-### Native Login Bound to the App
-- [ ] Our native builds receive their login on a loopback redirect and redeem it with a PKCE verifier, instead of polling; the api-server stays the confidential OIDC client (no new registration at the identity provider)
-- [ ] api-server: `nonce` and PKCE on the provider leg; finishes only logins bound to their browser (cookie) or loopback, so polling-only clients (stock, older builds) can no longer log in
-- [ ] Release notes state the client / api-server version pairing (GitHub Release, chart `UPGRADING.md`)
-- **Today:** polling login with a confirmation page for logins from native clients
-- Design: [design-native-login.md](design-native-login.md); tracked in [api-server-roadmap.md](api-server-roadmap.md) (Phase 2)
+### Login Bound to Its Starter
+- [ ] Every OIDC login (our native builds, web client, admin console) returns a one-time result to its starter (loopback for native, same-origin page for browsers), redeemed with a PKCE verifier; no polling. The api-server stays the confidential OIDC client (no new registration at the identity provider)
+- [ ] Release notes state the client / web client / api-server version pairing (GitHub Release, chart `UPGRADING.md`); no backward compatibility, so older native builds and stock clients can no longer log in
+- **Today:** polling login, a browser cookie, and a confirmation page for logins finished in another browser
+- Design: [design-oidc-login.md](design-oidc-login.md); tracked in [api-server-roadmap.md](api-server-roadmap.md) (Phase 2)
 
 ### WebSocket Port for Hostnames ([#30](https://github.com/crabamole/rustdesk/issues/30))
 - [x] Keep a non-default port when the rendezvous server is a hostname: when `custom-rendezvous-server` and `api-server` name the same host and port, the WebSocket URLs keep that port (`check_ws()` in our `hbb_common` copy, [crabamole/hbb_common](https://github.com/crabamole/hbb_common))

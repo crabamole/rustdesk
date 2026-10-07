@@ -89,12 +89,13 @@ Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdes
 - [x] hbbs, hbbr and the api-server honour forwarded headers only from `TRUSTED_PROXIES`
 - [x] hbbs registration rate limits configurable (`IP_BLOCK_PER_MINUTE`, `IP_BLOCK_IDS_PER_DAY`); hbbr checks its blocklist against the resolved address
 
-### Native Client Login Bound to the App
-- [ ] `POST /api/oidc/auth` accepts a loopback redirect and a PKCE challenge; the callback redirects to the app's loopback with a one-time result; `POST /api/oidc/token` redeems it with the verifier
-- [ ] `nonce` and PKCE toward the identity provider for every login (native, web, console); the ID token comes from the token endpoint over TLS
-- [ ] Logins bound to neither their browser (cookie) nor a loopback are refused; the confirmation page goes away. No backward compatibility: release notes and `UPGRADING.md` state the minimum client version
-- Design: [design-native-login.md](design-native-login.md); replaces the earlier public-client plan (no public client registration needed)
-- **Depends on:** shipping our own native client builds ([native-client-roadmap.md](native-client-roadmap.md))
+### Login Bound to Its Starter
+- [ ] `POST /api/oidc/auth` requires `return_to` (loopback for native, own origin for browsers) and a PKCE challenge; the callback redirects there with a one-time result; `POST /api/oidc/token` redeems it with the verifier
+- [ ] `nonce` and PKCE toward the identity provider; the ID token comes from the token endpoint over TLS
+- [ ] Removed: `GET /api/oidc/auth-query`, the confirmation page and the login cookie
+- [ ] Console login page uses the new flow
+- Design: [design-oidc-login.md](design-oidc-login.md); replaces the earlier public-client plan. No backward compatibility: release notes and `UPGRADING.md` state the version pairing
+- **Depends on:** our own native client builds ([native-client-roadmap.md](native-client-roadmap.md))
 
 ## Phase 3: Policy & Control
 
