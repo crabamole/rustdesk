@@ -116,6 +116,11 @@ Enforce organizational policies on client behavior during remote sessions.
 - [ ] Design doc complete
 - **Depends on:** Strategy Push
 
+### Same-User Access
+- [ ] A viewer connects without the device password when the same user is logged in on the device (opt-in per deployment and in `custom.txt`)
+- Design: `docs/design-same-user-access.md` (future, not scheduled)
+- **Depends on:** Control Role Enforcement
+
 ## Phase 4: DLP & Compliance
 
 Data loss prevention controls for regulated environments.
