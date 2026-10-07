@@ -202,10 +202,10 @@ impl OidcSession {
     fn wait_loopback(
         listener: &std::net::TcpListener,
         auth_attempt: u64,
+        login_code: &str,
         timeout: Duration,
     ) -> Result<String, String> {
         use std::io::{Read, Write};
-        const PAGE: &[u8] = b"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n<!DOCTYPE html><html><body><p>Signed in. You can close this window.</p></body></html>";
         let begin = Instant::now();
         while Self::auth_attempt_is_current(auth_attempt) && begin.elapsed() < timeout {
             match listener.accept() {
@@ -214,9 +214,18 @@ impl OidcSession {
                     let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
                     let mut buf = [0u8; 4096];
                     let n = stream.read(&mut buf).unwrap_or(0);
-                    let _ = stream.write_all(PAGE);
-                    if let Some(reply) = parse_loopback_request(&String::from_utf8_lossy(&buf[..n]))
-                    {
+                    // Any local process can call the loopback; only this login's redirect counts.
+                    let reply = parse_loopback_request(&String::from_utf8_lossy(&buf[..n]))
+                        .filter(|(_, code)| code == login_code);
+                    let (status, text) = match &reply {
+                        Some((Ok(_), _)) => ("200 OK", "Login received. Return to RustDesk."),
+                        Some((Err(_), _)) => {
+                            ("200 OK", "Login failed. Return to RustDesk and try again.")
+                        }
+                        None => ("404 Not Found", "Not found"),
+                    };
+                    let _ = stream.write_all(format!("HTTP/1.1 {status}\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n<!DOCTYPE html><html><body><p>{text}</p></body></html>").as_bytes());
+                    if let Some((reply, _)) = reply {
                         return reply;
                     }
                 }
@@ -326,6 +335,7 @@ impl OidcSession {
             }
         };
 
+        let login_code = code_url.code.clone();
         {
             let mut session = OIDC_SESSION.write().unwrap();
             if !session.is_current_auth_attempt(auth_attempt) {
@@ -336,7 +346,8 @@ impl OidcSession {
         }
 
         let query_timeout = OIDC_SESSION.read().unwrap().query_timeout;
-        let result = match Self::wait_loopback(&listener, auth_attempt, query_timeout) {
+        let result = match Self::wait_loopback(&listener, auth_attempt, &login_code, query_timeout)
+        {
             Ok(result) => result,
             Err(err) => {
                 Self::set_state_if_current(auth_attempt, WAITING_ACCOUNT_AUTH, err);
@@ -452,17 +463,21 @@ fn pkce_pair() -> (String, String) {
     (verifier, challenge)
 }
 
-/// The browser's request to the loopback: `Ok(result)`, `Err(error)`, or `None` for other requests (e.g. favicon).
-fn parse_loopback_request(request: &str) -> Option<Result<String, String>> {
+/// The browser's request to the loopback: `Ok(result)` or `Err(error)` with the login code, or `None` for other requests (e.g. favicon).
+fn parse_loopback_request(request: &str) -> Option<(Result<String, String>, String)> {
     let target = request.lines().next()?.split_whitespace().nth(1)?;
     let url = Url::parse(&format!("http://127.0.0.1{target}")).ok()?;
-    let mut pairs = url.query_pairs();
-    if let Some((_, r)) = pairs.clone().find(|(k, _)| k == "result") {
-        return Some(Ok(r.into_owned()));
-    }
-    pairs
-        .find(|(k, _)| k == "error")
-        .map(|(_, e)| Err(e.into_owned()))
+    let param = |name: &str| {
+        url.query_pairs()
+            .find(|(k, _)| k == name)
+            .map(|(_, v)| v.into_owned())
+    };
+    let code = param("code")?;
+    let reply = match param("result") {
+        Some(result) => Ok(result),
+        None => Err(param("error")?),
+    };
+    Some((reply, code))
 }
 
 #[cfg(test)]
@@ -473,11 +488,19 @@ mod tests {
     fn loopback_request_carries_the_result_or_the_error() {
         assert_eq!(
             parse_loopback_request("GET /?result=abc&code=x HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n"),
-            Some(Ok("abc".to_owned()))
+            Some((Ok("abc".to_owned()), "x".to_owned()))
         );
         assert_eq!(
-            parse_loopback_request("GET /?error=login_failed HTTP/1.1\r\n\r\n"),
-            Some(Err("login_failed".to_owned()))
+            parse_loopback_request("GET /?error=login_failed&code=x HTTP/1.1\r\n\r\n"),
+            Some((Err("login_failed".to_owned()), "x".to_owned()))
+        );
+        assert_eq!(
+            parse_loopback_request("GET /?result=abc HTTP/1.1\r\n\r\n"),
+            None
+        );
+        assert_eq!(
+            parse_loopback_request("GET /?code=x HTTP/1.1\r\n\r\n"),
+            None
         );
         assert_eq!(
             parse_loopback_request("GET /favicon.ico HTTP/1.1\r\n\r\n"),
