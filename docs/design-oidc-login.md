@@ -59,7 +59,7 @@ Starter                     Browser                  api-server                 
   the callback requires the matching `state`, sends the verifier with the code, and checks
   the ID token's `nonce` besides `iss`, `aud` and `exp`. The ID token comes straight from the
   token endpoint over TLS, which OIDC Core §3.1.3.7 accepts in place of a signature check.
-- The callback redirects to `returnTo` with a one-time `result` (random, valid 60 seconds, single use) and the login `code`, so a starter with several logins can match it; on failure it redirects with `error=login_failed`.
+- The callback redirects to `returnTo` with a one-time `result` (random, valid 60 seconds, single use) and the login `code`, so a starter with several logins can match it; on failure it redirects with `error=login_failed` and the login `code`.
 - `POST /api/oidc/token` issues the bearer token when `result` is known and unused,
   `BASE64URL(SHA256(codeVerifier))` matches the stored challenge, and `id` and `uuid` match
   the ones given at `/api/oidc/auth`. Any mismatch burns the result. The response has the
