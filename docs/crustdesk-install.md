@@ -23,6 +23,12 @@ Attached to each [GitHub Release](https://github.com/crabamole/rustdesk/releases
 | macOS arm64 | `cRustDesk-<ver>-aarch64.zip`, `cRustDesk-client-<ver>-aarch64.zip` (signed, notarized app inside) |
 | Ubuntu x86_64 (X11) | `crustdesk-<ver>-x86_64.deb`, `crustdesk-client-<ver>-x86_64.deb` |
 
+Each installer from 1.4.9-8 on carries a GitHub build attestation: it proves the file was built by this repo's release workflow from the tagged commit. Check a download with the [GitHub CLI](https://cli.github.com/):
+
+```bash
+gh attestation verify cRustDesk-<ver>-x86_64.msi --repo crabamole/rustdesk
+```
+
 ## Server config
 
 Two ways; use either on every platform.
