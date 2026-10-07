@@ -110,9 +110,9 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 - Not planned: viewer-reported local addresses or MAC addresses (NAT and randomized MACs make them weak; the hostname matches the inventory)
 
 ### Login Bound to Its Starter
-- [ ] Every OIDC login (our native builds, web client, admin console) returns a one-time result to its starter (loopback for native, same-origin page for browsers), redeemed with a PKCE verifier; no polling. The api-server stays the confidential OIDC client (no new registration at the identity provider)
-- [ ] Release notes state the client / web client / api-server version pairing (GitHub Release, chart `UPGRADING.md`); no backward compatibility, so older native builds and stock clients can no longer log in
-- **Today:** polling login, a browser cookie, and a confirmation page for logins finished in another browser
+- [x] Every OIDC login (our native builds, web client, admin console) returns a one-time result to its starter (loopback for native, same-origin page for browsers), redeemed with a PKCE verifier; no polling. The api-server stays the confidential OIDC client (no new registration at the identity provider)
+- [x] Release notes state the client / web client / api-server version pairing (GitHub Release, chart `UPGRADING.md`); no backward compatibility, so older native builds and stock clients can no longer log in
+- Shipped in clients 1.4.9-8 with rustdesk-api 3.4.0 (chart 0.8.0); verified by e2e and a manual cRustDesk login on macOS
 - Design: [design-oidc-login.md](design-oidc-login.md); tracked in [api-server-roadmap.md](api-server-roadmap.md) (Phase 2)
 
 ### WebSocket Port for Hostnames ([#30](https://github.com/crabamole/rustdesk/issues/30))

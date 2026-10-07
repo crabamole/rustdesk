@@ -60,7 +60,7 @@ Establish test coverage as a foundation for opinionated development.
 - [x] **Clipboard support**: text in both directions; the browser clipboard is sent when the pointer enters the remote view and before Ctrl/Cmd+V (Chromium, after the user allows clipboard access); respects the host's clipboard permission
 - [ ] **File transfer**: Basic upload/download (many bridge stubs to implement)
 - [ ] **Mobile browser**: Responsive layout and touch input handling
-- [ ] **Login without polling**: redeem a one-time result from a same-origin callback page with a PKCE verifier ([design-oidc-login.md](design-oidc-login.md))
+- [x] **Login without polling**: redeem a one-time result from a same-origin callback page with a PKCE verifier ([design-oidc-login.md](design-oidc-login.md))
 - [ ] **Viewer identity**: send the logged-in user instead of the hard-coded `my_id: "web"` (`connection.ts`); audit records show every browser session as viewer `web`
 
 ### Phase 4: Operations
