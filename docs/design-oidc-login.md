@@ -29,7 +29,7 @@ One flow for every client. The api-server keeps the provider leg; the starter re
 one-time `result` on a redirect it controls and proves with a PKCE verifier (RFC 7636) that
 it started the login.
 
-| Client | Redirect target (`return_to`) | Verifier kept in |
+| Client | Redirect target (`returnTo`) | Verifier kept in |
 |---|---|---|
 | Native | its loopback `http://127.0.0.1:<port>/` (RFC 8252 §7.3) | app memory |
 | Web client | a callback page of the web client, same origin | the starting page (`sessionStorage`) |
@@ -37,32 +37,31 @@ it started the login.
 
 ```
 Starter                     Browser                  api-server                 IdP
- │ POST /api/oidc/auth {op, id, uuid, deviceInfo, return_to, code_challenge} ─▶│
+ │ POST /api/oidc/auth {op, id, uuid, deviceInfo, returnTo, codeChallenge} ─▶│
  │◀──────────────────────────────── {code, url} ──────────│                        │
  │ open url ─────────────────▶│ login ────────────────────┼───────────────────────▶│
  │                            │◀──── redirect /callback ──┼────────────────────────│
  │                            │ GET /callback ───────────▶│ code→tokens (secret,   │
  │                            │                           │ PKCE, state, nonce) ──▶│
- │                            │◀──── 302 <return_to>?result=<one-time> ────────────│
+ │                            │◀──── 302 <returnTo>?result=<one-time> ────────────│
  │◀── result (loopback request, or callback page → starting page) ─│              │
- │ POST /api/oidc/token {result, code_verifier, id, uuid} ▶│ check, issue token     │
+ │ POST /api/oidc/token {result, codeVerifier, id, uuid} ▶│ check, issue token     │
  │◀──────────────────────────────── {access_token, user} ─│                        │
 ```
 
 ### api-server
 
-- `POST /api/oidc/auth` requires `return_to` and `code_challenge` (method `S256`).
-  `return_to` is either `http://127.0.0.1:<port>/` or `http://[::1]:<port>/` (native), or a
+- `POST /api/oidc/auth` requires `returnTo` and `codeChallenge` (method `S256`).
+  `returnTo` is either `http://127.0.0.1:<port>/` or `http://[::1]:<port>/` (native), or a
   URL on the server's own origin (web client, console; today's `redirectUri` rule).
   Anything else is refused.
 - Toward the provider, every login sends a random `nonce` and a PKCE challenge of its own;
   the callback requires the matching `state`, sends the verifier with the code, and checks
   the ID token's `nonce` besides `iss`, `aud` and `exp`. The ID token comes straight from the
   token endpoint over TLS, which OIDC Core §3.1.3.7 accepts in place of a signature check.
-- The callback redirects to `return_to` with a one-time `result` (random, valid 60 seconds,
-  single use). It never finishes a login any other way.
+- The callback redirects to `returnTo` with a one-time `result` (random, valid 60 seconds, single use) and the login `code`, so a starter with several logins can match it; on failure it redirects with `error=login_failed`.
 - `POST /api/oidc/token` issues the bearer token when `result` is known and unused,
-  `BASE64URL(SHA256(code_verifier))` matches the stored challenge, and `id` and `uuid` match
+  `BASE64URL(SHA256(codeVerifier))` matches the stored challenge, and `id` and `uuid` match
   the ones given at `/api/oidc/auth`. Any mismatch burns the result. The response has the
   body of today's successful `auth-query`.
 - Removed: `GET /api/oidc/auth-query`, the confirmation page (`/api/oidc/confirm`) and the
@@ -71,7 +70,7 @@ Starter                     Browser                  api-server                 
 ### Native (our builds, `src/hbbs_http/account.rs`)
 
 - Before calling `/api/oidc/auth`, open a listener on `127.0.0.1` with a port chosen by the
-  OS and create a random `code_verifier` (43–128 characters).
+  OS and create a random `codeVerifier` (43–128 characters).
 - Wait up to 3 minutes for one request carrying `result`; answer it with a short page
   ("Signed in, you can close this window") and close the listener.
 - Redeem `result` at `POST /api/oidc/token`; the rest of the login code stays.
@@ -79,15 +78,14 @@ Starter                     Browser                  api-server                 
 
 ### Web client (`flutter/web/js/src/globals.js`)
 
-- Keep the verifier in `sessionStorage`, start the login with `return_to` set to a small
+- Keep the verifier in `sessionStorage`, start the login with `returnTo` set to a small
   callback page served by the web client, and open the provider URL in a popup as today.
-- The callback page passes `result` to the starting page (`postMessage` to its opener,
-  checking the origin) and closes; the starting page redeems it.
+- The callback page passes `result` and `code` to the starting tab over a `BroadcastChannel` (same origin only; identity providers may cut `window.opener`) and closes; the starting page redeems it.
 - The polling code is removed.
 
 ### Admin console (`webconsole/src/views/LoginPage.vue`)
 
-- Keep the verifier in `sessionStorage`; `return_to` is `/ui/login`.
+- Keep the verifier in `sessionStorage`; `returnTo` is `/ui/login`.
 - On return, `/ui/login?result=…` redeems `result` with the verifier and removes it from
   the address bar.
 
@@ -120,7 +118,7 @@ log in. The chart bumps all images together.
 
 ## Testing
 
-- api-server unit and integration tests: `return_to` validation (loopback, own origin, others
+- api-server unit and integration tests: `returnTo` validation (loopback, own origin, others
   refused), one-time `result`, verifier and `id`/`uuid` checks, expiry, `nonce`/PKCE/`state`
   on the provider leg (stub provider); `auth-query` and `/api/oidc/confirm` are gone.
 - Web client and console unit tests: verifier storage, the callback page's origin check,
