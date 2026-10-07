@@ -32,7 +32,7 @@ it started the login.
 | Client | Redirect target (`returnTo`) | Verifier kept in |
 |---|---|---|
 | Native | its loopback `http://127.0.0.1:<port>/` (RFC 8252 §7.3) | app memory |
-| Web client | a callback page of the web client, same origin | the starting page (`sessionStorage`) |
+| Web client | a callback page of the web client, same origin | the starting tab's memory |
 | Admin console | `/ui/login`, same origin | `sessionStorage` |
 
 ```
@@ -78,7 +78,7 @@ Starter                     Browser                  api-server                 
 
 ### Web client (`flutter/web/js/src/globals.js`)
 
-- Keep the verifier in `sessionStorage`, start the login with `returnTo` set to a small
+- Keep the verifier in the starting tab's memory, start the login with `returnTo` set to a small
   callback page served by the web client, and open the provider URL in a popup as today.
 - The callback page passes `result` and `code` to the starting tab over a `BroadcastChannel` (same origin only; identity providers may cut `window.opener`) and closes; the starting page redeems it.
 - The polling code is removed.
