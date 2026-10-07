@@ -14,7 +14,6 @@ lazy_static::lazy_static! {
     static ref OIDC_SESSION: Arc<RwLock<OidcSession>> = Arc::new(RwLock::new(OidcSession::new()));
 }
 
-const QUERY_INTERVAL_SECS: f32 = 1.0;
 const QUERY_TIMEOUT_SECS: u64 = 60 * 3;
 
 const REQUESTING_ACCOUNT_AUTH: &str = "Requesting account auth";
@@ -162,6 +161,8 @@ impl OidcSession {
         op: &str,
         id: &str,
         uuid: &str,
+        return_to: &str,
+        code_challenge: &str,
     ) -> ResultType<HbbHttpResponse<OidcAuthUrl>> {
         Self::ensure_client(api_server);
         let body = serde_json::json!({
@@ -170,32 +171,60 @@ impl OidcSession {
             "uuid": uuid,
             "deviceInfo": crate::ui_interface::get_login_device_info(),
             "apiDomain": api_server,
+            "returnTo": return_to,
+            "codeChallenge": code_challenge,
         })
         .to_string();
         let resp = crate::post_request_sync(format!("{}/api/oidc/auth", api_server), body, "")?;
         HbbHttpResponse::parse(&resp)
     }
 
-    fn query(
+    /// Exchanges the one-time result for the session token.
+    fn redeem(
         api_server: &str,
-        code: &str,
+        result: &str,
+        code_verifier: &str,
         id: &str,
         uuid: &str,
     ) -> ResultType<HbbHttpResponse<AuthBody>> {
-        let url = Url::parse_with_params(
-            &format!("{}/api/oidc/auth-query", api_server),
-            &[("code", code), ("id", id), ("uuid", uuid)],
-        )?;
-        Self::ensure_client(api_server);
-        #[derive(Deserialize)]
-        struct HttpResponseBody {
-            body: String,
-        }
+        let body = serde_json::json!({
+            "result": result,
+            "codeVerifier": code_verifier,
+            "id": id,
+            "uuid": uuid,
+        })
+        .to_string();
+        let resp = crate::post_request_sync(format!("{}/api/oidc/token", api_server), body, "")?;
+        HbbHttpResponse::parse(&resp)
+    }
 
-        let resp =
-            crate::http_request_sync(url.to_string(), "GET".to_owned(), None, "{}".to_owned())?;
-        let resp = serde_json::from_str::<HttpResponseBody>(&resp)?;
-        HbbHttpResponse::parse(&resp.body)
+    /// Waits for the browser's redirect to the loopback listener.
+    fn wait_loopback(
+        listener: &std::net::TcpListener,
+        auth_attempt: u64,
+        timeout: Duration,
+    ) -> Result<String, String> {
+        use std::io::{Read, Write};
+        const PAGE: &[u8] = b"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n<!DOCTYPE html><html><body><p>Signed in. You can close this window.</p></body></html>";
+        let begin = Instant::now();
+        while Self::auth_attempt_is_current(auth_attempt) && begin.elapsed() < timeout {
+            match listener.accept() {
+                Ok((mut stream, _)) => {
+                    let _ = stream.set_nonblocking(false);
+                    let _ = stream.set_read_timeout(Some(Duration::from_secs(5)));
+                    let mut buf = [0u8; 4096];
+                    let n = stream.read(&mut buf).unwrap_or(0);
+                    let _ = stream.write_all(PAGE);
+                    if let Some(reply) = parse_loopback_request(&String::from_utf8_lossy(&buf[..n]))
+                    {
+                        return reply;
+                    }
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => Self::sleep(0.2),
+                Err(e) => return Err(e.to_string()),
+            }
+        }
+        Err("timeout".to_owned())
     }
 
     fn reset(&mut self) {
@@ -254,7 +283,25 @@ impl OidcSession {
         remember_me: bool,
         auth_attempt: u64,
     ) {
-        let auth_request_res = Self::auth(&api_server, &op, &id, &uuid);
+        let listener = match std::net::TcpListener::bind("127.0.0.1:0")
+            .and_then(|l| l.set_nonblocking(true).map(|_| l))
+        {
+            Ok(l) => l,
+            Err(err) => {
+                Self::set_state_if_current(auth_attempt, REQUESTING_ACCOUNT_AUTH, err.to_string());
+                return;
+            }
+        };
+        let return_to = match listener.local_addr() {
+            Ok(addr) => format!("http://127.0.0.1:{}/", addr.port()),
+            Err(err) => {
+                Self::set_state_if_current(auth_attempt, REQUESTING_ACCOUNT_AUTH, err.to_string());
+                return;
+            }
+        };
+        let (code_verifier, code_challenge) = pkce_pair();
+        let auth_request_res =
+            Self::auth(&api_server, &op, &id, &uuid, &return_to, &code_challenge);
         log::info!("Request oidc auth result: {:?}", &auth_request_res);
         if !Self::auth_attempt_is_current(auth_attempt) {
             return;
@@ -285,65 +332,55 @@ impl OidcSession {
                 return;
             }
             session.set_state(WAITING_ACCOUNT_AUTH, "".to_owned());
-            session.code_url = Some(code_url.clone());
+            session.code_url = Some(code_url);
         }
 
-        let begin = Instant::now();
         let query_timeout = OIDC_SESSION.read().unwrap().query_timeout;
-        while Self::auth_attempt_is_current(auth_attempt) && begin.elapsed() < query_timeout {
-            let query_result = Self::query(&api_server, &code_url.code, &id, &uuid);
-            if !Self::auth_attempt_is_current(auth_attempt) {
+        let result = match Self::wait_loopback(&listener, auth_attempt, query_timeout) {
+            Ok(result) => result,
+            Err(err) => {
+                Self::set_state_if_current(auth_attempt, WAITING_ACCOUNT_AUTH, err);
                 return;
             }
-            match query_result {
-                Ok(HbbHttpResponse::<_>::Data(auth_body)) => {
-                    let mut session = OIDC_SESSION.write().unwrap();
-                    if !session.is_current_auth_attempt(auth_attempt) {
-                        return;
-                    }
-                    if auth_body.r#type == "access_token" {
-                        if remember_me {
-                            LocalConfig::set_option(
-                                "access_token".to_owned(),
-                                auth_body.access_token.clone(),
-                            );
-                            LocalConfig::set_option(
-                                "user_info".to_owned(),
-                                serde_json::json!({
-                                    "name": auth_body.user.name,
-                                    "display_name": auth_body.user.display_name,
-                                    "avatar": auth_body.user.avatar,
-                                    "status": auth_body.user.status
-                                })
-                                .to_string(),
-                            );
-                        }
-                    }
-                    session.set_state(LOGIN_ACCOUNT_AUTH, "".to_owned());
-                    session.auth_body = Some(auth_body);
+        };
+        match Self::redeem(&api_server, &result, &code_verifier, &id, &uuid) {
+            Ok(HbbHttpResponse::<_>::Data(auth_body)) => {
+                let mut session = OIDC_SESSION.write().unwrap();
+                if !session.is_current_auth_attempt(auth_attempt) {
                     return;
                 }
-                Ok(HbbHttpResponse::<_>::Error(err)) => {
-                    if err.contains("No authed oidc is found") {
-                        // ignore, keep querying
-                    } else {
-                        Self::set_state_if_current(auth_attempt, WAITING_ACCOUNT_AUTH, err);
-                        return;
+                if auth_body.r#type == "access_token" {
+                    if remember_me {
+                        LocalConfig::set_option(
+                            "access_token".to_owned(),
+                            auth_body.access_token.clone(),
+                        );
+                        LocalConfig::set_option(
+                            "user_info".to_owned(),
+                            serde_json::json!({
+                                "name": auth_body.user.name,
+                                "display_name": auth_body.user.display_name,
+                                "avatar": auth_body.user.avatar,
+                                "status": auth_body.user.status
+                            })
+                            .to_string(),
+                        );
                     }
                 }
-                Ok(_) => {
-                    // ignore
-                }
-                Err(err) => {
-                    log::trace!("Failed query oidc {}", err);
-                    // ignore
-                }
+                session.set_state(LOGIN_ACCOUNT_AUTH, "".to_owned());
+                session.auth_body = Some(auth_body);
             }
-            Self::sleep(QUERY_INTERVAL_SECS);
-        }
-
-        if begin.elapsed() >= query_timeout && Self::auth_attempt_is_current(auth_attempt) {
-            Self::set_state_if_current(auth_attempt, WAITING_ACCOUNT_AUTH, "timeout".to_owned());
+            Ok(HbbHttpResponse::<_>::Error(err)) => {
+                Self::set_state_if_current(auth_attempt, WAITING_ACCOUNT_AUTH, err)
+            }
+            Ok(_) => Self::set_state_if_current(
+                auth_attempt,
+                WAITING_ACCOUNT_AUTH,
+                "Invalid auth response".to_owned(),
+            ),
+            Err(err) => {
+                Self::set_state_if_current(auth_attempt, WAITING_ACCOUNT_AUTH, err.to_string())
+            }
         }
     }
 
@@ -396,5 +433,70 @@ impl OidcSession {
 
     pub fn get_result() -> AuthResult {
         OIDC_SESSION.read().unwrap().get_result_()
+    }
+}
+
+/// PKCE verifier and its S256 challenge (RFC 7636).
+fn pkce_pair() -> (String, String) {
+    use hbb_common::{
+        base64::prelude::{Engine as _, BASE64_URL_SAFE_NO_PAD},
+        rand::{distributions::Alphanumeric, Rng},
+        sha2::{Digest, Sha256},
+    };
+    let verifier: String = hbb_common::rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(64)
+        .map(char::from)
+        .collect();
+    let challenge = BASE64_URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
+    (verifier, challenge)
+}
+
+/// The browser's request to the loopback: `Ok(result)`, `Err(error)`, or `None` for other requests (e.g. favicon).
+fn parse_loopback_request(request: &str) -> Option<Result<String, String>> {
+    let target = request.lines().next()?.split_whitespace().nth(1)?;
+    let url = Url::parse(&format!("http://127.0.0.1{target}")).ok()?;
+    let mut pairs = url.query_pairs();
+    if let Some((_, r)) = pairs.clone().find(|(k, _)| k == "result") {
+        return Some(Ok(r.into_owned()));
+    }
+    pairs
+        .find(|(k, _)| k == "error")
+        .map(|(_, e)| Err(e.into_owned()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn loopback_request_carries_the_result_or_the_error() {
+        assert_eq!(
+            parse_loopback_request("GET /?result=abc&code=x HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n"),
+            Some(Ok("abc".to_owned()))
+        );
+        assert_eq!(
+            parse_loopback_request("GET /?error=login_failed HTTP/1.1\r\n\r\n"),
+            Some(Err("login_failed".to_owned()))
+        );
+        assert_eq!(
+            parse_loopback_request("GET /favicon.ico HTTP/1.1\r\n\r\n"),
+            None
+        );
+        assert_eq!(parse_loopback_request(""), None);
+    }
+
+    #[test]
+    fn pkce_pair_is_s256() {
+        use hbb_common::{
+            base64::prelude::{Engine as _, BASE64_URL_SAFE_NO_PAD},
+            sha2::{Digest, Sha256},
+        };
+        let (v, c) = pkce_pair();
+        assert_eq!(v.len(), 64);
+        assert_eq!(
+            c,
+            BASE64_URL_SAFE_NO_PAD.encode(Sha256::digest(v.as_bytes()))
+        );
     }
 }

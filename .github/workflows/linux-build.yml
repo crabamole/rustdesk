@@ -208,6 +208,8 @@ jobs:
             pushd /workspace
             export VCPKG_ROOT=/opt/artifacts/vcpkg
             cargo build --locked --lib --features hwcodec,flutter,unix-file-copy-paste --release
+            # --release reuses the dependencies just built.
+            cargo test --locked --lib --features hwcodec,flutter,unix-file-copy-paste --release -- hbbs_http::account::tests
             rm -rf target/release/deps target/release/build
             rm -rf ~/.cargo
 
