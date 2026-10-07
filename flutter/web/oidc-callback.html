@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>RustDesk Login</title></head>
+<body>
+<p>Signing in…</p>
+<script>
+  // The provider may cut window.opener; a same-origin channel always reaches the starting tab.
+  const q = new URLSearchParams(location.search);
+  new BroadcastChannel('rustdesk-oidc').postMessage({ result: q.get('result'), error: q.get('error'), code: q.get('code') });
+  history.replaceState(null, '', location.pathname);
+  window.close();
+</script>
+</body>
+</html>

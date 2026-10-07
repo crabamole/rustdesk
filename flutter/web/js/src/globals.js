@@ -5,15 +5,17 @@ import { loadVp9 } from "./codec";
 import { checkIfRetry, version } from "./gen_js_from_hbb";
 import { initZstd, translate } from "./common";
 import PCMPlayer from "pcm-player";
+import { randomVerifier, s256Challenge } from "./pkce";
 
 window.curConn = undefined;
 
-let _oidcState = { state_msg: '', failed_msg: '', url: '', auth_body: null, code: '', cancelled: false, popup: null };
+let _oidcState = { state_msg: '', failed_msg: '', url: '', auth_body: null, code: '', verifier: '', channel: null, cancelled: false, popup: null };
 function _oidcReset() {
+  if (_oidcState.channel) _oidcState.channel.close();
   if (_oidcState.popup && !_oidcState.popup.closed) {
     _oidcState.popup.close();
   }
-  _oidcState = { state_msg: '', failed_msg: '', url: '', auth_body: null, code: '', cancelled: false, popup: null };
+  _oidcState = { state_msg: '', failed_msg: '', url: '', auth_body: null, code: '', verifier: '', channel: null, cancelled: false, popup: null };
 }
 
 function _oidcStartAuth(op, rememberMe) {
@@ -28,6 +30,7 @@ async function _oidcStartAuthAsync(op, rememberMe) {
   const apiServer = getApiServer();
   const id = localStorage.getItem('id') || '';
   const uuid = btoa(localStorage.getItem('uuid') || crypto.randomUUID());
+  const verifier = randomVerifier();
   try {
     const resp = await fetch(`${apiServer}/api/oidc/auth`, {
       method: 'POST',
@@ -37,6 +40,8 @@ async function _oidcStartAuthAsync(op, rememberMe) {
         id: id,
         uuid: uuid,
         deviceInfo: { name: 'web', os: 'web', type: 'web' },
+        returnTo: location.origin + '/oidc-callback.html',
+        codeChallenge: await s256Challenge(verifier),
       }),
     });
     if (!resp.ok) {
@@ -52,13 +57,14 @@ async function _oidcStartAuthAsync(op, rememberMe) {
       return;
     }
     _oidcState.code = data.code;
+    _oidcState.verifier = verifier;
     _oidcState.state_msg = 'WaitingAccountAuth';
     if (_oidcState.popup && !_oidcState.popup.closed) {
       _oidcState.popup.location.href = data.url;
     } else {
       _oidcState.url = data.url;
     }
-    _oidcStartPolling(apiServer, data.code, id, uuid, rememberMe);
+    _oidcAwaitResult(apiServer, id, uuid, rememberMe);
   } catch (e) {
     if (!_oidcState.cancelled) {
       _oidcState.failed_msg = e.toString();
@@ -67,42 +73,43 @@ async function _oidcStartAuthAsync(op, rememberMe) {
   }
 }
 
-function _oidcStartPolling(apiServer, code, id, uuid, rememberMe) {
-  const maxAttempts = 60;
-  let attempt = 0;
-  const poll = async () => {
-    if (_oidcState.cancelled || attempt >= maxAttempts) {
-      if (!_oidcState.cancelled && attempt >= maxAttempts) {
-        _oidcState.failed_msg = 'timeout';
-      }
+function _oidcAwaitResult(apiServer, id, uuid, rememberMe) {
+  const state = _oidcState;
+  const channel = new BroadcastChannel('rustdesk-oidc');
+  state.channel = channel;
+  const timer = setTimeout(() => { if (!state.cancelled && !state.auth_body) state.failed_msg = 'timeout'; channel.close(); }, 180_000);
+  channel.onmessage = async (event) => {
+    const msg = event.data || {};
+    if (state.cancelled || msg.code !== state.code) return;
+    clearTimeout(timer);
+    channel.close();
+    if (!msg.result) {
+      state.failed_msg = msg.error || 'login_failed';
       return;
     }
-    attempt++;
     try {
-      const url = `${apiServer}/api/oidc/auth-query?code=${encodeURIComponent(code)}&id=${encodeURIComponent(id)}&uuid=${encodeURIComponent(uuid)}`;
-      const resp = await fetch(url);
-      if (!resp.ok || _oidcState.cancelled) return;
-      const text = await resp.text();
-      if (!text || _oidcState.cancelled) return;
-      const data = JSON.parse(text);
-      if (data && data.type === 'access_token') {
-        _oidcState.auth_body = data;
-        _oidcState.state_msg = 'LoginAccountAuth';
-        if (rememberMe) {
-          localStorage.setItem('access_token', data.access_token || '');
-          localStorage.setItem('user_info', JSON.stringify(data.user || {}));
-        }
-        if (_oidcState.popup && !_oidcState.popup.closed) {
-          _oidcState.popup.close();
-        }
+      const resp = await fetch(`${apiServer}/api/oidc/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ result: msg.result, codeVerifier: state.verifier, id, uuid }),
+      });
+      const data = await resp.json();
+      if (state.cancelled) return;
+      if (!resp.ok || data.type !== 'access_token') {
+        state.failed_msg = data.error || `HTTP ${resp.status}`;
         return;
       }
+      state.auth_body = data;
+      state.state_msg = 'LoginAccountAuth';
+      if (rememberMe) {
+        localStorage.setItem('access_token', data.access_token || '');
+        localStorage.setItem('user_info', JSON.stringify(data.user || {}));
+      }
     } catch (e) {
-      // ignore, keep polling
+      state.failed_msg = e.toString();
     }
-    setTimeout(poll, 1000);
+    if (state.popup && !state.popup.closed) state.popup.close();
   };
-  setTimeout(poll, 1000);
 }
 
 window.isMobile = () => {
