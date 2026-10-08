@@ -1,6 +1,6 @@
 # Design: Audit Records From Their Own Device
 
-**Status: approved, in progress (roadmap Phase 2, Audit Logging).**
+**Status: implemented (rustdesk-api, rustdesk-server; unreleased).**
 
 ## Goal
 
@@ -44,9 +44,10 @@ hbbs) would stop the rest; that needs a client change and belongs with
 ## Compatibility
 
 Stock and our clients send the same records, so no client change is needed. hbbs and the
-api-server must be upgraded together: an older hbbs mints references without a target,
-which the new api-server refuses (hbbs then admits the viewer without a reference, so
-records lose their viewer user until hbbs is upgraded). Release notes state the pairing.
+api-server must be upgraded together: the api-server refuses a reference request without
+a target, which an older hbbs treats as the api-server being unavailable (with
+`LOGGED_IN_ONLY=Y` it refuses connections). Release notes and `UPGRADING.md` state the
+pairing.
 
 ## Tests
 
