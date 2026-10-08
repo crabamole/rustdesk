@@ -3,7 +3,7 @@
 Corporate deployment features for [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api).
 
 **Base:** sctgdesk-api-server (AGPL-3.0)  
-**Updated:** 2026-10-03
+**Updated:** 2026-10-08
 
 ## Architecture Context
 
@@ -77,6 +77,7 @@ Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdes
 - [ ] Login audit: one row per OIDC sign-in (native, web, console) with user, client type, RustDesk ID, hostname, OS, address and outcome, including failures
 - [ ] Device registration audit: first registration, key change and owner change per device ID
 - [ ] Console page: disconnect an active connection
+- [ ] Console page: date, user and viewer filters, a detail view per record, and full alarm details
 - [ ] CSV export of the audit log
 - [ ] Log retention (purge after N days)
 - [ ] Console (admin action) logging
@@ -94,6 +95,7 @@ Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdes
 - [x] `nonce` and PKCE toward the identity provider; the ID token comes from the token endpoint over TLS
 - [x] Removed: `GET /api/oidc/auth-query`, the confirmation page and the login cookie
 - [x] Console login page uses the new flow
+- [ ] Browser logins return only to the console and web-client login pages
 - Design: [design-oidc-login.md](design-oidc-login.md); replaces the earlier public-client plan. No backward compatibility: release notes and `UPGRADING.md` state the version pairing
 - **Depends on:** our own native client builds ([native-client-roadmap.md](native-client-roadmap.md))
 
