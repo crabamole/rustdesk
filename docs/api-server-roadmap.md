@@ -74,7 +74,7 @@ Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdes
 - [x] Viewer **user** attribution: hbbs sends `ControlledContext` (spec §11)
 - [x] Admin read API `GET /api/audits/{kind}` and a console page
 - [x] Viewer machine on connection rows: hostname, OS and login address from the viewer's latest native login by the same user (self-reported); viewer rows are per machine and user
-- [ ] Login audit: one row per OIDC sign-in (native, web, console) with user, client type, RustDesk ID, hostname, OS, address and outcome, including failures
+- [ ] Login audit: one row per OIDC sign-in (native, web, console) with user, client type, RustDesk ID, hostname, OS, address and outcome, including failures (design: [design-login-audit.md](design-login-audit.md))
 - [ ] Device registration audit: first registration, key change and owner change per device ID
 - [ ] Console page: disconnect an active connection
 - [ ] Console page: date, user and viewer filters, a detail view per record, and full alarm details
