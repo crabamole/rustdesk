@@ -95,7 +95,7 @@ Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdes
 - [x] `nonce` and PKCE toward the identity provider; the ID token comes from the token endpoint over TLS
 - [x] Removed: `GET /api/oidc/auth-query`, the confirmation page and the login cookie
 - [x] Console login page uses the new flow
-- [ ] Browser logins return only to the console and web-client login pages
+- [x] Browser logins return only to the console and web-client login pages
 - Design: [design-oidc-login.md](design-oidc-login.md); replaces the earlier public-client plan. No backward compatibility: release notes and `UPGRADING.md` state the version pairing
 - **Depends on:** our own native client builds ([native-client-roadmap.md](native-client-roadmap.md))
 
