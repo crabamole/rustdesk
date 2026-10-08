@@ -23,7 +23,7 @@ env:
 
 jobs:
   check-signing-key:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check the custom.txt signing key
         # A malformed key still compiles, and the client would then ignore every custom.txt.
