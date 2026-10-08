@@ -1,6 +1,6 @@
 # Design: Login Audit
 
-**Status: proposed (roadmap Phase 2, Audit Logging).**
+**Status: implemented (rustdesk-api, unreleased).**
 
 ## Goal
 
