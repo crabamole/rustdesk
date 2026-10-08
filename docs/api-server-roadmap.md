@@ -81,7 +81,7 @@ Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdes
 - [ ] CSV export of the audit log
 - [ ] Log retention (purge after N days)
 - [ ] Console (admin action) logging
-- [ ] Reject audit records from unregistered devices (spec §12.1); bind audit references to the target device
+- [ ] Reject audit records from unregistered devices (spec §12.1); bind audit references to the target device (design: [design-audit-authentication.md](design-audit-authentication.md))
 - [ ] hbbs raw-TCP proxy for api-server calls (spec §2.2; only with `USE_RAW_TCP_FOR_API=Y` or api-server errors)
 - [x] End a device's open rows whose `close` record was lost (e.g. the Linux client restarting `--server` right after the last connection closes), by diffing against heartbeat `conns`
 
