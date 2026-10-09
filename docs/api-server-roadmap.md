@@ -151,6 +151,7 @@ Data loss prevention controls for regulated environments.
 - [ ] hbbr: pair both halves of a relayed session across pods
 - [ ] api-server: move OIDC logins in progress to Postgres; drop or invalidate the address book cache
 - [ ] PodDisruptionBudgets once replicas > 1
+- Design: [design-multi-replica.md](design-multi-replica.md) (presence in Postgres, forwarding between hbbs pods, one relay URL per hbbr pod, DR runbook)
 
 ## Already Working
 
