@@ -43,7 +43,7 @@ Run as administrator/root:
 | Linux | `sudo crustdesk --config <string>` |
 | macOS | `sudo /Applications/cRustDesk.app/Contents/MacOS/cRustDesk --config <string>` |
 
-`<string>` is the JSON `{"host":"<your-server>","relay":"<relay or empty>","api":"https://<your-server>","key":"<server-public-key>"}`, base64-encoded URL-safe without padding, then reversed character by character. Our builds hide the network settings, so take the string from a stock client's "Export Server Config" (Settings, Network), or build it yourself in the format above. The command sets `custom-rendezvous-server`, `api-server` and `key`; the `relay` value is ignored, since hbbs names the relay for every session.
+`<string>` is the JSON `{"host":"<your-server>","relay":"","api":"https://<your-server>","key":"<server-public-key>"}`, base64-encoded URL-safe without padding, then reversed character by character. Our builds hide the network settings, so take the string from a stock client's "Export Server Config" (Settings, Network), or build it yourself in the format above. The command sets `custom-rendezvous-server`, `api-server` and `key`; the `relay` value is ignored, since hbbs names the relay for every session.
 
 `--config` and the service-profile paths in B configure the DC service only. The client variant runs no service; see [Client variant](#client-variant).
 
@@ -70,7 +70,7 @@ Per-user files must be owned by that user (Linux and macOS: `chown <user>`, mode
 
 ### Custom port
 
-Our builds also work when the server is reached on a port other than 443/80 (stock clients drop it): give the same port `P` everywhere — `custom-rendezvous-server = '<your-server>:P'`, `api-server = 'http(s)://<your-server>:P'`, and on the server the chart's `publicHost` (or hbbs's `RELAY_URLS`) `<your-server>:P`.
+Our builds also work when the server is reached on a port other than 443/80 (stock clients drop it): give the same port `P` everywhere — `custom-rendezvous-server = '<your-server>:P'`, `api-server = 'http(s)://<your-server>:P'`, and on the server the chart's `publicHost` `<your-server>:P` (or hbbs's `RELAY_URLS`, `wss://<your-server>:P/ws/relay/<n>`).
 
 ### Client variant
 
