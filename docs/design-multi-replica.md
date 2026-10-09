@@ -214,15 +214,48 @@ state the pairing.
 
 ## Tests
 
-- hbbs unit and integration: presence upsert and generation rules, stale-pod filtering, re-assert
-  after an emptied table, routing-token encoding, forwarding both ways, OFFLINE only when no live
-  pod holds the device.
+### Unit and integration
+
+- hbbs: presence upsert and delete rules, stale-pod filtering, re-assert after an emptied table,
+  routing-token encoding, forwarding both ways, OFFLINE only when no live pod holds the device,
+  `/livez` and `/readyz`.
 - api-server: OIDC login across two state instances on one database; nonce uniqueness.
-- e2e with two pods each: sessions from every client type to devices on either hbbs pod, a pod
-  deleted and a pod frozen mid-test (devices reachable again within 30 s), an hbbr rolling update
-  during a session (session survives), a web client rolling update during a session (survives),
-  login across api-server pods. e2e helpers that pick the
-  first pod (logs, coverage, port-forward) handle several.
+
+### Availability (e2e, two pods of each server)
+
+Three measurements:
+
+| Measurement | Probe |
+|---|---|
+| Device unreachable window | The test starts each disruption itself at `t0` and polls presence every 500 ms; per device, the window ends when it is registered on another pod (or a new epoch of the same pod). Works for real devices and for silent failures, where the lost pod logs nothing. Cross-checked end to end for synthetic devices: a logged-in prober asks for each device every second and expects its answer within 3 s. |
+| Session interruption | Synthetic viewer/device pairs relay a sequence number every 100 ms through hbbr, at least two per hbbr pod; any gap over 500 ms or closed session is recorded. One real web-client session to a device checks the same. |
+| Login availability | A mock-OIDC login every 2 s during the api-server's rolling update. |
+
+Synthetic devices register over `/ws/id` like real ones and copy the client's reconnect rules
+(reconnect at once after a connection that lived 18 s or more, otherwise after the rest of 18 s;
+give up after 1.5 × the server's keep-alive without data; register again at once). Real devices
+check that the fleet behaves like them. 200 synthetic devices per run; 5000 in an optional scale
+run that also records database writes per second. The probers run as a pod in the cluster and
+reach the servers through the web client Service, as devices do.
+
+| Scenario | Target |
+|---|---|
+| hbbs rolling restart | each device unreachable ≤ 3 s; no failed session setup except those in flight on the restarting pod |
+| hbbs pod deleted | ≤ 3 s |
+| hbbs pod killed (SIGKILL) | ≤ 5 s |
+| hbbs pod frozen (SIGSTOP) | ≤ 40 s (keep-alive detection plus readiness); liveness restarts the pod |
+| hbbs pod partitioned (all its packets dropped) | ≤ 40 s; liveness restarts the pod |
+| hbbr rolling restart (short grace in the test) | sessions ending within the grace period are not cut; no new session is given a draining pod |
+| hbbr pod killed | its sessions are cut; viewers are back within 5 s on another pod |
+| Web client rolling restart | sessions survive within the grace period |
+| api-server rolling restart | all logins succeed |
+| Postgres crash (empties `UNLOGGED` tables) | no device reconnects; presence rebuilt within 10 s; hbbs pods unready, then ready, never restarted |
+| Node drain (manual) | PodDisruptionBudgets respected; targets above |
+
+Each run writes a report: per scenario, the unreachable window per device (max, p50, p95),
+sessions cut and failed session setups. A missed target fails the run. These specs run last and
+separately from the main suite, since they take minutes. Existing e2e helpers that pick the first
+pod (logs, coverage collection, restart counts, port-forwards) handle several.
 
 ## Future Work
 
