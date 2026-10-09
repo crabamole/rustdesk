@@ -839,10 +839,7 @@ impl RendezvousMediator {
     }
 
     fn get_relay_server(&self, provided_by_rendezvous_server: String) -> String {
-        let mut relay_server = Config::get_option("relay-server");
-        if relay_server.is_empty() {
-            relay_server = provided_by_rendezvous_server;
-        }
+        let mut relay_server = provided_by_rendezvous_server;
         if relay_server.is_empty() {
             relay_server = crate::increase_port(&self.host, 1);
         }
@@ -1033,5 +1030,27 @@ impl Drop for CheckIfResendPk {
             Config::set_key_confirmed(false);
             log::info!("Set key_confirmed to false due to pk changed, will resend register_pk");
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn relay_server_is_the_one_hbbs_sent() {
+        let mediator = RendezvousMediator {
+            addr: TargetAddr::Domain("hbbs.example.com".into(), 21116),
+            host: "hbbs.example.com:21116".to_owned(),
+            host_prefix: String::new(),
+            keep_alive: 0,
+        };
+        Config::set_option(OPTION_RELAY_SERVER.to_owned(), "local.example.com:21117".to_owned());
+        assert_eq!(
+            mediator.get_relay_server("wss://hbbs.example.com/ws/relay/1".to_owned()),
+            "wss://hbbs.example.com/ws/relay/1"
+        );
+        assert_eq!(mediator.get_relay_server(String::new()), "hbbs.example.com:21117");
+        Config::set_option(OPTION_RELAY_SERVER.to_owned(), String::new());
     }
 }
