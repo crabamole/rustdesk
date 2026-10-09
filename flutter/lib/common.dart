@@ -2968,7 +2968,8 @@ class ServerConfig {
       json = jsonDecode(utf8.decode(bytes, allowMalformed: true));
     }
     idServer = json['host'] ?? '';
-    relayServer = json['relay'] ?? '';
+    // The relay is always the one hbbs hands out.
+    relayServer = '';
     apiServer = json['api'] ?? '';
     key = json['key'] ?? '';
   }
@@ -2990,7 +2991,7 @@ class ServerConfig {
   /// from local options
   ServerConfig.fromOptions(Map<String, dynamic> options)
       : idServer = options['custom-rendezvous-server'] ?? "",
-        relayServer = options['relay-server'] ?? "",
+        relayServer = "",
         apiServer = options['api-server'] ?? "",
         key = options['key'] ?? "";
 }

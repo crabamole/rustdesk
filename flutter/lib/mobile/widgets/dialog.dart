@@ -157,11 +157,6 @@ void showServerSettingsWithValue(
                   buildField(translate('ID Server'), idCtrl, idServerMsg.value,
                       autofocus: true),
                   SizedBox(height: 8),
-                  if (!isIOS && !isWeb) ...[
-                    buildField(translate('Relay Server'), relayCtrl,
-                        relayServerMsg.value),
-                    SizedBox(height: 8),
-                  ],
                   buildField(
                     translate('API Server'),
                     apiCtrl,
