@@ -94,6 +94,9 @@ peer_presence (id, pod, epoch, gen, since)        one row per connected device
 - *Deliver to waiting viewer*: the pod that receives the device's answer passes it to the pod named
   in the routing token.
 
+Only session setup is forwarded: one request and one answer of a few hundred bytes each. Session
+data flows between the clients and hbbr and never passes through hbbs.
+
 Calls carry a token derived from the server keypair all pods already share; a NetworkPolicy lets
 only hbbs pods reach the port.
 
@@ -109,8 +112,9 @@ two viewers behind one NAT overwrite each other.
 
 - hbbs tells devices a shorter keep-alive in its registration reply (`RegisterPkResponse.keep_alive`,
   20 s): a device notices a silent pod in about 30 s instead of 90 s. Upstream clients honour it.
-- `/healthz` on a small HTTP port, answered through the main event loop and checking the
-  database. Liveness restarts a hung pod; readiness takes it out of the Service.
+- A small HTTP port with two checks. `/livez` is answered through the main event loop; liveness
+  uses it to restart a hung pod. `/readyz` also checks the database; while the database is down the
+  pod leaves the Service but is not restarted, and its open device connections stay.
 - On SIGTERM, hbbs fails readiness first, then closes device connections so they move at once.
 
 **Other changes.**
@@ -144,7 +148,6 @@ The relay address is always chosen by hbbs:
   `--config`, the settings field). A device would otherwise dial its own relay address instead of
   the pod hbbs chose, and the two halves would meet on the same pod only one time in N.
 - **Web client:** dial the relay address hbbs returns, not the fixed `/ws/relay`.
-- **Stock clients:** work when their relay-server setting is empty, as our install guide says.
 
 ### api-server
 
@@ -152,7 +155,7 @@ The relay address is always chosen by hbbs:
   single use and the redeem become conditional updates.
 - The legacy `/api/ab` cache becomes write-through (also fixes a write that was never saved).
 - Unique index on the audit nonce; the fallback insert of a connection row becomes an upsert.
-- `/healthz` checks the database.
+- `/livez` (process) and `/readyz` (database), as for hbbs.
 
 ### Chart
 
@@ -160,7 +163,7 @@ The relay address is always chosen by hbbs:
   Services, hbbr with per-pod Services; `hbbs.relayAddress` replaced by URLs generated from the
   public host and `hbbr.replicas`.
 - nginx: one `/ws/relay/<n>` location per hbbr pod, rendered from `hbbr.replicas`.
-- `/healthz` probes; PodDisruptionBudgets (max one unavailable) when replicas > 1; pods spread
+- `/livez` and `/readyz` probes; PodDisruptionBudgets (max one unavailable) when replicas > 1; pods spread
   across nodes; `terminationGracePeriodSeconds` long enough for hbbr to drain (default 1 h).
 - NetworkPolicy: hbbs pods reach each other's internal port.
 
@@ -182,7 +185,8 @@ not yet replicated. The runbook lives in the chart README and is not verified ye
 
 ## Compatibility
 
-No protocol change: stock and our clients work, with an empty relay-server setting. Our clients
+No protocol change. Stock clients are already unsupported (they lack our OIDC login flow); one
+with a relay-server set would pair only one time in N. Our clients
 lose the relay-server setting; the web client dials the address hbbs returns. hbbs, hbbr, the
 api-server, the web client and the chart are upgraded together; release notes and `UPGRADING.md`
 state the pairing.
@@ -200,7 +204,4 @@ state the pairing.
 
 ## Open Questions
 
-- Stock clients that still have a relay-server set pair only one time in N: refuse, document, or
-  let hbbr pods pass unmatched halves to each other later.
-- Readiness of hbbs while its database is down: stay Ready and answer from memory, or leave the
-  Service.
+None.
