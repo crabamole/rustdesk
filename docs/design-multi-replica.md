@@ -113,8 +113,10 @@ two viewers behind one NAT overwrite each other.
 - hbbs tells devices a shorter keep-alive in its registration reply (`RegisterPkResponse.keep_alive`,
   20 s): a device notices a silent pod in about 30 s instead of 90 s. Upstream clients honour it.
 - A small HTTP port with two checks. `/livez` is answered through the main event loop; liveness
-  uses it to restart a hung pod. `/readyz` also checks the database; while the database is down the
-  pod leaves the Service but is not restarted, and its open device connections stay.
+  uses it to restart a hung pod. `/readyz` fails only while the pod shuts down. It does not check
+  the database: Postgres is shared, so every pod would fail together, and a CNI that resets the
+  flows of a non-ready backend (Cilium does) would drop every device. While the database is down,
+  hbbs keeps its connections and registers devices from memory; startup still waits for the database.
 - On SIGTERM, hbbs fails readiness first, then closes device connections so they move at once.
 
 **Other changes.**
@@ -158,7 +160,7 @@ The relay address is always chosen by hbbs:
   single use and the redeem become conditional updates.
 - The legacy `/api/ab` cache becomes write-through (also fixes a write that was never saved).
 - Unique index on the audit nonce; the fallback insert of a connection row becomes an upsert.
-- `/livez` (process) and `/readyz` (database), as for hbbs.
+- `/livez` (process) and `/readyz` (database; unlike hbbs, its requests are short-lived).
 
 ### Chart
 
@@ -252,7 +254,7 @@ reach the servers through the web client Service, as devices do.
 | Web client rolling restart | sessions survive within the grace period |
 | api-server rolling restart | all logins and viewer connections succeed |
 | Postgres crash (empties `UNLOGGED` tables) | no device reconnects; presence rebuilt within 12 s (the next 10 s heartbeat finds it empty); no server pod restarted |
-| Postgres unavailable for 20 s (frozen) | no device reconnects; hbbs pods unready, then ready, never restarted |
+| Postgres unavailable for 20 s (frozen) | no device reconnects; hbbs pods stay ready and are never restarted |
 | Node drain (manual) | PodDisruptionBudgets respected; targets above |
 
 Each run writes a report: per scenario, the unreachable window per device (max, p50, p95),
