@@ -106,11 +106,13 @@ vi.mock("./url", () => ({
   getDefaultUri: vi.fn((relay?: boolean) => relay ? "ws://relay:21119" : "ws://host:21118"),
   getHost: vi.fn(() => "host:21116"),
   getRelayHost: vi.fn(() => "relay:21117"),
+  getRelayUri: vi.fn((relay?: string) => relay || "ws://relay:21119"),
 }));
 
 import Connection, { getConfigHost, getConfigRelay } from "./connection";
 import * as globals from "./globals";
 import { IdPk } from "./message.js";
+import { getRelayUri } from "./url";
 
 describe("getConfigHost / getConfigRelay", () => {
   it("returns host from url module", () => {
@@ -784,10 +786,16 @@ describe("Connection", () => {
       expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "Server busy");
     });
 
-    it("does not treat default failure value (0) as an error", async () => {
-      nextWsResponse = { punch_hole_response: { failure: 0 } };
+    it("does not treat failure 0 as an error when the peer address is set", async () => {
+      nextWsResponse = { punch_hole_response: { failure: 0, socket_addr: new Uint8Array([1, 2, 3]) } };
       await (conn as any)._start("test-peer");
       expect(globals.msgbox).not.toHaveBeenCalledWith("error", expect.anything(), expect.anything());
+    });
+
+    it("handles ID_NOT_EXIST failure", async () => {
+      nextWsResponse = { punch_hole_response: { failure: 0, socket_addr: new Uint8Array(0) } };
+      await (conn as any)._start("test-peer");
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "ID does not exist");
     });
 
     it("handles OFFLINE failure", async () => {
@@ -849,6 +857,19 @@ describe("Connection", () => {
       expect(secureSpy).toHaveBeenCalled();
       expect(globals.pushEvent).toHaveBeenCalledWith("connection_ready", { secure: true, direct: false });
       expect(msgLoopSpy).toHaveBeenCalled();
+    });
+
+    it("dials the relay server named in the relay response", async () => {
+      vi.spyOn(conn as any, "secure").mockResolvedValue(true);
+      vi.spyOn(conn as any, "msgLoop").mockResolvedValue(undefined);
+
+      await conn.connectRelay({
+        pk: new Uint8Array(32),
+        uuid: "test-uuid",
+        relay_server: "wss://rustdesk.example.com/ws/relay/1",
+      } as any);
+
+      expect(getRelayUri).toHaveBeenCalledWith("wss://rustdesk.example.com/ws/relay/1");
     });
   });
 

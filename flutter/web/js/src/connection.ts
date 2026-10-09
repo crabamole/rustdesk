@@ -5,7 +5,7 @@ import { loadVp9 } from "./codec";
 import * as sha256 from "fast-sha256";
 import * as globals from "./globals";
 import { decompress, mapKey, sleep } from "./common";
-import { loadConfig, getConfigKey, getDefaultUri, getHost, getRelayHost, getApiServer } from "./url";
+import { loadConfig, getConfigKey, getDefaultUri, getHost, getRelayHost, getApiServer, getRelayUri } from "./url";
 
 export { loadConfig, getConfigKey, getApiServer };
 
@@ -117,8 +117,12 @@ export default class Connection {
         this.msgbox("error", "Error", phr?.other_failure);
         return;
       }
-      if (phr.failure) {
+      // As in the native client: an answer without the peer's address is a failure, including ID_NOT_EXIST (0).
+      if (!phr.socket_addr?.length) {
         switch (phr.failure) {
+          case rendezvous.PunchHoleResponse_Failure.ID_NOT_EXIST:
+            this.msgbox("error", "Error", "ID does not exist");
+            break;
           case rendezvous.PunchHoleResponse_Failure.OFFLINE:
             this.msgbox("error", "Error", "Remote desktop is offline");
             break;
@@ -145,7 +149,7 @@ export default class Connection {
 
   async connectRelay(rr: rendezvous.RelayResponse) {
     const pk = rr.pk;
-    const uri = getDefaultUri(true);
+    const uri = getRelayUri(rr.relay_server);
     const uuid = rr.uuid;
     console.log(new Date() + ": Connecting to relay server: " + uri);
     const ws = new Websock(uri, false);

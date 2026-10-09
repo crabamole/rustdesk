@@ -38,6 +38,12 @@ export function getDefaultUri(isRelay: Boolean = false): string {
   return resolveUri(raw);
 }
 
+// hbbs names the relay pod to dial; anything but a WebSocket URL means the configured relay.
+export function getRelayUri(relayServer?: string): string {
+  if (relayServer && /^wss?:\/\//.test(relayServer)) return relayServer;
+  return getDefaultUri(true);
+}
+
 export async function loadConfig(): Promise<void> {
   try {
     const resp = await fetch("config.json");

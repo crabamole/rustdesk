@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { setConfig, getDefaultUri, getHost, getRelayHost, getConfigKey, loadConfig, resolveUri } from "./url";
+import { setConfig, getDefaultUri, getHost, getRelayHost, getConfigKey, loadConfig, resolveUri, getRelayUri } from "./url";
 
 describe("resolveUri", () => {
   it("resolves path to wss:// on HTTPS page", () => {
@@ -61,6 +61,27 @@ describe("getDefaultUri", () => {
   it("returns relay when relay is set", () => {
     setConfig("host.example.com:21116", "relay.example.com:21117", "");
     expect(getDefaultUri(true)).toBe("relay.example.com:21117");
+  });
+});
+
+describe("getRelayUri", () => {
+  beforeEach(() => {
+    setConfig("/ws/id", "/ws/relay", "");
+    (globalThis as any).location = { protocol: "https:", host: "rustdesk.corp.com" };
+  });
+
+  it("dials a wss:// relay server from hbbs as is", () => {
+    expect(getRelayUri("wss://rustdesk.corp.com/ws/relay/1")).toBe("wss://rustdesk.corp.com/ws/relay/1");
+  });
+
+  it("dials a ws:// relay server from hbbs as is", () => {
+    expect(getRelayUri("ws://10.0.0.5:21119/ws/relay/0")).toBe("ws://10.0.0.5:21119/ws/relay/0");
+  });
+
+  it("uses the configured relay for anything else", () => {
+    expect(getRelayUri("relay.example.com:21117")).toBe("wss://rustdesk.corp.com/ws/relay");
+    expect(getRelayUri("")).toBe("wss://rustdesk.corp.com/ws/relay");
+    expect(getRelayUri(undefined)).toBe("wss://rustdesk.corp.com/ws/relay");
   });
 });
 
