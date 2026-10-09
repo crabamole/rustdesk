@@ -85,8 +85,6 @@ peer_presence (id, pod, epoch, gen, since)        one row per connected device
   330/s for the same fleet.
 - `UNLOGGED`: no write-ahead log, not replicated, emptied by a database crash or failover. When a
   pod's refresh finds its own `hbbs_pod` row missing, it writes all its devices again.
-- The api-server can read presence: the console shows which devices are online, and online status
-  no longer depends on heartbeats.
 
 **Forwarding between pods.** A new internal port (cluster-only) carries the existing protobuf
 `RendezvousMessage` over the existing framed stream, so no new dependency. Two calls:
@@ -172,6 +170,9 @@ The relay address is always chosen by hbbs:
   across nodes; `terminationGracePeriodSeconds` for hbbr and the web client long enough to drain
   (default 30 min).
 - NetworkPolicy: hbbs pods reach each other's internal port.
+- hbbs waits 5 s in `preStop`, so devices it drops reconnect to another pod rather than back to it.
+- Sized for the fleet: the web client's nginx `worker_connections` (each proxied WebSocket takes two
+  connections) and memory limits of hbbs and the web client are values.
 
 ### Rolling updates
 
@@ -197,8 +198,8 @@ A standby site needs:
 
 - a Postgres replica (managed replication), the same keypair Secret and OIDC provider file;
 - the same public hostname, with the IdP redirect URI on it;
-- the chart installed with the replica's URL, scaled to zero or running against a read-only
-  database until failover.
+- the chart installed with the replica's URL and scaled to zero until failover: a hot standby
+  cannot read `UNLOGGED` tables, so hbbs could not run against it.
 
 Failover: promote the replica, scale the standby up, point DNS at it. Devices reconnect when their
 connections drop and register with the new site; viewers log in again only if their sessions were
@@ -235,7 +236,8 @@ Synthetic devices register over `/ws/id` like real ones and copy the client's re
 (reconnect at once after a connection that lived 18 s or more, otherwise after the rest of 18 s;
 give up after 1.5 × the server's keep-alive without data; register again at once). Real devices
 check that the fleet behaves like them. 200 synthetic devices per run; 5000 in an optional scale
-run that also records database writes per second. The probers run as a pod in the cluster and
+run that also records database writes per second (with `worker_connections` and memory limits
+raised for it). The probers run as a pod in the cluster and
 reach the servers through the web client Service, as devices do.
 
 | Scenario | Target |
@@ -258,6 +260,8 @@ separately from the main suite, since they take minutes. Existing e2e helpers th
 pod (logs, coverage collection, restart counts, port-forwards) handle several.
 
 ## Future Work
+
+- Console online status from presence instead of heartbeats.
 
 - Rebalance devices across hbbs pods after a rolling update: a pod well above the average device
   count (from presence) closes a few connections a minute; or a maximum connection age.
