@@ -186,9 +186,7 @@ ready before the next.
 | Web client (nginx) | It proxies every WebSocket, including relayed sessions, so it drains like hbbr: nginx stops gracefully (`SIGQUIT`, the image's stop signal) and keeps upgraded connections until they close or the grace period expires. Same 30 min default. Its pods also restart when `hbbr.replicas` changes, because the nginx config lists one location per hbbr pod. |
 
 After a rolling update of hbbs the last pod replaced holds few devices, since devices stay where
-they reconnected. Each pod compares its device count with the average from presence and, above
-1.5 × the average, closes a few connections a minute until it is back under; those devices
-reconnect through the Service.
+they reconnected. Rebalancing is future work (see Future Work).
 
 ## Disaster recovery
 
@@ -223,9 +221,10 @@ state the pairing.
 - e2e with two pods each: sessions from every client type to devices on either hbbs pod, a pod
   deleted and a pod frozen mid-test (devices reachable again within 30 s), an hbbr rolling update
   during a session (session survives), a web client rolling update during a session (survives),
-  login across api-server pods, device counts even out after an hbbs rolling update. e2e helpers that pick the
+  login across api-server pods. e2e helpers that pick the
   first pod (logs, coverage, port-forward) handle several.
 
-## Open Questions
+## Future Work
 
-None.
+- Rebalance devices across hbbs pods after a rolling update: a pod well above the average device
+  count (from presence) closes a few connections a minute; or a maximum connection age.
