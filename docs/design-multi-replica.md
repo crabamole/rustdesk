@@ -251,7 +251,7 @@ reach the servers through the web client Service, as devices do.
 | hbbr pod killed | its sessions are cut; viewers are back within 5 s on another pod |
 | Web client rolling restart | sessions survive within the grace period |
 | api-server rolling restart | all logins and viewer connections succeed |
-| Postgres crash (empties `UNLOGGED` tables) | no device reconnects; presence rebuilt within 10 s; no server pod restarted |
+| Postgres crash (empties `UNLOGGED` tables) | no device reconnects; presence rebuilt within 12 s (the next 10 s heartbeat finds it empty); no server pod restarted |
 | Postgres unavailable for 20 s (frozen) | no device reconnects; hbbs pods unready, then ready, never restarted |
 | Node drain (manual) | PodDisruptionBudgets respected; targets above |
 
