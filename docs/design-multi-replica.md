@@ -74,8 +74,10 @@ peer_presence (id, pod, epoch, gen, since)        one row per connected device
 ```
 
 - A pod starts with a new `epoch` and replaces its own rows. On registration it upserts the
-  device's row; a later `(epoch, gen)` wins, so a fast reconnect elsewhere is not undone by the old
-  pod. On disconnect it deletes the row only if it still names this pod, epoch and generation.
+  device's row: the latest registration wins, since it is the device's newest connection. On
+  disconnect a pod deletes the row only if it still names this pod, epoch and generation, so a
+  late delete from the old pod cannot undo a reconnect elsewhere. On shutdown a pod deletes all
+  its rows.
 - A lookup ignores rows whose pod has not refreshed `alive_at` within 30 s, or whose epoch is not
   the pod's current one. No per-device leases.
 - Writes happen on connect and disconnect only: about 2/s on average for 5000 devices, a burst of
@@ -135,8 +137,11 @@ stays routed to the hbbr Service for clients that dial it.
 - hbbs keeps two lists: the public URLs it hands out and the per-pod Service addresses it
   health-checks. It picks a healthy pod at random.
 - Native clients (ours and stock) dial a full `ws(s)://` relay address unchanged.
-- On SIGTERM, hbbr stops accepting new sessions and keeps relaying until its sessions end or the
-  grace period runs out, so rolling updates no longer cut sessions. A lost pod cuts its sessions;
+- hbbs health-checks each pod's `/readyz` instead of a TCP connect. The per-pod Services publish
+  pods that are not ready (`publishNotReadyAddresses`), so a URL handed out just before a pod
+  started draining still reaches it.
+- On SIGTERM, hbbr fails `/readyz` (hbbs stops handing out its URL within 3 s) and keeps relaying
+  until its sessions end or the grace period runs out, so rolling updates no longer cut sessions. A lost pod cuts its sessions;
   viewers reconnect on their own (after 1 s, doubling) through hbbs and get a healthy pod.
 - Bandwidth limits stay per pod and are documented as such.
 
@@ -164,8 +169,26 @@ The relay address is always chosen by hbbs:
   public host and `hbbr.replicas`.
 - nginx: one `/ws/relay/<n>` location per hbbr pod, rendered from `hbbr.replicas`.
 - `/livez` and `/readyz` probes; PodDisruptionBudgets (max one unavailable) when replicas > 1; pods spread
-  across nodes; `terminationGracePeriodSeconds` long enough for hbbr to drain (default 1 h).
+  across nodes; `terminationGracePeriodSeconds` for hbbr and the web client long enough to drain
+  (default 30 min).
 - NetworkPolicy: hbbs pods reach each other's internal port.
+
+### Rolling updates
+
+StatefulSets replace one pod at a time, highest ordinal first, and wait for the new pod to be
+ready before the next.
+
+| Component | During its update |
+|---|---|
+| hbbs | The pod leaves the Service, deletes its presence rows and closes its device connections. Devices reconnect at once through the Service to the other pods; requests for them answer OFFLINE for those few seconds. A viewer whose session setup was in flight on that pod sees an error and retries. Running sessions are not affected. |
+| hbbr | The pod stops getting new sessions and drains: running sessions continue until they end or the grace period expires, then viewers reconnect (after 1 s) to another pod. The replacement starts only after the old pod has exited, so updating every pod takes up to replicas × the grace period, with one pod less capacity meanwhile. Default grace: 30 min, configurable. |
+| api-server | No state of its own. A preStop pause lets the Service drop the pod before it stops; a login in progress finishes on another pod. |
+| Web client (nginx) | It proxies every WebSocket, including relayed sessions, so it drains like hbbr: nginx stops gracefully (`SIGQUIT`, the image's stop signal) and keeps upgraded connections until they close or the grace period expires. Same 30 min default. Its pods also restart when `hbbr.replicas` changes, because the nginx config lists one location per hbbr pod. |
+
+After a rolling update of hbbs the last pod replaced holds few devices, since devices stay where
+they reconnected. Each pod compares its device count with the average from presence and, above
+1.5 × the average, closes a few connections a minute until it is back under; those devices
+reconnect through the Service.
 
 ## Disaster recovery
 
@@ -199,7 +222,8 @@ state the pairing.
 - api-server: OIDC login across two state instances on one database; nonce uniqueness.
 - e2e with two pods each: sessions from every client type to devices on either hbbs pod, a pod
   deleted and a pod frozen mid-test (devices reachable again within 30 s), an hbbr rolling update
-  during a session (session survives), login across api-server pods. e2e helpers that pick the
+  during a session (session survives), a web client rolling update during a session (survives),
+  login across api-server pods, device counts even out after an hbbs rolling update. e2e helpers that pick the
   first pod (logs, coverage, port-forward) handle several.
 
 ## Open Questions
