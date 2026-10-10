@@ -80,7 +80,8 @@ jobs:
         run: |
           version=$(jq -r .version flutter/web/js/package.json)
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          if [ "${{ github.event_name }}" != push ]; then
+          # A dispatch on master publishes too, for a push that started no run.
+          if [ "${{ github.event_name }}" = pull_request ] || [ "${{ github.ref }}" != refs/heads/master ]; then
             echo "publish=false" >> "$GITHUB_OUTPUT"
           # Publish only on a definite "not found"; any other lookup error fails the job.
           elif out=$(docker manifest inspect "$IMAGE_NAME:$version" 2>&1); then
