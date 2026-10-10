@@ -14,8 +14,6 @@ pub struct CustomServer {
     pub host: String,
     #[serde(default)]
     pub api: String,
-    #[serde(default)]
-    pub relay: String,
 }
 
 fn get_custom_server_from_config_string(s: &str) -> ResultType<CustomServer> {
@@ -62,7 +60,6 @@ pub fn get_custom_server_from_string(s: &str) -> ResultType<CustomServer> {
         let mut host = String::default();
         let mut key = String::default();
         let mut api = String::default();
-        let mut relay = String::default();
         let strs_iter = strs.iter();
         for el in strs_iter {
             let el_lower = el.to_lowercase();
@@ -75,16 +72,8 @@ pub fn get_custom_server_from_string(s: &str) -> ResultType<CustomServer> {
             if el_lower.starts_with("api=") {
                 api = el.chars().skip(4).collect();
             }
-            if el_lower.starts_with("relay=") {
-                relay = el.chars().skip(6).collect();
-            }
         }
-        return Ok(CustomServer {
-            host,
-            key,
-            api,
-            relay,
-        });
+        return Ok(CustomServer { host, key, api });
     } else {
         let s = s
             .replace("-licensed---", "--")
@@ -121,7 +110,6 @@ mod test {
                 host: "server.example.net".to_owned(),
                 key: "".to_owned(),
                 api: "".to_owned(),
-                relay: "".to_owned(),
             }
         );
         assert_eq!(
@@ -130,7 +118,6 @@ mod test {
                 host: "server.example.net".to_owned(),
                 key: "".to_owned(),
                 api: "".to_owned(),
-                relay: "".to_owned(),
             }
         );
         // key in these tests is "foobar.,2" base64 encoded
@@ -143,7 +130,6 @@ mod test {
                 host: "server.example.net".to_owned(),
                 key: "Zm9vYmFyLiwyCg==".to_owned(),
                 api: "abc".to_owned(),
-                relay: "".to_owned(),
             }
         );
         assert_eq!(
@@ -155,7 +141,6 @@ mod test {
                 host: "server.example.net".to_owned(),
                 key: "Zm9vYmFyLiwyCg==".to_owned(),
                 api: "".to_owned(),
-                relay: "".to_owned(),
             }
         );
         assert_eq!(
@@ -167,7 +152,6 @@ mod test {
                 host: "server.example.net".to_owned(),
                 key: "Zm9vYmFyLiwyCg==".to_owned(),
                 api: "".to_owned(),
-                relay: "server.example.net".to_owned(),
             }
         );
         assert_eq!(
@@ -179,14 +163,12 @@ mod test {
                 host: "server.example.net".to_owned(),
                 key: "Zm9vYmFyLiwyCg==".to_owned(),
                 api: "".to_owned(),
-                relay: "server.example.net".to_owned(),
             }
         );
         let lic = CustomServer {
             host: "1.1.1.1".to_owned(),
             key: "5Qbwsde3unUcJBtrx9ZkvUmwFNoExHzpryHuPUdqlWM=".to_owned(),
             api: "".to_owned(),
-            relay: "".to_owned(),
         };
         assert_eq!(
             get_custom_server_from_string("rustdesk-licensed-0nI900VsFHZVBVdIlncwpHS4V0bOZ0dtVldrpVO4JHdCp0YV5WdzUGZzdnYRVjI6ISeltmIsISMuEjLx4SMiojI0N3boJye.exe")

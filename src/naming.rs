@@ -10,13 +10,11 @@ fn gen_name(lic: &CustomServer) -> ResultType<String> {
 fn main() {
     let args: Vec<_> = std::env::args().skip(1).collect();
     let api = args.get(2).cloned().unwrap_or_default();
-    let relay = args.get(3).cloned().unwrap_or_default();
     if args.len() >= 2 {
         match gen_name(&CustomServer {
             key: args[0].clone(),
             host: args[1].clone(),
             api,
-            relay,
         }) {
             Ok(name) => println!("rustdesk-custom_serverd-{}.exe", name),
             Err(e) => println!("{:?}", e),
