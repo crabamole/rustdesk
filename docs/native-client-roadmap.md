@@ -122,7 +122,7 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 ### Relay Chosen by hbbs
 - [x] Our builds have no relay-server setting: the `relay-server` option is gone, `--config` ignores `relay`, the server settings dialog has no relay field and exports none. A device dials the relay URL hbbs hands out (`wss://<host>/ws/relay/<n>`) exactly as given, so both halves of a session meet on the same hbbr pod; without one the connection fails
 - [x] The web client dials the relay URL hbbs returns; it has no relay setting or fallback
-- Stock clients: leave the relay server blank; with one set they pair only when both halves reach the same hbbr pod
+- Stock clients: leave the relay server blank; with one set they fail with "Unknown relay server" unless it is exactly a handed-out URL
 - Design: [design-multi-replica.md](design-multi-replica.md)
 
 ### Clipboard Audit

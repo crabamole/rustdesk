@@ -180,7 +180,7 @@ The relay address is always chosen by hbbs:
   across nodes; `terminationGracePeriodSeconds` for hbbr and the web client long enough to drain
   (default 30 min).
 - NetworkPolicy: hbbs pods reach each other's internal port.
-- hbbs waits 5 s in `preStop`, so devices it drops reconnect to another pod rather than back to it.
+- hbbs waits 5 s in `preStop`, so devices it drops reconnect to another pod rather than back to it; `hbbs.minReadySeconds` (default 20) holds a rolling update until the previous pod has been Ready that long.
 - Sized for the fleet: the web client's nginx `worker_connections` (each proxied WebSocket takes two
   connections) and memory limits of hbbs and the web client are values.
 
@@ -191,10 +191,10 @@ ready before the next.
 
 | Component | During its update |
 |---|---|
-| hbbs | The pod leaves the Service, deletes its presence rows and closes its device connections. Devices reconnect at once through the Service to the other pods; requests for them answer OFFLINE for those few seconds. A viewer whose session setup was in flight on that pod sees an error and retries. Running sessions are not affected. |
+| hbbs | The pod leaves the Service, closes its device connections, then deletes only its own presence rows. Devices reconnect at once through the Service to the other pods; requests for them answer OFFLINE for those few seconds. A viewer whose session setup was in flight on that pod sees an error and retries. Running sessions are not affected. |
 | hbbr | The pod stops getting new sessions and drains: running sessions continue until they end or the grace period expires, then viewers reconnect (after 1 s) to another pod. The replacement starts only after the old pod has exited, so updating every pod takes up to replicas × the grace period, with one pod less capacity meanwhile. Default grace: 30 min, configurable. |
 | api-server | No state of its own. A preStop pause lets the Service drop the pod before it stops; a login in progress finishes on another pod. |
-| Web client (nginx) | It proxies every WebSocket, including relayed sessions, so it drains like hbbr: nginx stops gracefully (`SIGQUIT`, the image's stop signal) and keeps upgraded connections until they close or the grace period expires. Same 30 min default. Its pods also restart when `hbbr.replicas` changes, because the nginx config lists one location per hbbr pod. |
+| Web client (nginx) | It proxies every WebSocket, including relayed sessions, so it drains like hbbr: the stopping pod takes no new connections and keeps relaying its sessions until they end or the grace period minus 10 s runs out; nginx then stops (`nginx -s stop`) and its devices reconnect to the other pods. Same 30 min default. Its pods also restart when `hbbr.replicas` changes, because the nginx config lists one location per hbbr pod. |
 
 After a rolling update of hbbs the last pod replaced holds few devices, since devices stay where
 they reconnected. Rebalancing is future work (see Future Work).
@@ -247,8 +247,7 @@ Synthetic devices register over `/ws/id` like real ones and copy the client's re
 (reconnect at once after a connection that lived 18 s or more, otherwise after the rest of 18 s;
 give up after 1.5 × the server's keep-alive without data; register again at once). Real devices
 check that the fleet behaves like them. 200 synthetic devices per run; the targets below apply to them. 5000 in an optional scale
-run that only measures (unreachable window, database writes per second, memory) (with `worker_connections` and memory limits
-raised for it). The probers run as a pod in the cluster and
+run, with `worker_connections` and memory limits raised, that only measures the unreachable window, database writes per second and memory. The probers run as a pod in the cluster and
 reach the servers through the web client Service, as devices do.
 
 | Scenario | Target |
@@ -259,7 +258,7 @@ reach the servers through the web client Service, as devices do.
 | hbbs pod frozen (SIGSTOP) | ≤ 40 s (keep-alive detection plus readiness); liveness restarts the pod |
 | hbbs pod partitioned (all its packets dropped) | ≤ 40 s; liveness restarts the pod |
 | hbbr rolling restart (short grace in the test) | sessions ending within the grace period are not cut; no new session is given a draining pod |
-| hbbr pod killed | its sessions are cut; viewers are back within 5 s on another pod |
+| hbbr pod killed | its sessions are cut; viewers are back within 5 s (on another pod or the restarted one) |
 | Web client rolling restart | sessions survive within the grace period |
 | api-server rolling restart | all logins and viewer connections succeed |
 | Postgres crash (empties `UNLOGGED` tables) | no device reconnects; presence rebuilt within 12 s (the next 10 s heartbeat finds it empty); no server pod restarted |
