@@ -151,7 +151,6 @@ fi
 cat > "$CONFIG" <<CONF
 {${API_LINE}
   "host": "${RUSTDESK_HOST:-/ws/id}",
-  "relay": "${RUSTDESK_RELAY:-/ws/relay}",
   "key": "${KEY}"
 }
 CONF
