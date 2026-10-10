@@ -246,8 +246,8 @@ Three measurements:
 Synthetic devices register over `/ws/id` like real ones and copy the client's reconnect rules
 (reconnect at once after a connection that lived 18 s or more, otherwise after the rest of 18 s;
 give up after 1.5 × the server's keep-alive without data; register again at once). Real devices
-check that the fleet behaves like them. 200 synthetic devices per run; 5000 in an optional scale
-run that also records database writes per second (with `worker_connections` and memory limits
+check that the fleet behaves like them. 200 synthetic devices per run; the targets below apply to them. 5000 in an optional scale
+run that only measures (unreachable window, database writes per second, memory) (with `worker_connections` and memory limits
 raised for it). The probers run as a pod in the cluster and
 reach the servers through the web client Service, as devices do.
 
