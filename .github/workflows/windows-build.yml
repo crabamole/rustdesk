@@ -1,4 +1,4 @@
-# Windows x64 client build, derived from build-for-windows-flutter in workflows-archive/flutter-build.yml.
+# Windows x64 client build, derived from build-for-windows-flutter in upstream's .github/workflows/flutter-build.yml.
 # Builds the cRustDesk device and client variants as MSIs, uploaded as workflow artifacts.
 name: Windows build
 

@@ -1,5 +1,5 @@
 # Ubuntu x86_64 build of the cRustDesk device and client variants, derived from build-rustdesk-linux
-# in workflows-archive/flutter-build.yml. Stock-layout .deb repackaged as crustdesk, uploaded as workflow artifacts.
+# in upstream's .github/workflows/flutter-build.yml. Stock-layout .deb repackaged as crustdesk, uploaded as workflow artifacts.
 name: Linux build
 
 on:

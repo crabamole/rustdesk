@@ -1,5 +1,5 @@
 # macOS arm64 build of the cRustDesk device and client variants, derived from build-for-macOS
-# in workflows-archive/flutter-build.yml. Signed, notarized and stapled apps zipped as workflow artifacts.
+# in upstream's .github/workflows/flutter-build.yml. Signed, notarized and stapled apps zipped as workflow artifacts.
 name: macOS build
 
 on:
