@@ -10,7 +10,7 @@ Six repos work together, in the [crabamole](https://github.com/crabamole) org, c
 | [crabamole/rustdesk-server](https://github.com/crabamole/rustdesk-server) | `~/crabamole/rustdesk-server` | Server (hbbs/hbbr): WS peer registration, Postgres |
 | [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api) | `~/crabamole/rustdesk-api` | API server + web console (OSS take on RustDesk Pro API) |
 | [crabamole/rustdesk-charts](https://github.com/crabamole/rustdesk-charts) | `~/crabamole/rustdesk-charts` | Helm chart for deploying all components to Kubernetes |
-| [crabamole/hbb_common](https://github.com/crabamole/hbb_common) | `~/crabamole/hbb_common` | Shared client library (config, protocol, WebSocket); `libs/hbb_common` submodule of rustdesk |
+| [crabamole/hbb_common](https://github.com/crabamole/hbb_common) | `~/crabamole/hbb_common` | Shared client library (config, protocol, WebSocket); `libs/hbb_common` submodule of rustdesk and rustdesk-server |
 | [crabamole/rustdesk-e2e](https://github.com/crabamole/rustdesk-e2e) (private) | `~/crabamole/rustdesk-e2e` | E2E tests and deployment (skaffold builds from the sibling checkouts) |
 
 Images published to `ghcr.io/crabamole/`:
