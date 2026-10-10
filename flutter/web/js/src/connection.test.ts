@@ -103,24 +103,19 @@ vi.mock("./common", () => ({
 vi.mock("./url", () => ({
   loadConfig: vi.fn().mockResolvedValue(undefined),
   getConfigKey: vi.fn(() => "testkey"),
-  getDefaultUri: vi.fn((relay?: boolean) => relay ? "ws://relay:21119" : "ws://host:21118"),
+  getDefaultUri: vi.fn(() => "ws://host:21118"),
   getHost: vi.fn(() => "host:21116"),
-  getRelayHost: vi.fn(() => "relay:21117"),
   getRelayUri: vi.fn((relay?: string) => relay || "ws://relay:21119"),
 }));
 
-import Connection, { getConfigHost, getConfigRelay } from "./connection";
+import Connection, { getConfigHost } from "./connection";
 import * as globals from "./globals";
 import { IdPk } from "./message.js";
 import { getRelayUri } from "./url";
 
-describe("getConfigHost / getConfigRelay", () => {
+describe("getConfigHost", () => {
   it("returns host from url module", () => {
     expect(getConfigHost()).toBe("host:21116");
-  });
-
-  it("returns relay from url module", () => {
-    expect(getConfigRelay()).toBe("relay:21117");
   });
 });
 
@@ -870,6 +865,15 @@ describe("Connection", () => {
       } as any);
 
       expect(getRelayUri).toHaveBeenCalledWith("wss://rustdesk.example.com/ws/relay/1");
+    });
+
+    it("fails the session when hbbs names no WebSocket relay", async () => {
+      vi.mocked(getRelayUri).mockImplementationOnce(() => {
+        throw new Error("No WebSocket relay from the rendezvous server");
+      });
+
+      await expect(conn.connectRelay({ pk: new Uint8Array(32), uuid: "test-uuid" } as any))
+        .rejects.toThrow("No WebSocket relay");
     });
   });
 

@@ -1,20 +1,14 @@
 let HOST = "/ws/id";
-let RELAY_HOST = "/ws/relay";
 let CONFIG_KEY = "";
 let API_SERVER = "";
 
-export function setConfig(host: string, relay: string, key: string) {
+export function setConfig(host: string, key: string) {
   HOST = host;
-  RELAY_HOST = relay;
   CONFIG_KEY = key;
 }
 
 export function getHost(): string {
   return HOST;
-}
-
-export function getRelayHost(): string {
-  return RELAY_HOST;
 }
 
 export function getConfigKey(): string {
@@ -33,15 +27,14 @@ export function resolveUri(value: string): string {
   return value;
 }
 
-export function getDefaultUri(isRelay: Boolean = false): string {
-  const raw = isRelay ? (RELAY_HOST || HOST) : HOST;
-  return resolveUri(raw);
+export function getDefaultUri(): string {
+  return resolveUri(HOST);
 }
 
-// hbbs names the relay pod to dial; anything but a WebSocket URL means the configured relay.
+// hbbs names the relay pod to dial; the web client never picks one itself.
 export function getRelayUri(relayServer?: string): string {
   if (relayServer && /^wss?:\/\//.test(relayServer)) return relayServer;
-  return getDefaultUri(true);
+  throw new Error("No WebSocket relay from the rendezvous server: " + JSON.stringify(relayServer ?? ""));
 }
 
 export async function loadConfig(): Promise<void> {
@@ -50,10 +43,9 @@ export async function loadConfig(): Promise<void> {
     if (resp.ok) {
       const config = await resp.json();
       if (config.host) HOST = config.host;
-      if (config.relay) RELAY_HOST = config.relay;
       if (config.key) CONFIG_KEY = config.key;
       if (config.api) API_SERVER = config.api;
-      console.log("Loaded config: host=" + HOST + ", relay=" + (RELAY_HOST || HOST));
+      console.log("Loaded config: host=" + HOST);
     }
   } catch (e) {
     console.log("Failed to load config.json (" + e + "), using defaults (host=" + HOST + ")");

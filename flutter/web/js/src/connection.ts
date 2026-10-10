@@ -5,16 +5,12 @@ import { loadVp9 } from "./codec";
 import * as sha256 from "fast-sha256";
 import * as globals from "./globals";
 import { decompress, mapKey, sleep } from "./common";
-import { loadConfig, getConfigKey, getDefaultUri, getHost, getRelayHost, getApiServer, getRelayUri } from "./url";
+import { loadConfig, getConfigKey, getDefaultUri, getHost, getApiServer, getRelayUri } from "./url";
 
 export { loadConfig, getConfigKey, getApiServer };
 
 export function getConfigHost(): string {
   return getHost();
-}
-
-export function getConfigRelay(): string {
-  return getRelayHost();
 }
 
 type MsgboxCallback = (type: string, title: string, text: string) => void;

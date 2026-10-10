@@ -1,4 +1,4 @@
-import Connection, { loadConfig, getConfigKey, getConfigHost, getConfigRelay, getApiServer } from "./connection";
+import Connection, { loadConfig, getConfigKey, getConfigHost, getApiServer } from "./connection";
 import _sodium from "libsodium-wrappers";
 import { CursorData } from "./message";
 import { loadVp9 } from "./codec";
@@ -482,7 +482,7 @@ window.setByName = (name, value) => {
     case 'option:local':
     case 'option:user:default':
       value = JSON.parse(value);
-      if (['custom-rendezvous-server', 'relay-server', 'key'].includes(value.name)) break;
+      if (['custom-rendezvous-server', 'key'].includes(value.name)) break;
       localStorage.setItem(value.name, value.value);
       break;
     case 'peer_option':
@@ -537,7 +537,6 @@ function _getByName(name, arg) {
     case 'option':
       if (arg === 'key') return getConfigKey();
       if (arg === 'custom-rendezvous-server') return getConfigHost();
-      if (arg === 'relay-server') return getConfigRelay();
       return localStorage.getItem(arg);
     case 'option:local':
       return localStorage.getItem(arg) || '';
@@ -556,7 +555,6 @@ function _getByName(name, arg) {
     case 'options':
       return JSON.stringify({
         'custom-rendezvous-server': getConfigHost(),
-        'relay-server': getConfigRelay(),
         'key': getConfigKey(),
       });
     case 'alternative_codecs':

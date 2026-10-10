@@ -31,7 +31,6 @@ vi.mock("./connection", () => {
     loadConfig: vi.fn().mockResolvedValue(undefined),
     getConfigKey: vi.fn().mockReturnValue("testkey"),
     getConfigHost: vi.fn().mockReturnValue("testhost"),
-    getConfigRelay: vi.fn().mockReturnValue("testrelay"),
   };
 });
 
@@ -238,7 +237,7 @@ describe("setByName / getByName", () => {
   it("retrieves options as JSON", () => {
     const result = JSON.parse((window as any).getByName("options"));
     expect(result["custom-rendezvous-server"]).toBe("testhost");
-    expect(result["relay-server"]).toBe("testrelay");
+    expect(result).not.toHaveProperty("relay-server");
     expect(result.key).toBe("testkey");
   });
 
@@ -267,11 +266,6 @@ describe("setByName / getByName", () => {
   it("ignores custom-rendezvous-server in setByName option", () => {
     (window as any).setByName("option", JSON.stringify({ name: "custom-rendezvous-server", value: "evil" }));
     expect(localStorage.getItem("custom-rendezvous-server")).toBeNull();
-  });
-
-  it("ignores relay-server in setByName option", () => {
-    (window as any).setByName("option", JSON.stringify({ name: "relay-server", value: "evil" }));
-    expect(localStorage.getItem("relay-server")).toBeNull();
   });
 
   it("ignores key in setByName option", () => {
@@ -506,10 +500,6 @@ describe("setByName / getByName", () => {
 
   it("getByName returns option with custom-rendezvous-server arg", () => {
     expect((window as any).getByName("option", "custom-rendezvous-server")).toBe("testhost");
-  });
-
-  it("getByName returns option with relay-server arg", () => {
-    expect((window as any).getByName("option", "relay-server")).toBe("testrelay");
   });
 
   it("getByName returns localStorage for generic option", () => {
