@@ -71,18 +71,15 @@ void showServerSettingsWithValue(
     void Function(VoidCallback)? upSetState) async {
   var isInProgress = false;
   final idCtrl = TextEditingController(text: serverConfig.idServer);
-  final relayCtrl = TextEditingController(text: serverConfig.relayServer);
   final apiCtrl = TextEditingController(text: serverConfig.apiServer);
   final keyCtrl = TextEditingController(text: serverConfig.key);
 
   RxString idServerMsg = ''.obs;
-  RxString relayServerMsg = ''.obs;
   RxString apiServerMsg = ''.obs;
 
-  final controllers = [idCtrl, relayCtrl, apiCtrl, keyCtrl];
+  final controllers = [idCtrl, apiCtrl, keyCtrl];
   final errMsgs = [
     idServerMsg,
-    relayServerMsg,
     apiServerMsg,
   ];
 
@@ -96,7 +93,6 @@ void showServerSettingsWithValue(
           errMsgs,
           ServerConfig(
               idServer: idCtrl.text.trim(),
-              relayServer: relayCtrl.text.trim(),
               apiServer: apiCtrl.text.trim(),
               key: keyCtrl.text.trim()));
       setState(() {
@@ -144,7 +140,7 @@ void showServerSettingsWithValue(
     return CustomAlertDialog(
       title: Row(
         children: [
-          Expanded(child: Text(translate('ID/Relay Server'))),
+          Expanded(child: Text(translate('Server'))),
           if (!isWeb) ...ServerConfigImportExportWidgets(controllers, errMsgs),
         ],
       ),
