@@ -55,7 +55,7 @@ Establish test coverage as a foundation for opinionated development.
 
 ### Phase 3: Features
 
-- [x] **WSS support**: `url.ts` resolves `/ws/id` and `/ws/relay` to `wss://` on HTTPS pages (same-origin, behind a TLS-terminating reverse proxy); covered by `url.test.ts` and used in production over HTTPS
+- [x] **WSS support**: `url.ts` resolves `/ws/id` to `wss://` on HTTPS pages (same-origin, behind a TLS-terminating reverse proxy); covered by `url.test.ts` and used in production over HTTPS
 - [ ] **Auto-connect via URL params**: `?id=<peer_id>&pw=<password>` for embedded/kiosk use (inspired by MonsieurBiche fork)
 - [x] **Clipboard support**: text in both directions; the browser clipboard is sent when the pointer enters the remote view and before Ctrl/Cmd+V (Chromium, after the user allows clipboard access); respects the host's clipboard permission
 - [ ] **File transfer**: Basic upload/download (many bridge stubs to implement)

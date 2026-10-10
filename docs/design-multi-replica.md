@@ -131,12 +131,13 @@ two viewers behind one NAT overwrite each other.
 
 **StatefulSet, one URL per pod.** hbbs hands out `wss://<host>/ws/relay/<n>`; nginx routes each path
 to one pod through a per-pod Service (selector `statefulset.kubernetes.io/pod-name`). Both halves of
-a session dial the same URL, so they meet on the same pod, with no extra hop. A plain `/ws/relay`
-stays routed to the hbbr Service for clients that dial it.
+a session dial the same URL, so they meet on the same pod, with no extra hop. There is no plain
+`/ws/relay` and no shared hbbr Service: a relay path names its pod.
 
 - hbbs keeps two lists: the public URLs it hands out and the per-pod Service addresses it
   health-checks. It picks a healthy pod at random.
 - Native clients (ours and stock) dial a full `ws(s)://` relay address unchanged.
+- hbbs refuses to start without `RELAY_URLS`, so it never hands out an empty or derived relay.
 - hbbs health-checks each pod's `/readyz` instead of a TCP connect. The per-pod Services publish
   pods that are not ready (`publishNotReadyAddresses`), so a URL handed out just before a pod
   started draining still reaches it.
@@ -151,8 +152,11 @@ The relay address is always chosen by hbbs:
 
 - **Native (cRustDesk):** remove the relay-server setting (`relay-server` option, the `relay` key of
   `--config`, the settings field). A device would otherwise dial its own relay address instead of
-  the pod hbbs chose, and the two halves would meet on the same pod only one time in N.
-- **Web client:** dial the relay address hbbs returns, not the fixed `/ws/relay`.
+  the pod hbbs chose, and the two halves would meet on the same pod only one time in N. The relay
+  is dialed exactly as handed out: no default port, no rendezvous port+1 fallback, no `/ws/relay`
+  mapping. Without one the connection fails.
+- **Web client:** dial the relay address hbbs returns; it has no relay setting and no fallback, so a
+  session without a `ws(s)://` relay from hbbs fails with an error.
 
 ### api-server
 

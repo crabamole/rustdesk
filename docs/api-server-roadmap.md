@@ -156,7 +156,7 @@ Data loss prevention controls for regulated environments.
 ## Already Working
 
 - [x] **Login Enforcement** — `LOGGED_IN_ONLY=Y` rejects unauthenticated connections at punch hole and relay requests (verified with Playwright and protocol-level e2e)
-- [x] **WebSocket Mode** — single-port on 443 via `/ws/id` and `/ws/relay`, was Pro-only, our fork enables it
+- [x] **WebSocket Mode** — single-port on 443 via `/ws/id` and `/ws/relay/<n>`, was Pro-only, our fork enables it
 - [x] **Web Client** — Flutter web client restored from OSS, deployed via Helm with nginx; loads nothing from the internet
 - [x] **Helm Chart & K8s** — separate deployments for hbbs, hbbr, webclient, api-server, plus bundled PostgreSQL StatefulSet; published to `oci://ghcr.io/crabamole/charts/rustdesk`
 - [x] **E2E Regression Suite** — rustdesk-e2e (Vitest + Playwright): API, OIDC, web client to Linux/Mac peers, extraCACerts, shared database and database-restart resilience, with server coverage collection

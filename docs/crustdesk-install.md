@@ -43,7 +43,7 @@ Run as administrator/root:
 | Linux | `sudo crustdesk --config <string>` |
 | macOS | `sudo /Applications/cRustDesk.app/Contents/MacOS/cRustDesk --config <string>` |
 
-`<string>` is the JSON `{"host":"<your-server>","relay":"","api":"https://<your-server>","key":"<server-public-key>"}`, base64-encoded URL-safe without padding, then reversed character by character. Our builds hide the network settings, so take the string from a stock client's "Export Server Config" (Settings, Network), or build it yourself in the format above. The command sets `custom-rendezvous-server`, `api-server` and `key`; the `relay` value is ignored, since hbbs names the relay for every session.
+`<string>` is the JSON `{"host":"<your-server>","api":"https://<your-server>","key":"<server-public-key>"}`, base64-encoded URL-safe without padding, then reversed character by character. Our builds hide the network settings, so take the string from a stock client's "Export Server Config" (Settings, Network), or build it yourself in the format above. The command sets `custom-rendezvous-server`, `api-server` and `key`; a `relay` value (stock exports carry one) is ignored, since hbbs names the relay for every session.
 
 `--config` and the service-profile paths in B configure the DC service only. The client variant runs no service; see [Client variant](#client-variant).
 

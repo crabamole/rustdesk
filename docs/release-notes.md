@@ -4,7 +4,9 @@ Newest first. The release workflow copies a version's section into its GitHub Re
 
 ## 1.4.9-9
 
-- The relay is always the one hbbs hands out: the relay-server setting is gone from our native builds (not read, not shown, not exported; `--config` ignores `relay`), and the web client dials the relay URL hbbs returns. Needed for several hbbr pods.
+- The relay is always the one hbbs hands out: the relay-server setting is gone from our native builds (not read, not shown, not exported; `--config` ignores `relay`), and the web client dials the relay URL hbbs returns. Clients dial it as given and fail without one; they no longer fall back to the rendezvous host, a default port or `/ws/relay`. Needed for several hbbr pods.
+- The web-client image drops `RUSTDESK_RELAY` and the `relay` key of `config.json`.
+- Server settings: the dialog is titled "Server".
 - Web client: connecting to an unknown ID shows "ID does not exist" instead of nothing.
 - **Upgrade together:** hbbs, hbbr, the api-server, the web client, our native clients and the Helm chart of the multi-replica release; see the chart's `UPGRADING.md`.
 - The web client needs `wss://` relay URLs when served over https; the chart derives the scheme from `PUBLIC_URL`.

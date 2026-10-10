@@ -129,7 +129,7 @@ RustDesk Client (controlled device)
 web client nginx (rustdesk.example.com:443)
   │
   ├── /ws/id       → hbbs:21118
-  ├── /ws/relay    → hbbr:21119
+  ├── /ws/relay/<n> → hbbr pod <n>:21119
   ├── /api/, /ui   → rustdesk-api:21114
   └── /            → web client
   │

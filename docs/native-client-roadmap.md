@@ -117,12 +117,11 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 
 ### WebSocket Port for Hostnames ([#30](https://github.com/crabamole/rustdesk/issues/30))
 - [x] Keep a non-default port when the rendezvous server is a hostname: when `custom-rendezvous-server` and `api-server` name the same host and port, the WebSocket URLs keep that port (`check_ws()` in our `hbb_common` copy, [crabamole/hbb_common](https://github.com/crabamole/hbb_common))
-- [x] Relay connections always go to `/ws/relay`, so a relay address `<host>:443` is no longer treated as the rendezvous server
 - Stock clients: serve WebSocket on port 80 (ws) or 443 (wss), configure the rendezvous server as a hostname without port and leave the relay server blank
 
 ### Relay Chosen by hbbs
-- [x] Our builds have no relay-server setting: the `relay-server` option is not read, `--config` ignores `relay`, the server settings dialog has no relay field and exports none. A device dials the relay URL hbbs hands out (`wss://<host>/ws/relay/<n>`), so both halves of a session meet on the same hbbr pod
-- [x] The web client dials the relay URL hbbs returns and falls back to its configured `/ws/relay`
+- [x] Our builds have no relay-server setting: the `relay-server` option is gone, `--config` ignores `relay`, the server settings dialog has no relay field and exports none. A device dials the relay URL hbbs hands out (`wss://<host>/ws/relay/<n>`) exactly as given, so both halves of a session meet on the same hbbr pod; without one the connection fails
+- [x] The web client dials the relay URL hbbs returns; it has no relay setting or fallback
 - Stock clients: leave the relay server blank; with one set they pair only when both halves reach the same hbbr pod
 - Design: [design-multi-replica.md](design-multi-replica.md)
 
