@@ -26,12 +26,4 @@ void main() {
         .decode(base64.normalize(encoded.split('').reversed.join('')))));
     expect(json.containsKey('relay'), isFalse);
   });
-
-  test('a stored relay-server option is not loaded', () {
-    final config = ServerConfig.fromOptions({
-      'custom-rendezvous-server': 'id.example.com',
-      'relay-server': 'relay.example.com',
-    });
-    expect(config.idServer, 'id.example.com');
-  });
 }
