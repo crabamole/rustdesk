@@ -58,7 +58,7 @@ use hbb_common::{
     rand,
     rendezvous_proto::*,
     sha2::{Digest, Sha256},
-    socket_client::{connect_tcp, connect_tcp_local, ipv4_to_ipv6, new_direct_udp_for},
+    socket_client::{connect_tcp, connect_tcp_local, new_direct_udp_for},
     sodiumoxide::{base64, crypto::sign},
     timeout,
     tokio::{
@@ -564,7 +564,6 @@ impl Client {
                             rr.relay_server,
                             &key,
                             conn_type,
-                            my_addr.is_ipv4(),
                         );
                         connect_futures.push(
                             async move {
@@ -857,7 +856,6 @@ impl Client {
     ) -> ResultType<Stream> {
         let mut succeed = false;
         let mut uuid = "".to_owned();
-        let mut ipv4 = true;
 
         for i in 1..=3 {
             // use different socket due to current hbbs implementation requiring different nat address for each attempt
@@ -869,7 +867,6 @@ impl Client {
                 secure_tcp(&mut socket, key).await?;
             }
 
-            ipv4 = socket.local_addr().is_ipv4();
             let mut msg_out = RendezvousMessage::new();
             uuid = Uuid::new_v4().to_string();
             log::info!(
@@ -906,7 +903,7 @@ impl Client {
         if !succeed {
             bail!("Timeout");
         }
-        Self::create_relay(peer, uuid, relay_server, key, conn_type, ipv4).await
+        Self::create_relay(peer, uuid, relay_server, key, conn_type).await
     }
 
     /// Create a relay connection to the server.
@@ -916,13 +913,9 @@ impl Client {
         relay_server: String,
         key: &str,
         conn_type: ConnType,
-        ipv4: bool,
     ) -> ResultType<Stream> {
-        let mut conn = hbb_common::socket_client::connect_tcp_relay(
-            ipv4_to_ipv6(check_port(relay_server, RELAY_PORT), ipv4),
-            CONNECT_TIMEOUT,
-        )
-        .await
+        let mut conn = hbb_common::socket_client::connect_tcp_relay(relay_server, CONNECT_TIMEOUT)
+            .await
         .with_context(|| "Failed to connect to relay server")?;
         let mut msg_out = RendezvousMessage::new();
         msg_out.set_request_relay(RequestRelay {

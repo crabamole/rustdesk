@@ -15,7 +15,7 @@ use hbb_common::{
     allow_err,
     anyhow::Context,
     bail,
-    config::{Config, CONNECT_TIMEOUT, RELAY_PORT},
+    config::{Config, CONNECT_TIMEOUT},
     log,
     message_proto::*,
     protobuf::{Enum, Message as _},
@@ -290,7 +290,6 @@ pub async fn create_relay_connection(
     uuid: String,
     peer_addr: SocketAddr,
     secure: bool,
-    ipv4: bool,
     meta: ConnectionMeta,
 ) {
     if let Err(err) = create_relay_connection_(
@@ -299,7 +298,6 @@ pub async fn create_relay_connection(
         uuid.clone(),
         peer_addr,
         secure,
-        ipv4,
         meta,
     )
     .await
@@ -319,14 +317,9 @@ async fn create_relay_connection_(
     uuid: String,
     peer_addr: SocketAddr,
     secure: bool,
-    ipv4: bool,
     meta: ConnectionMeta,
 ) -> ResultType<()> {
-    let mut stream = socket_client::connect_tcp_relay(
-        socket_client::ipv4_to_ipv6(crate::check_port(relay_server, RELAY_PORT), ipv4),
-        CONNECT_TIMEOUT,
-    )
-    .await?;
+    let mut stream = socket_client::connect_tcp_relay(relay_server, CONNECT_TIMEOUT).await?;
     let mut msg_out = RendezvousMessage::new();
     let licence_key = crate::get_key(true).await;
     msg_out.set_request_relay(RequestRelay {
