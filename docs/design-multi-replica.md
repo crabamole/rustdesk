@@ -137,7 +137,9 @@ a session dial the same URL, so they meet on the same pod, with no extra hop. Th
 - hbbs keeps two lists: the public URLs it hands out and the per-pod Service addresses it
   health-checks. It picks a healthy pod at random.
 - Native clients (ours and stock) dial a full `ws(s)://` relay address unchanged.
-- hbbs refuses to start without `RELAY_URLS`, so it never hands out an empty or derived relay.
+- hbbs refuses to start without `RELAY_URLS` or with an entry that is not a `ws(s)://` URL, and
+  forwards only relays from that list: a relay named in `RequestRelay`, `RelayResponse`,
+  `PunchHoleSent` or `LocalAddr` must be one of them.
 - hbbs health-checks each pod's `/readyz` instead of a TCP connect. The per-pod Services publish
   pods that are not ready (`publishNotReadyAddresses`), so a URL handed out just before a pod
   started draining still reaches it.
@@ -154,7 +156,7 @@ The relay address is always chosen by hbbs:
   `--config`, the settings field). A device would otherwise dial its own relay address instead of
   the pod hbbs chose, and the two halves would meet on the same pod only one time in N. The relay
   is dialed exactly as handed out: no default port, no rendezvous port+1 fallback, no `/ws/relay`
-  mapping. Without one the connection fails.
+  mapping. Without one, or with one that is not a `ws(s)://` URL, the connection fails.
 - **Web client:** dial the relay address hbbs returns; it has no relay setting and no fallback, so a
   session without a `ws(s)://` relay from hbbs fails with an error.
 
