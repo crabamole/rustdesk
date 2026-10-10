@@ -139,7 +139,9 @@ a session dial the same URL, so they meet on the same pod, with no extra hop. Th
 - Native clients (ours and stock) dial a full `ws(s)://` relay address unchanged.
 - hbbs refuses to start without `RELAY_URLS` or with an entry that is not a `ws(s)://` URL, and
   forwards only relays from that list: a relay named in `RequestRelay`, `RelayResponse`,
-  `PunchHoleSent` or `LocalAddr` must be one of them.
+  `PunchHoleSent` or `LocalAddr` must be one of them. While a change of `hbbr.replicas` rolls
+  through hbbs, pods hold different lists, so a relay new to the list can be refused until the
+  rollout ends.
 - hbbs health-checks each pod's `/readyz` instead of a TCP connect. The per-pod Services publish
   pods that are not ready (`publishNotReadyAddresses`), so a URL handed out just before a pod
   started draining still reaches it.
@@ -216,7 +218,8 @@ not yet replicated. The runbook lives in the chart README and is not verified ye
 ## Compatibility
 
 No protocol change. Stock clients are already unsupported (they lack our OIDC login flow); one
-with a relay-server set would pair only one time in N. Our clients
+with a relay-server set fails with "Unknown relay server" unless the setting is exactly one of the
+handed-out URLs. Our clients
 lose the relay-server setting; the web client dials the address hbbs returns. hbbs, hbbr, the
 api-server, the web client and the chart are upgraded together; release notes and `UPGRADING.md`
 state the pairing.
