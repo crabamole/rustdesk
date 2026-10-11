@@ -148,11 +148,12 @@ Data loss prevention controls for regulated environments.
 
 Follow the RustDesk Pro API paging (`current`, `pageSize`, `{ total, data }`) on every list, so large fleets stay usable.
 
-- [ ] `GET /api/peers` honours `current` and `pageSize`; stock and our clients already page it, 100 at a time, and today every page returns the whole list
-- [ ] Check what Pro's `accessible` and `status` parameters on `/api/peers` mean, and whether ours should filter by them
-- [ ] Web console Devices, Users and Groups fetch one page at a time from the server (Viewers and Audit logs already do), with search sent to the API
-- [ ] Pickers that load a full list (users, groups) get a search box instead
-- [ ] `pro-api-compatibility.md` updated; tests against a fleet of 5000 devices
+- [x] `GET /api/peers` honours `current` and `pageSize`; `total` counts every match, so clients paging 100 at a time get each device once (it used to return the whole list on every page)
+- [x] `GET /api/users` and `GET /api/groups` report the full `total` (they reported the page length, so clients stopped after the first 100 users)
+- [x] `status=1` lists enabled devices and users only; `accessible` is ignored, since every logged-in user sees every device until Control Role Enforcement
+- [x] Web console Devices, Users and Groups fetch one page at a time from the server (as Viewers and Audit logs already did), with search sent to the API (`q`)
+- [x] Pickers that loaded a full list (groups in the user dialogs, users and groups in address book rules) search the API instead
+- [x] `pro-api-compatibility.md` updated; tested against a fleet of 5000 devices
 
 ## Multi-Replica
 
