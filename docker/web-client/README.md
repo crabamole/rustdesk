@@ -49,27 +49,32 @@ The proxy must route WebSocket connections to hbbs, and each relay URL hbbs hand
 |------|---------|----------|
 | `/ws/id` | hbbs:21118 | WebSocket |
 | `/ws/relay/<n>` | hbbr pod `<n>`:21119 | WebSocket |
+| `/api/`, `/ui` | api-server:21114 | HTTP |
 | `/` | web-client:80 | HTTP |
 
-The proxy should terminate TLS and support WebSocket upgrade. Example with nginx:
+The [Helm chart](https://github.com/crabamole/rustdesk-charts) renders this as an Istio
+VirtualService bound to your Gateway. Example for one hbbr pod:
 
-```nginx
-location /ws/id {
-    proxy_pass http://hbbs:21118;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_read_timeout 3600s;
-}
-
-location = /ws/relay/0 {
-    proxy_pass http://hbbr-0:21119;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_read_timeout 3600s;
-}
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: rustdesk
+spec:
+  gateways: [istio-ingress/public]
+  hosts: [rustdesk.example.com]
+  http:
+    - match: [{ uri: { prefix: /ws/id } }]
+      route: [{ destination: { host: hbbs, port: { number: 21118 } } }]
+    - match: [{ uri: { exact: /ws/relay/0 } }]
+      route: [{ destination: { host: hbbr-0, port: { number: 21119 } } }]
+    - match: [{ uri: { prefix: /api/ } }, { uri: { prefix: /ui } }]
+      route: [{ destination: { host: api-server, port: { number: 21114 } } }]
+    - match: [{ uri: { prefix: / } }]
+      route: [{ destination: { host: web-client, port: { number: 80 } } }]
 ```
+
+Istio sets no route timeout, so open WebSockets stay up.
 
 ## Source
 

@@ -1,6 +1,6 @@
 # Design: Istio Gateway as the Server Ingress
 
-**Status: design.**
+**Status: implemented (chart 0.10.0).**
 
 ## Goal
 
