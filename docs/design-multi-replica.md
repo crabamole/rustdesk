@@ -248,7 +248,7 @@ Synthetic devices register over `/ws/id` like real ones and copy the client's re
 (reconnect at once after a connection that lived 18 s or more, otherwise after the rest of 18 s;
 give up after 1.5 × the server's keep-alive without data; register again at once). Real devices
 check that the fleet behaves like them. 200 synthetic devices per run; the targets below apply to them. 5000 in an optional scale
-run, with `worker_connections` and memory limits raised, that only measures the unreachable window, database writes per second and memory. The probers run as a pod in the cluster and
+run, with memory limits raised, that only measures the unreachable window, database writes per second and memory. The probers run as a pod in the cluster and
 reach the servers through the in-cluster Istio gateway Service, as devices do.
 
 | Scenario | Target |
