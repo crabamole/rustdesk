@@ -3,14 +3,14 @@
 Corporate deployment features for [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api).
 
 **Base:** sctgdesk-api-server (AGPL-3.0)  
-**Updated:** 2026-10-08
+**Updated:** 2026-10-11
 
 ## Architecture Context
 
 - rustdesk-api (Rust/Rocket) and hbbs run as separate deployments (separate pods in the Helm chart) sharing one PostgreSQL database; hbbs reads/writes only the `peer` table
 - The api-server owns the schema (sqlx migrations); hbbs never runs DDL and waits at startup until the schema exists
 - hbbs calls the api-server over HTTP (`API_SERVER`, the apiserver Service) for every connection request that carries a token: `POST /api/audit/ref` validates it and returns the audit reference; with `LOGGED_IN_ONLY=Y` a missing or rejected token is refused
-- crabamole/rustdesk and crabamole/rustdesk-server pin the same `hbb_common` commit (`69cea8d`, from `rustdesk/hbb_common`), so their protos match
+- crabamole/rustdesk and crabamole/rustdesk-server pin the same commit of our `hbb_common` fork ([crabamole/hbb_common](https://github.com/crabamole/hbb_common)), so their protos match
 - lejianwen/rustdesk-api was evaluated and rejected (AGPL violation, DMCA history)
 
 ## Phase 1: Foundation
@@ -26,7 +26,7 @@ Core infrastructure that unblocks everything else.
 
 ### Persistent Sessions
 - [x] Move token store from in-memory `RwLock<HashMap<Token, AccessTokenInfo>>` to the `session` table
-- [x] Tokens survive restart and can be shared across replicas (OIDC logins in progress are still in memory; see Multi-Replica)
+- [x] Tokens survive restart and can be shared across replicas (OIDC logins in progress are kept in Postgres too; see Multi-Replica)
 - [x] Expired sessions are purged at login; deleting a user removes their sessions
 
 ### Proto Update
@@ -156,11 +156,11 @@ Follow the RustDesk Pro API paging (`current`, `pageSize`, `{ total, data }`) on
 
 ## Multi-Replica
 
-- [ ] Run more than one pod of hbbs, hbbr and the api-server
-- [ ] hbbs: route connection requests to the pod holding the target device's connection
-- [ ] hbbr: pair both halves of a relayed session across pods
-- [ ] api-server: move OIDC logins in progress to Postgres; drop or invalidate the address book cache
-- [ ] PodDisruptionBudgets once replicas > 1
+- [x] Run more than one pod of hbbs, hbbr and the api-server (chart 0.9.0)
+- [x] hbbs: route connection requests to the pod holding the target device's connection
+- [x] hbbr: one relay URL per hbbr pod, handed out by hbbs, so both halves of a session meet on the same pod
+- [x] api-server: OIDC logins in progress in Postgres; the legacy `/api/ab` cache is write-through
+- [x] PodDisruptionBudgets once replicas > 1
 - Design: [design-multi-replica.md](design-multi-replica.md) (presence in Postgres, forwarding between hbbs pods, one relay URL per hbbr pod, DR runbook)
 
 ## Already Working

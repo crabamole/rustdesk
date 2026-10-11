@@ -1,6 +1,6 @@
 # RustDesk OSS Web Client Roadmap
 
-**Updated:** 2026-09-30
+**Updated:** 2026-10-11
 
 Upstream RustDesk removed the open-source web client in favor of a closed-source Pro offering. This roadmap tracks our effort to revive and maintain the web client against the OSS rendezvous server (hbbs/hbbr).
 
@@ -23,7 +23,7 @@ The web client shares ~68K lines of Dart with native clients. The web-specific l
 ### Done (feat/revive-web-client)
 
 - [x] Restore web client JS source from git history
-- [x] Load server config (host/relay/key) from `config.json` instead of localStorage
+- [x] Load server config (host/key) from `config.json` instead of localStorage; the relay comes from hbbs
 - [x] Skip public server latency test and `refreshCurrentUser` for OSS server
 - [x] Fix JS bridge: option handlers (`option:local`, `option:user:default`), `jsonfyForDart` double-encoding
 - [x] Remove Firebase analytics
@@ -43,7 +43,7 @@ Establish test coverage as a foundation for opinionated development.
   - `getByName`/`setByName` option handlers — defaults, read/write, server config blocking
   - `loadConfig()` — config.json parsing and fallback behavior
 - [ ] **Flutter widget tests**: Extend existing `server_settings_dialog_test.dart` for `readOnly` parameter. Add tests for web-specific UI behavior (read-only server settings, close-only dialog).
-- [x] **CI gating**: `web-docker.yml` runs `yarn test` (vitest) before building the web image; Flutter tests do not run in CI since the native-client workflows were archived
+- [x] **CI gating**: `web-docker.yml` runs `yarn test` (vitest) before building the web image; Flutter tests do not run in CI
 - [x] **E2E smoke test**: rustdesk-e2e `webclient-linux` / `webclient-mac` log in via OIDC, connect to real Linux and macOS peers through hbbs/hbbr, and verify the remote desktop screenshot
 
 ### Phase 2: Connection Reliability
@@ -95,5 +95,5 @@ Reviewed for feature inspiration (none have strong traction):
 | `flutter/lib/web/bridge.dart` | Dart-side bridge (131 stubs) |
 | `flutter/lib/models/web_model.dart` | Web platform FFI |
 | `flutter/lib/mobile/widgets/dialog.dart` | Server settings dialog (read-only on web) |
-| `flutter/web/config.json` | Server config (host/relay/key) |
+| `flutter/web/config.json` | Server config (host/key) |
 | `docker/web-client/Dockerfile` | Web client image: browser codecs, Flutter web build, nginx |

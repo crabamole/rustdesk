@@ -1,6 +1,6 @@
 # Native Client Build Roadmap
 
-**Updated:** 2026-10-05
+**Updated:** 2026-10-11
 
 Stock RustDesk clients work with our server stack, but some features need a client built from this fork. This roadmap tracks what shipping our own Windows, macOS and Linux builds requires, and the features waiting on it.
 
@@ -123,6 +123,7 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 - [x] Our builds have no relay-server setting: the `relay-server` option is gone, `--config` ignores `relay`, the server settings dialog has no relay field and exports none. A device dials the relay URL hbbs hands out (`wss://<host>/ws/relay/<n>`) exactly as given, so both halves of a session meet on the same hbbr pod; without one the connection fails
 - [x] The web client dials the relay URL hbbs returns; it has no relay setting or fallback
 - Stock clients: leave the relay server blank; with one set they fail with "Unknown relay server" unless it is exactly a handed-out URL
+- Shipped in clients 1.4.9-9 with rustdesk-server 1.1.16-4 (chart 0.9.0); verified by e2e with native clients on macOS, Windows and Linux
 - Design: [design-multi-replica.md](design-multi-replica.md)
 
 ### Clipboard Audit
