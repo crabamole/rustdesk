@@ -56,7 +56,8 @@ Core infrastructure that unblocks everything else.
 
 Make authentication fast and auditable.
 
-### JWT Token Verification
+### JWT Token Verification (parked)
+- **Parked (2026-10-11):** the api-server runs several replicas and the HA tests show viewer connections surviving its restarts and a Postgres outage, and the per-connection call is one in-cluster request at session setup. Local JWT checks would delay revocation and need a redesigned audit reference, so revisit only if measurements show this call limiting connection setup.
 - [ ] Replace per-connection HTTP roundtrip to `/api/currentUser` with local JWT verification at hbbs
 - [ ] API server issues signed JWTs at login; hbbs verifies using public key
 - [ ] Eliminates hbbs's HTTP call to the api-server per connection
