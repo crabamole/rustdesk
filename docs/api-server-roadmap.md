@@ -86,8 +86,7 @@ Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdes
 - [x] End a device's open rows whose `close` record was lost (e.g. the Linux client restarting `--server` right after the last connection closes), by diffing against heartbeat `conns`
 
 ### Trusted Client Address
-- [x] The chart's nginx resolves the client address from trusted proxies (`realIp.trustedProxies`, `realIp.header`) and overwrites `X-Real-IP` / `X-Forwarded-For` toward hbbs, hbbr and the api-server
-- [x] hbbs, hbbr and the api-server honour forwarded headers only from `TRUSTED_PROXIES`
+- [x] hbbs, hbbr and the api-server take the client address from `X-Forwarded-For`, walked from the right past `TRUSTED_PROXIES` (chart value `trustedProxies`, required); `X-Real-IP` is not read and an empty list trusts no peer (after chart 0.9.0; before, the chart's nginx resolved the address)
 - [x] hbbs registration rate limits configurable (`IP_BLOCK_PER_MINUTE`, `IP_BLOCK_IDS_PER_DAY`); hbbr checks its blocklist against the resolved address
 
 ### Login Bound to Its Starter
@@ -168,9 +167,10 @@ Follow the RustDesk Pro API paging (`current`, `pageSize`, `{ total, data }`) on
 
 - [x] **Login Enforcement** — `LOGGED_IN_ONLY=Y` rejects unauthenticated connections at punch hole and relay requests (verified with Playwright and protocol-level e2e)
 - [x] **WebSocket Mode** — single-port on 443 via `/ws/id` and `/ws/relay/<n>`, was Pro-only, our fork enables it
-- [x] **Web Client** — Flutter web client restored from OSS, deployed via Helm with nginx; loads nothing from the internet
+- [x] **Istio Gateway ingress** — the chart renders a VirtualService that routes `/ws/id`, each `/ws/relay/<n>`, `/api/` and `/ui` straight to hbbs, hbbr pod n and the api-server; the web client serves static files only (after chart 0.9.0; design: [design-istio-gateway.md](design-istio-gateway.md))
+- [x] **Web Client** — Flutter web client restored from OSS, served as static files by nginx; loads nothing from the internet
 - [x] **Helm Chart & K8s** — separate deployments for hbbs, hbbr, webclient, api-server, plus bundled PostgreSQL StatefulSet; published to `oci://ghcr.io/crabamole/charts/rustdesk`
 - [x] **E2E Regression Suite** — rustdesk-e2e (Vitest + Playwright): API, OIDC, web client to Linux/Mac peers, extraCACerts, shared database and database-restart resilience, with server coverage collection
 - [x] **OIDC Authentication** — generic OIDC (`Oauth2` provider: Entra ID, Okta, Keycloak, Google, ...), plus Dex and GitHub; auto-create users on first login
 - [x] **Extra CA Certs** — `extraCACerts` Helm value mounts corporate CA bundle, apiserver uses `rustls-tls-native-roots` + `SSL_CERT_FILE` for OIDC token exchange
-- [x] **Chart Hardening** — non-root pods, ingress-only NetworkPolicies, no ServiceAccount token, required keypair and relay address checked at install, optional Ingress
+- [x] **Chart Hardening** — non-root pods, ingress-only NetworkPolicies, no ServiceAccount token, required keypair and public host checked at install, Istio sidecars off

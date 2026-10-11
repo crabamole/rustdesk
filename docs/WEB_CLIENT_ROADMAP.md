@@ -50,6 +50,7 @@ Establish test coverage as a foundation for opinionated development.
 
 - [ ] Improve error handling for connection failures (clear user-facing messages)
 - [ ] Handle server unreachable / timeout gracefully
+- [ ] Receive timeout in a session (about 30 s, as native clients have): without it a browser session hangs until the user reconnects when an hbbr node is lost without a connection reset (the Istio gateway sets no idle timeouts)
 - [ ] Reconnection logic on WebSocket drop
 - [ ] Audit the 131 `UnimplementedError` stubs in `web/bridge.dart` — categorize as: needed, not-applicable-to-web, or deferred
 
@@ -66,7 +67,7 @@ Establish test coverage as a foundation for opinionated development.
 ### Phase 4: Operations
 
 - [x] CI/CD pipeline: pushes to master build the Docker image; a version bump in `flutter/web/js/package.json` publishes it; the release workflow tags `<version>` for all clients (`web-client-<version>` before 1.4.9-7)
-- [x] Helm chart: `oci://ghcr.io/crabamole/charts/rustdesk` with webclient deployment, configmap, and nginx config
+- [x] Helm chart: `oci://ghcr.io/crabamole/charts/rustdesk` with the webclient deployment; nginx serves the static files and the chart's Istio VirtualService routes `/ws/id`, `/ws/relay/<n>` and `/api/` to the servers
 - [x] Health check endpoint or readiness probe (liveness/readiness probes in the Helm chart's webclient Deployment)
 - [ ] Documentation: deployment guide, config.json reference, architecture diagram
 
