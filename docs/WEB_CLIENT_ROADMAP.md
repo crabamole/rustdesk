@@ -50,7 +50,7 @@ Establish test coverage as a foundation for opinionated development.
 
 - [ ] Improve error handling for connection failures (clear user-facing messages)
 - [ ] Handle server unreachable / timeout gracefully
-- [ ] Receive timeout in a session (about 30 s, as native clients have): without it a browser session hangs until the user reconnects when an hbbr node is lost without a connection reset (the Istio gateway sets no idle timeouts)
+- [x] A silent relay ends the session: after 12 s without a message (`Websock.next()` timeout) the web client shows "Reconnect" and reconnects through another relay; verified with a frozen hbbr pod (e2e `ha/hbbr-freeze.spec.ts`, back within about 17 s)
 - [ ] Reconnection logic on WebSocket drop
 - [ ] Audit the 131 `UnimplementedError` stubs in `web/bridge.dart` — categorize as: needed, not-applicable-to-web, or deferred
 
