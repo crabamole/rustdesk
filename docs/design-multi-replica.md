@@ -181,7 +181,7 @@ The relay address is always chosen by hbbs:
   across nodes; `terminationGracePeriodSeconds` for hbbr long enough to drain
   (default 30 min).
 - NetworkPolicy: hbbs pods reach each other's internal port.
-- hbbs waits 5 s in `preStop`, so devices it drops reconnect to another pod rather than back to it; `hbbs.minReadySeconds` (default 20) holds a rolling update until the previous pod has been Ready that long.
+- On SIGTERM hbbs fails `/readyz` but keeps serving until no new connection has arrived for 2 s (at most 15 s), then closes its devices, so they reconnect to another pod rather than back to it; `hbbs.minReadySeconds` (default 20) holds a rolling update until the previous pod has been Ready that long.
 - Sized for the fleet: memory limits of hbbs are values; the gateway carries the connections
   (see [design-istio-gateway.md](design-istio-gateway.md)).
 
@@ -194,7 +194,7 @@ ready before the next.
 |---|---|
 | hbbs | The pod leaves the Service, closes its device connections, then deletes only its own presence rows. Devices reconnect at once through the Service to the other pods; requests for them answer OFFLINE for those few seconds. A viewer whose session setup was in flight on that pod sees an error and retries. Running sessions are not affected. |
 | hbbr | The pod stops getting new sessions and drains: running sessions continue until they end or the grace period expires, then viewers reconnect (after 1 s) to another pod. The replacement starts only after the old pod has exited, so updating every pod takes up to replicas × the grace period, with one pod less capacity meanwhile. Default grace: 30 min, configurable. |
-| api-server | No state of its own. A preStop pause lets the Service drop the pod before it stops; a login in progress finishes on another pod. |
+| api-server | No state of its own. On SIGTERM it fails `/readyz` and keeps serving until no request has arrived for 5 s (at most 25 s); a login in progress finishes on another pod. |
 | Web client | Serves static files only and holds no sessions; the default grace period applies. The Istio gateway carries the WebSockets (see [design-istio-gateway.md](design-istio-gateway.md)). |
 
 After a rolling update of hbbs the last pod replaced holds few devices, since devices stay where
@@ -255,7 +255,7 @@ reach the servers through the in-cluster Istio gateway Service, as devices do.
 |---|---|
 | hbbs rolling restart | each device unreachable ≤ 3 s; no failed session setup except those in flight on the restarting pod |
 | hbbs pod deleted | ≤ 3 s |
-| hbbs pod killed (SIGKILL) | ≤ 5 s |
+| hbbs pod killed (SIGKILL) | ≤ 20 s; most devices ≤ 5 s. A device whose reconnect reaches the dead pod before the gateway drops it gets a 503 and waits out the client's 18 s throttle |
 | hbbs pod frozen (SIGSTOP) | ≤ 40 s (keep-alive detection plus readiness); liveness restarts the pod |
 | hbbs pod partitioned (all its packets dropped) | ≤ 40 s; liveness restarts the pod |
 | hbbr rolling restart (short grace in the test) | sessions ending within the grace period are not cut; no new session is given a draining pod |
