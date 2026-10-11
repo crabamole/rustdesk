@@ -49,8 +49,8 @@ client ─► (front proxies) ─► Istio gateway ─┬─► hbbs        /ws/
 
 ### Routing
 
-The chart renders one `VirtualService` (`networking.istio.io/v1beta1`) for `publicHost`, bound
-to a Gateway the platform owns. The chart never creates the Gateway: the listener, TLS
+The chart renders one `VirtualService` (`networking.istio.io/v1beta1`) for `istio.hosts`
+(default: `publicHost`), bound to a Gateway the platform owns. The chart never creates the Gateway: the listener, TLS
 certificate and gateway pods stay with whoever runs the mesh.
 
 | Match | Destination |
@@ -73,6 +73,8 @@ New values:
 | Value | Meaning |
 |---|---|
 | `istio.gateway` | required; the Gateway to bind to, `<namespace>/<name>` |
+| `istio.hosts` | hosts the VirtualService matches (default `[publicHost]`); differs when a proxy in front rewrites `Host` |
+| `istio.requestHeaders` | headers set on every route, e.g. `x-forwarded-proto: https` behind a plain-HTTP gateway listener |
 | `istio.gatewayPods.namespace` | namespace of the gateway pods (default `istio-system`) |
 | `istio.gatewayPods.labels` | their pod labels (default `istio: ingressgateway`) |
 | `trustedProxies` | required; CIDRs of the gateway pods and of every proxy in front of the gateway |
@@ -115,7 +117,8 @@ Gateway pods are selected by `istio.gatewayPods` (namespace and labels).
 
 ### Web client
 
-The web client's Deployment keeps only the image's own static-file nginx config. It loses the
+The web client's nginx config shrinks to serving the static files (on port 8080, as the
+unprivileged user the chart runs it as; the image's own config listens on 80). It loses the
 preStop connection hold, the 1800 s grace period, the restart on `hbbr.replicas` changes and the
 `workerConnections` sizing; a stopping pod needs only the default grace period.
 
