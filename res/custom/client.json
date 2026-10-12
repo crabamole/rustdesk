@@ -8,6 +8,8 @@
     "hide-websocket-settings": "Y",
     "hide-proxy-settings": "Y",
     "hide-remote-printer-settings": "Y",
-    "allow-auto-update": "N"
+    "allow-auto-update": "N",
+    "enable-webrtc": "N",
+    "allow-sync-clipboard-between-sessions": "N"
   }
 }
