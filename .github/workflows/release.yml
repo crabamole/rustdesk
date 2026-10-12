@@ -125,7 +125,7 @@ jobs:
           Installers for the device (\`cRustDesk\`) and client-only (\`cRustDesk-client\`) variants.
           The Windows MSIs are not code-signed, so SmartScreen warns on first run.
           Verify a download: \`gh attestation verify <file> --repo $GITHUB_REPOSITORY\`
-          Install guide: [docs/crustdesk-install.md](https://github.com/$GITHUB_REPOSITORY/blob/$VERSION/docs/crustdesk-install.md)
+          Deployment guide: [docs/crustdesk-deployment.md](https://github.com/$GITHUB_REPOSITORY/blob/$VERSION/docs/crustdesk-deployment.md)
           EOF
           awk -v v="## $VERSION" '$0 == v {f = 1; next} /^## / {f = 0} f' docs/release-notes.md > section.md
           [ -s section.md ] || { echo "docs/release-notes.md has no section for $VERSION"; exit 1; }

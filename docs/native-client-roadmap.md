@@ -25,7 +25,7 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 - [x] Release process: a version bump in `flutter/web/js/package.json` (`<upstream>-<n>`) releases every client under one tag (`release.yml`): the web-client image plus a GitHub Release with the six installers and `SHA256SUMS`. From 1.4.9-8 each installer carries a GitHub build attestation (`gh attestation verify <file> --repo crabamole/rustdesk`)
 - [ ] Tracking upstream releases
 - [ ] Merge upstream 1.5.0 (released 2026-09-30; our last upstream merge is from 2026-08-08): handshake hardening (Kx v1) and security fixes; our `hbb_common` copy merges upstream too. Then lock its new options in `custom.txt` (WebRTC transport, clipboard sync between sessions)
-- [x] Install guide for our packages: [crustdesk-install.md](crustdesk-install.md) (Windows, macOS, Ubuntu; `--config` and pre-seeded config). The stock RustDesk pre-seed guides are kept separately ([Linux](stock-rustdesk-linux-preseed-install.md), [macOS](stock-rustdesk-macos-preseed-install.md))
+- [x] Install guide for our packages: [crustdesk-deployment.md](crustdesk-deployment.md) (Windows, macOS, Ubuntu; `--config` and pre-seeded config). The stock RustDesk pre-seed guides are kept separately ([Linux](stock-rustdesk-linux-preseed-install.md), [macOS](stock-rustdesk-macos-preseed-install.md))
 - [x] No auto-update in custom builds: both `custom.txt` files lock `"allow-auto-update": "N"` (`override-settings`), so they never download stock RustDesk and the toggle shows as locked. With default settings no update-server contact was observed on Windows; the only path was the toggle
 
 ### Naming and packaging
@@ -72,7 +72,7 @@ A machine gets either the DC or the OA build, never both and never next to stock
 - [ ] Direct IP access (`direct_server`) is not paused by the runtime guard; our DC build locks direct access off, so only builds that enable it are affected
 - [x] Uninstalling stock RustDesk's MSI removes the shared `rustdesk://` handler; the cRustDesk service restores it within about a minute while cRustDesk runs
 - [x] The service also checks the handler when it starts, so a handler removed while the service was down comes back
-- The Windows client variant has no service: after a stock install and uninstall, an MSI repair (`msiexec /f`) restores `rustdesk://` (by design; see [crustdesk-install.md](crustdesk-install.md#windows))
+- The Windows client variant has no service: after a stock install and uninstall, an MSI repair (`msiexec /f`) restores `rustdesk://` (by design; see [crustdesk-deployment.md](crustdesk-deployment.md#windows-rustdesk-links))
 
 ## Testing
 

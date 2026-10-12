@@ -1,8 +1,10 @@
 # cRustDesk Deployment Guide
 
-Rolling out the server and the cRustDesk clients for an organisation. Reference material lives in the
-[chart README](https://github.com/crabamole/rustdesk-charts#readme) (server) and the
-[install guide](crustdesk-install.md) (clients); this guide is the order to do things in.
+Rolling out the server and the cRustDesk clients (Windows, macOS, Ubuntu) for an organisation, in the
+order to do things in; [Reference](#4-reference) at the end covers uninstalling and other single tasks.
+Server details live in the [chart README](https://github.com/crabamole/rustdesk-charts#readme).
+Upstream RustDesk clients are not covered; see the stock guides:
+[Linux](stock-rustdesk-linux-preseed-install.md), [macOS](stock-rustdesk-macos-preseed-install.md).
 
 Placeholders:
 
@@ -79,18 +81,33 @@ Before choosing `trustedProxies`, check which address the gateway sees for a cli
 
 ### 2.1 Get the installers
 
+From the registry:
+
 ```bash
 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/crabamole/rustdesk/installers:<ver> cp -r /installers /out
 (cd installers && sha256sum -c SHA256SUMS)
 ```
 
-| Machine | Variant | Files |
-|---|---|---|
-| Controlled (servers, desks that support staff connect to) | DC: `cRustDesk` | `cRustDesk-<ver>-x86_64.msi`, `crustdesk-<ver>-x86_64.deb`, `cRustDesk-<ver>-aarch64.zip` |
-| Only connects to others | Client: `cRustDesk-client` | `cRustDesk-client-…` / `crustdesk-client-…` |
+The same files are attached to each [GitHub Release](https://github.com/crabamole/rustdesk/releases).
+From 1.4.9-8 on each carries a GitHub build attestation, proving it was built by this repo's release
+workflow from the tagged commit:
 
-One variant per machine, never next to stock RustDesk (the installers refuse). Linux: Ubuntu x86_64 with
-X11; macOS: Apple Silicon only.
+```bash
+gh attestation verify cRustDesk-<ver>-x86_64.msi --repo crabamole/rustdesk
+```
+
+Pick a variant per machine:
+
+| Machine | Variant | Windows x64 (unsigned MSI) | Ubuntu x86_64, X11 | macOS arm64 (signed, notarized) |
+|---|---|---|---|---|
+| Controlled (and may control others) | DC | `cRustDesk-<ver>-x86_64.msi` | `crustdesk-<ver>-x86_64.deb` | `cRustDesk-<ver>-aarch64.zip` |
+| Only connects to others | Client | `cRustDesk-client-<ver>-x86_64.msi` | `crustdesk-client-<ver>-x86_64.deb` | `cRustDesk-client-<ver>-aarch64.zip` |
+
+Both are the same app, `cRustDesk`, differing in their signed `custom.txt`
+([`res/custom/rustdesk.json`](../res/custom/rustdesk.json), [`res/custom/client.json`](../res/custom/client.json)).
+A machine holds one: installing one variant replaces the other, and the installers refuse to install next
+to stock RustDesk (Linux `Conflicts: rustdesk, rustdesk-unattended-wayland`; Windows MSI: "RustDesk is
+installed. Uninstall it first."). While stock RustDesk is present, the cRustDesk service stays idle.
 
 ### 2.2 The config file
 
@@ -139,8 +156,16 @@ The client variant runs no service, so only the user's own file reaches it: stag
 
 ### 2.4 Alternative for the DC variant: `--config`
 
-After installing, as administrator/root, `cRustDesk --config <string>` writes the same three settings to
-the service. `<string>` is the JSON `{"host","api","key"}`, URL-safe base64 without padding, reversed:
+After installing, as administrator/root, `--config <string>` writes the same three settings to the service:
+
+| Platform | Command |
+|---|---|
+| Windows | `"C:\Program Files\cRustDesk\cRustDesk.exe" --config <string>` |
+| Linux | `sudo crustdesk --config <string>` |
+| macOS | `sudo /Applications/cRustDesk.app/Contents/MacOS/cRustDesk --config <string>` |
+
+`<string>` is the JSON `{"host","api","key"}`, URL-safe base64 without padding, reversed (a stock client's
+"Export Server Config" gives the same format; its `relay` value is ignored):
 
 ```bash
 printf '%s' '{"host":"<host>","api":"https://<host>","key":"<server-public-key>"}' \
@@ -148,7 +173,8 @@ printf '%s' '{"host":"<host>","api":"https://<host>","key":"<server-public-key>"
 ```
 
 `--config` splits its argument at `--`: if the result contains `--`, add a space after a comma in the
-JSON and encode again. `--config` does not set `enable-lan-discovery`; use the file for that.
+JSON and encode again. `--config` does not set `enable-lan-discovery`; use the file for that. It does not
+reach the client variant, which runs no service.
 
 ### 2.5 Install
 
@@ -162,7 +188,9 @@ msiexec /i cRustDesk-<ver>-x86_64.msi /qn
 Get-Service cRustDesk
 ```
 
-The MSIs are not code-signed: allow-list them by hash, or sign them with your own certificate.
+It installs `C:\Program Files\cRustDesk\cRustDesk.exe` and, for the DC variant, the service `cRustDesk`;
+the client MSI installs no service. The MSIs are not code-signed: allow-list them by hash, or sign them
+with your own certificate.
 
 **Linux** (as root; DC variant):
 
@@ -186,12 +214,16 @@ apt-get install -y "./${deb#./}"
 systemctl is-active crustdesk
 ```
 
-For the client variant, seed only the users' homes (and `/etc/skel/.config/crustdesk/` for new users).
+The binary is `/usr/bin/crustdesk`; the DC package runs the systemd service `crustdesk`. For the client
+variant (no service), seed only the users' homes (and `/etc/skel/.config/crustdesk/` for new users).
 
-**macOS** (DC variant): stage the files in 2.3, copy `cRustDesk.app` from the zip to `/Applications`,
-push a PPPC profile granting Screen Recording and Accessibility to the bundle ID
-`io.github.crabamole.crustdesk`, then launch the app once to install its service. Details:
-[install guide, macOS](crustdesk-install.md#macos).
+**macOS**:
+
+1. Stage the files in 2.3, unzip, move `cRustDesk.app` to `/Applications`.
+2. Grant Screen Recording and Accessibility to the bundle ID `io.github.crabamole.crustdesk`; for a fleet,
+   push an MDM PPPC profile.
+3. DC only: launch the app once to install its service, or install it from the app. The client variant
+   installs no service.
 
 ### 2.6 Unattended access (DC variant)
 
@@ -205,10 +237,37 @@ from a script, not an interactive shell history.
   Devices page.
 - Client: open the app, choose "Continue with <op>" (the IdP button), sign in, connect to a device ID.
   Logging in is required: the server refuses connections from clients that are not logged in.
-- Machines that ran stock RustDesk against the same server keep a stale device row; remove it
-  ([Moving from stock RustDesk](crustdesk-install.md#moving-from-stock-rustdesk)).
+- The console's Viewers list shows machines that log in with the client variant and have no device row
+  (self-reported at login). Client builds never register or send heartbeats. A machine with a device row
+  is listed as a device, including one that once ran stock RustDesk or the DC against this server (see
+  [Moving from stock RustDesk](#moving-from-stock-rustdesk)).
 
 ## 3. Upgrades
 
 - Server: follow the chart's `UPGRADING.md` for each chart release; it names the matching client release.
 - Clients: the release notes of each client release say how to upgrade from the previous one.
+
+## 4. Reference
+
+### Uninstall
+
+| Platform | How |
+|---|---|
+| Windows | Apps & Features, or `msiexec /x <product-code-or-msi>` |
+| Ubuntu | `sudo apt purge crustdesk` (or `crustdesk-client`) |
+| macOS | Unload and remove `/Library/LaunchDaemons/io.github.crabamole.cRustDesk_service.plist` and `/Library/LaunchAgents/io.github.crabamole.cRustDesk_server.plist`, remove the app and the preference folders in 2.3 |
+
+### Windows `rustdesk://` links
+
+Uninstalling stock RustDesk's MSI removes the `rustdesk://` link handler that cRustDesk shares. The DC's
+service restores it within about a minute, or when it next starts. The client variant has no service;
+repair it with the MSI it was installed from:
+
+```powershell
+msiexec /f cRustDesk-client-<ver>-x86_64.msi /qn
+```
+
+### Moving from stock RustDesk
+
+Machines that ran stock RustDesk against the same server keep an old device row under their natural ID
+with the old key; cRustDesk then registers under a random ID. Remove the stale rows when moving a fleet.

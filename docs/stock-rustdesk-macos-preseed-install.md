@@ -1,6 +1,6 @@
 # Stock RustDesk client pre-seed install guide (macOS)
 
-This guide applies to upstream RustDesk, not to cRustDesk. For our builds see [crustdesk-install.md](crustdesk-install.md).
+This guide applies to upstream RustDesk, not to cRustDesk. For our builds see [crustdesk-deployment.md](crustdesk-deployment.md).
 
 Automated installation of RustDesk on macOS with pre-configured settings, so the client registers to a custom rendezvous server on first launch.
 

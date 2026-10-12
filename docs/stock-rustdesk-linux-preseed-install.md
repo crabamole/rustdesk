@@ -1,6 +1,6 @@
 # Stock RustDesk client pre-seed install guide (Linux)
 
-This guide applies to upstream RustDesk, not to cRustDesk. For our builds see [crustdesk-install.md](crustdesk-install.md).
+This guide applies to upstream RustDesk, not to cRustDesk. For our builds see [crustdesk-deployment.md](crustdesk-deployment.md).
 
 Automated installation of RustDesk on Linux with pre-configured settings, so the client registers to a custom rendezvous server on first boot with no manual configuration.
 

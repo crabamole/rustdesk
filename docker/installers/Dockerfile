@@ -5,6 +5,6 @@ ARG VERSION
 LABEL org.opencontainers.image.title="cRustDesk installers" \
       org.opencontainers.image.version="${VERSION}" \
       org.opencontainers.image.source="https://github.com/crabamole/rustdesk" \
-      org.opencontainers.image.documentation="https://github.com/crabamole/rustdesk/blob/${VERSION}/docs/crustdesk-install.md"
+      org.opencontainers.image.documentation="https://github.com/crabamole/rustdesk/blob/${VERSION}/docs/crustdesk-deployment.md"
 COPY dist/ /installers/
 CMD ["ls", "-l", "/installers"]
