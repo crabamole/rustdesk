@@ -3,7 +3,7 @@
 Corporate deployment features for [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api).
 
 **Base:** sctgdesk-api-server (AGPL-3.0)  
-**Updated:** 2026-10-11
+**Updated:** 2026-10-12
 
 ## Architecture Context
 
@@ -56,9 +56,12 @@ Core infrastructure that unblocks everything else.
 
 Make authentication fast and auditable.
 
+### Access Log
+- [x] One api-server log line per request (method, path without query, status, time); probes are not logged. `RUST_LOG` filters the logs, default `info,rocket=warn` (api 3.6.0)
+
 ### JWT Token Verification (parked)
 - **Parked (2026-10-11):** the api-server runs several replicas and the HA tests show viewer connections surviving its restarts and a Postgres outage, and the per-connection call is one in-cluster request at session setup. Local JWT checks would delay revocation and need a redesigned audit reference, so revisit only if measurements show this call limiting connection setup.
-- [ ] Replace per-connection HTTP roundtrip to `/api/currentUser` with local JWT verification at hbbs
+- [ ] Replace the per-connection HTTP roundtrip to `/api/audit/ref` with local JWT verification at hbbs
 - [ ] API server issues signed JWTs at login; hbbs verifies using public key
 - [ ] Eliminates hbbs's HTTP call to the api-server per connection
 - **Depends on:** Persistent Sessions
@@ -104,7 +107,7 @@ Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdes
 Enforce organizational policies on client behavior during remote sessions.
 
 ### Client Config Endpoint
-- [ ] `GET /api/client-config` (no login) returns the client settings this deployment expects (rendezvous server, relay, api-server, key), so users and support can check a `RustDesk2.toml` against it
+- [ ] `GET /api/client-config` (no login) returns the client settings this deployment expects (rendezvous server, api-server, key; hbbs hands out the relay), so users and support can check a `RustDesk2.toml` against it
 
 ### Strategy Push
 - [x] Heartbeat response delivers `StrategyOptions.config_options` (one global policy, Pro send-on-change semantics, re-push)
@@ -154,6 +157,7 @@ Follow the RustDesk Pro API paging (`current`, `pageSize`, `{ total, data }`) on
 - [x] Web console Devices, Users and Groups fetch one page at a time from the server (as Viewers and Audit logs already did), with search sent to the API (`q`)
 - [x] Pickers that loaded a full list (groups in the user dialogs, users and groups in address book rules) search the API instead
 - [x] `pro-api-compatibility.md` updated; tested against a fleet of 5000 devices
+- Shipped in api 3.6.0 (chart 0.10.0)
 
 ## Multi-Replica
 
@@ -162,13 +166,14 @@ Follow the RustDesk Pro API paging (`current`, `pageSize`, `{ total, data }`) on
 - [x] hbbr: one relay URL per hbbr pod, handed out by hbbs, so both halves of a session meet on the same pod
 - [x] api-server: OIDC logins in progress in Postgres; the legacy `/api/ab` cache is write-through
 - [x] PodDisruptionBudgets once replicas > 1
+- [x] Rolling restarts without dropped requests: on SIGTERM hbbs and the api-server stay up until new connections and requests stop arriving, then exit (server 1.1.16-5, api 3.6.0, chart 0.10.0); `/readyz` no longer checks the database, so a Postgres outage does not take pods out of service
 - Design: [design-multi-replica.md](design-multi-replica.md) (presence in Postgres, forwarding between hbbs pods, one relay URL per hbbr pod, DR runbook)
 
 ## Already Working
 
 - [x] **Login Enforcement** — `LOGGED_IN_ONLY=Y` rejects unauthenticated connections at punch hole and relay requests (verified with Playwright and protocol-level e2e)
 - [x] **WebSocket Mode** — single-port on 443 via `/ws/id` and `/ws/relay/<n>`, was Pro-only, our fork enables it
-- [x] **Istio Gateway ingress** — the chart renders a VirtualService that routes `/ws/id`, each `/ws/relay/<n>`, `/api/` and `/ui` straight to hbbs, hbbr pod n and the api-server; the web client serves static files only (after chart 0.9.0; design: [design-istio-gateway.md](design-istio-gateway.md))
+- [x] **Istio Gateway ingress** — the chart renders a VirtualService that routes `/ws/id`, each `/ws/relay/<n>`, `/api/` and `/ui` straight to hbbs, hbbr pod n and the api-server; the web client serves static files only (after chart 0.9.0; the test-only OIDC mock is routed too from chart 0.11.0; design: [design-istio-gateway.md](design-istio-gateway.md))
 - [x] **Web Client** — Flutter web client restored from OSS, served as static files by nginx; loads nothing from the internet
 - [x] **Helm Chart & K8s** — separate deployments for hbbs, hbbr, webclient, api-server, plus bundled PostgreSQL StatefulSet; published to `oci://ghcr.io/crabamole/charts/rustdesk`
 - [x] **E2E Regression Suite** — rustdesk-e2e (Vitest + Playwright): API, OIDC, web client to Linux/Mac peers, extraCACerts, shared database and database-restart resilience, with server coverage collection

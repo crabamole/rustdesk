@@ -1,6 +1,6 @@
 # Native Client Build Roadmap
 
-**Updated:** 2026-10-11
+**Updated:** 2026-10-12
 
 Stock RustDesk clients work with our server stack, but some features need a client built from this fork. This roadmap tracks what shipping our own Windows, macOS and Linux builds requires, and the features waiting on it.
 
@@ -22,7 +22,7 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 - [x] `custom.txt` signing key is a required build parameter (`RUSTDESK_CUSTOM_CLIENT_PK`, base64 Ed25519 public key); builds fail without it and never trust RustDesk's key. Sign with `rustdesk-utils signcustom` (rustdesk-server)
 - [x] macOS: Apple Developer ID signing and notarization (Gatekeeper)
 - [ ] Windows: code-signing certificate (SmartScreen); stays unsigned for now. SignPath (free for open source) asks for a search keyword that finds the product on Google, so revisit when the fork is findable; alternatives are Azure Artifact Signing (from $9.99/month; check organisation eligibility) and Certum (about €49/yr). Organisations can instead sign with their internal CA or allow the MSI by hash in WDAC/MDM. The workflow's signing steps have never run; before first use, keep the certificate password off signtool's command line, delete the PFX afterwards, and sign only our own binaries
-- [x] Release process: a version bump in `flutter/web/js/package.json` (`<upstream>-<n>`) releases every client under one tag (`release.yml`): the web-client image plus a GitHub Release with the six installers and `SHA256SUMS`. From 1.4.9-8 each installer carries a GitHub build attestation (`gh attestation verify <file> --repo crabamole/rustdesk`)
+- [x] Release process: a version bump in `flutter/web/js/package.json` (`<upstream>-<n>`) releases every client under one tag (`release.yml`): the web-client image plus a GitHub Release with the six installers and `SHA256SUMS`. From 1.4.9-8 each installer carries a GitHub build attestation (`gh attestation verify <file> --repo crabamole/rustdesk`). From 1.4.9-9 the installers are also published as an image, `ghcr.io/crabamole/rustdesk/installers:<version>`, for networks that pull from a registry only
 - [ ] Tracking upstream releases
 - [ ] Merge upstream 1.5.0 (released 2026-09-30; our last upstream merge is from 2026-08-08): handshake hardening (Kx v1) and security fixes; our `hbb_common` copy merges upstream too. Then lock its new options in `custom.txt` (WebRTC transport, clipboard sync between sessions)
 - [x] Install guide for our packages: [crustdesk-deployment.md](crustdesk-deployment.md) (Windows, macOS, Ubuntu; `--config` and pre-seeded config). The stock RustDesk pre-seed guides are kept separately ([Linux](stock-rustdesk-linux-preseed-install.md), [macOS](stock-rustdesk-macos-preseed-install.md))

@@ -1,6 +1,6 @@
 # RustDesk OSS Web Client Roadmap
 
-**Updated:** 2026-10-11
+**Updated:** 2026-10-12
 
 Upstream RustDesk removed the open-source web client in favor of a closed-source Pro offering. This roadmap tracks our effort to revive and maintain the web client against the OSS rendezvous server (hbbs/hbbr).
 
@@ -20,7 +20,7 @@ The web client shares ~68K lines of Dart with native clients. The web-specific l
 
 ## Status
 
-### Done (feat/revive-web-client)
+### Done
 
 - [x] Restore web client JS source from git history
 - [x] Load server config (host/key) from `config.json` instead of localStorage; the relay comes from hbbs
@@ -31,7 +31,7 @@ The web client shares ~68K lines of Dart with native clients. The web-specific l
 - [x] Make server settings UI read-only on web
 - [x] Force English locale for web client
 - [x] Add a Dockerfile for containerized builds
-- [x] Remove untested wss:// support (to revisit later)
+- [x] Remove untested wss:// support (restored later, tested; see WSS support in Phase 3)
 
 ### Phase 1: Testing Infrastructure
 
@@ -52,6 +52,7 @@ Establish test coverage as a foundation for opinionated development.
 - [ ] Handle server unreachable / timeout gracefully
 - [x] A silent relay ends the session: after 12 s without a message (`Websock.next()` timeout) the web client shows "Reconnect" and reconnects through another relay; verified with a frozen hbbr pod (e2e `ha/hbbr-freeze.spec.ts`, back within about 17 s)
 - [ ] Reconnection logic on WebSocket drop
+- [ ] Recent sessions always empty: `load_recent_peers` is never answered ([#31](https://github.com/crabamole/rustdesk/issues/31))
 - [ ] Audit the 131 `UnimplementedError` stubs in `web/bridge.dart` — categorize as: needed, not-applicable-to-web, or deferred
 
 ### Phase 3: Features
@@ -69,7 +70,8 @@ Establish test coverage as a foundation for opinionated development.
 - [x] CI/CD pipeline: pushes to master build the Docker image; a version bump in `flutter/web/js/package.json` publishes it; the release workflow tags `<version>` for all clients (`web-client-<version>` before 1.4.9-7)
 - [x] Helm chart: `oci://ghcr.io/crabamole/charts/rustdesk` with the webclient deployment; nginx serves the static files and the chart's Istio VirtualService routes `/ws/id`, `/ws/relay/<n>` and `/api/` to the servers
 - [x] Health check endpoint or readiness probe (liveness/readiness probes in the Helm chart's webclient Deployment)
-- [ ] Documentation: deployment guide, config.json reference, architecture diagram
+- [x] Deployment: the Helm chart README covers the web client
+- [ ] Documentation: config.json reference, architecture diagram
 
 ## Non-Goals
 
