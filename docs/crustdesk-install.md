@@ -32,7 +32,7 @@ gh attestation verify cRustDesk-<ver>-x86_64.msi --repo crabamole/rustdesk
 The same files, with `SHA256SUMS`, are in the image `ghcr.io/crabamole/rustdesk/installers:<ver>` (from 1.4.9-9 on), for sites that pull from a registry mirror rather than GitHub:
 
 ```bash
-docker run --rm -v "$PWD:/out" ghcr.io/crabamole/rustdesk/installers:<ver> cp -r /installers /out
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/out" ghcr.io/crabamole/rustdesk/installers:<ver> cp -r /installers /out
 (cd installers && sha256sum -c SHA256SUMS)
 ```
 
