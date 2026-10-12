@@ -1791,7 +1791,7 @@ mod tests {
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     fn synced_option_decides_server_configured() {
         use super::{Config, OPTIONS, OPTION_SYNCED};
-        use hbb_common::config::keys::OPTION_CUSTOM_RENDEZVOUS_SERVER as KEY;
+        use base::config::keys::OPTION_CUSTOM_RENDEZVOUS_SERVER as KEY;
 
         struct Restore(String, std::collections::HashMap<String, String>, bool);
         impl Drop for Restore {
@@ -1825,7 +1825,7 @@ mod tests {
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     fn change_id_refused_without_server() {
         use super::{Config, OPTION_SYNCED};
-        use hbb_common::config::keys::OPTION_CUSTOM_RENDEZVOUS_SERVER as KEY;
+        use base::config::keys::OPTION_CUSTOM_RENDEZVOUS_SERVER as KEY;
 
         struct Restore(String, bool);
         impl Drop for Restore {
