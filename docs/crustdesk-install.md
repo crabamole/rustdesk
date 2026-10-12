@@ -1,6 +1,6 @@
 # cRustDesk Install Guide
 
-Installing the cRustDesk builds of this fork (Windows, macOS, Ubuntu). Upstream RustDesk clients are not covered here; see the stock guides: [Linux](stock-rustdesk-linux-preseed-install.md), [macOS](stock-rustdesk-macos-preseed-install.md).
+Installing the cRustDesk builds of this fork (Windows, macOS, Ubuntu). For a fleet rollout, server included, follow the [deployment guide](crustdesk-deployment.md). Upstream RustDesk clients are not covered here; see the stock guides: [Linux](stock-rustdesk-linux-preseed-install.md), [macOS](stock-rustdesk-macos-preseed-install.md).
 
 ## Variants
 
@@ -70,7 +70,7 @@ Put it in place before installing:
 | Platform | Locations |
 |---|---|
 | Windows | `C:\Windows\ServiceProfiles\LocalService\AppData\Roaming\cRustDesk\config\cRustDesk2.toml` |
-| Linux | `/root/.config/crustdesk/cRustDesk2.toml` and `~/.config/crustdesk/cRustDesk2.toml` of every session user, owned by that user |
+| Linux | `/root/.config/crustdesk/cRustDesk2.toml` and `~/.config/crustdesk/cRustDesk2.toml` of every desktop user and of the login-screen user (`/var/lib/lightdm`, `/var/lib/gdm3`, …), owned by that user |
 | macOS | `/var/root/Library/Preferences/io.github.crabamole.cRustDesk/cRustDesk2.toml` and the user's `~/Library/Preferences/io.github.crabamole.cRustDesk/cRustDesk2.toml`, the latter owned by that user |
 
 Per-user files must be owned by that user (Linux and macOS: `chown <user>`, mode `0600`).
