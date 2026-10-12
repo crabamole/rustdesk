@@ -30,6 +30,14 @@ jobs:
         with:
           persist-credentials: false
 
+      # Before the lookup: ghcr answers "denied", not "not found", to anonymous lookups of a new package.
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Check if this version is published
         id: check
         run: |
@@ -53,14 +61,6 @@ jobs:
           cd dist
           sha256sum -c SHA256SUMS
           [ "$(ls | grep -c -- "-$VERSION-")" = 6 ] || { ls -l; echo "expected 6 installers"; exit 1; }
-
-      - name: Log in to GHCR
-        if: steps.check.outputs.publish == 'true'
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
         if: steps.check.outputs.publish == 'true'
