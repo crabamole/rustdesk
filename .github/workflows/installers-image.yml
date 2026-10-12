@@ -1,0 +1,72 @@
+# Publishes a release's installers as ghcr.io/crabamole/rustdesk/installers:<version>.
+# release.yml calls it once the GitHub Release exists; a dispatch on master publishes an earlier release.
+name: Installers image
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag, e.g. 1.4.9-9
+        required: true
+        type: string
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    env:
+      VERSION: ${{ inputs.version }}
+      IMAGE: ghcr.io/crabamole/rustdesk/installers
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Check if this version is published
+        id: check
+        run: |
+          # Publish only on a definite "not found"; any other lookup error fails the job.
+          if out=$(docker manifest inspect "$IMAGE:$VERSION" 2>&1); then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          elif grep -qiE 'manifest unknown|no such manifest|not found' <<<"$out"; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "$out" >&2
+            exit 1
+          fi
+
+      - name: Download the release's installers
+        if: steps.check.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: docker/installers
+        run: |
+          gh release download "$VERSION" --repo "$GITHUB_REPOSITORY" --dir dist
+          cd dist
+          sha256sum -c SHA256SUMS
+          [ "$(ls | grep -c -- "-$VERSION-")" = 6 ] || { ls -l; echo "expected 6 installers"; exit 1; }
+
+      - name: Log in to GHCR
+        if: steps.check.outputs.publish == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        if: steps.check.outputs.publish == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: docker/installers
+          build-args: VERSION=${{ env.VERSION }}
+          push: true
+          tags: ${{ env.IMAGE }}:${{ env.VERSION }}

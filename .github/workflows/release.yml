@@ -1,6 +1,7 @@
 # Releases every client under one tag: the version in flutter/web/js/package.json (<upstream>-<n>).
-# web-docker.yml publishes the web-client image; this workflow builds the native installers and
-# creates the GitHub Release (and its tag) once all of them exist. A dispatch on any branch is a dry run.
+# web-docker.yml publishes the web-client image; this workflow builds the native installers,
+# creates the GitHub Release (and its tag) once all of them exist, then publishes them as an image
+# (installers-image.yml). A dispatch on any branch is a dry run.
 name: Release
 
 on:
@@ -119,6 +120,7 @@ jobs:
         run: |
           cat > notes.md <<EOF
           Web client image: \`$IMAGE:$VERSION\`
+          Installers image: \`ghcr.io/crabamole/rustdesk/installers:$VERSION\`
 
           Installers for the device (\`cRustDesk\`) and client-only (\`cRustDesk-client\`) variants.
           The Windows MSIs are not code-signed, so SmartScreen warns on first run.
@@ -130,3 +132,13 @@ jobs:
           { echo; cat section.md; } >> notes.md
           gh release create "$VERSION" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "cRustDesk $VERSION" --notes-file notes.md
+
+  installers-image:
+    needs: [version, publish]
+    if: needs.version.outputs.release == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/installers-image.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
