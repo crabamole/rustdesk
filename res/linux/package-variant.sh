@@ -10,9 +10,6 @@ cd "$work/pkg"
 mv usr/share/rustdesk usr/share/crustdesk
 mv usr/share/crustdesk/rustdesk usr/share/crustdesk/crustdesk
 mv usr/share/crustdesk/files/systemd/rustdesk.service usr/share/crustdesk/files/systemd/crustdesk.service
-# The binary looks for these under its lowercased app name.
-mv etc/rustdesk etc/crustdesk
-mv etc/pam.d/rustdesk etc/pam.d/crustdesk
 for f in usr/share/applications/rustdesk*.desktop; do mv "$f" "${f/rustdesk/crustdesk}"; done
 find usr/share/icons -name 'rustdesk*' -exec sh -c 'mv "$1" "$(dirname "$1")/c$(basename "$1")"' _ {} \;
 install -m 644 "$custom" usr/share/crustdesk/custom.txt
