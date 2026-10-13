@@ -31,6 +31,7 @@ vi.mock("./connection", () => {
     loadConfig: vi.fn().mockResolvedValue(undefined),
     getConfigKey: vi.fn().mockReturnValue("testkey"),
     getConfigHost: vi.fn().mockReturnValue("testhost"),
+    getApiServer: vi.fn().mockReturnValue("https://api.test"),
   };
 });
 
