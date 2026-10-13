@@ -19,7 +19,6 @@ vi.mock("./message.js", () => ({
   SwitchDisplay: { fromPartial: vi.fn((v: any) => v) },
   PublicKey: { fromPartial: vi.fn((v: any) => v) },
   PeerInfo: { fromPartial: vi.fn((v: any) => v) },
-  IdPk: { decode: vi.fn(() => ({ id: "test", pk: new Uint8Array(32) })) },
   ControlKey: {
     Alt: 1, Control: 2, Shift: 3, Meta: 4,
     CtrlAltDel: 100, Delete: 101, LockScreen: 102,
@@ -44,6 +43,7 @@ vi.mock("./rendezvous.js", () => ({
   },
   RequestRelay: { fromPartial: vi.fn((v: any) => v) },
   RelayResponse: { fromPartial: vi.fn((v: any) => v) },
+  IdPk: { decode: vi.fn(() => ({ id: "test", pk: new Uint8Array(32) })) },
 }));
 
 let nextWsResponse: any = {};
@@ -110,7 +110,7 @@ vi.mock("./url", () => ({
 
 import Connection, { getConfigHost } from "./connection";
 import * as globals from "./globals";
-import { IdPk } from "./message.js";
+import { IdPk } from "./rendezvous.js";
 import { getRelayUri } from "./url";
 
 describe("getConfigHost", () => {

@@ -168,7 +168,7 @@ export default class Connection {
       try {
         pk = await globals.verify(pk, getConfigKey() || RS_PK);
         if (pk) {
-          const idpk = message.IdPk.decode(pk);
+          const idpk = rendezvous.IdPk.decode(pk);
           if (idpk.id == this._id) {
             pk = idpk.pk;
           }
@@ -209,7 +209,7 @@ export default class Connection {
       this._ws?.sendMessage({ public_key });
       return;
     }
-    const idpk = message.IdPk.decode(signedId);
+    const idpk = rendezvous.IdPk.decode(signedId);
     const id = idpk.id;
     const theirPk = idpk.pk;
     if (id != this._id!) {
