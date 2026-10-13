@@ -234,6 +234,15 @@ describe("setByName / getByName", () => {
     expect((window as any).getByName("version")).toBe("1.0.0-test");
   });
 
+  it("reports login progress with the native client's state text", () => {
+    vi.spyOn(window, "open").mockReturnValue(null);
+    vi.spyOn(globalThis, "fetch").mockReturnValue(new Promise(() => {}));
+    (window as any).setByName("account_auth", JSON.stringify({ op: "OIDC", remember: true }));
+    const result = JSON.parse((window as any).getByName("account_auth_result"));
+    expect(result.state_msg).toBe("Requesting account auth");
+    (window as any).setByName("account_auth_cancel");
+  });
+
   it("retrieves options as JSON", () => {
     const result = JSON.parse((window as any).getByName("options"));
     expect(result["custom-rendezvous-server"]).toBe("testhost");

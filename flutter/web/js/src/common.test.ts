@@ -49,6 +49,10 @@ describe("translate", () => {
     expect(translate("xx_en", "Unknown")).toBe("Unknown");
   });
 
+  it("fills a {value} placeholder like the native client", () => {
+    expect(translate("xx_en", "Continue with {OIDC}")).toBe("Continue with OIDC");
+  });
+
   it("falls back to English for unknown language", () => {
     expect(translate("xx_fr", "Hello")).toBe("Hello");
   });

@@ -20,7 +20,7 @@ function _oidcReset() {
 
 function _oidcStartAuth(op, rememberMe) {
   _oidcReset();
-  _oidcState.state_msg = 'RequestingAccountAuth';
+  _oidcState.state_msg = 'Requesting account auth';
   // Open popup synchronously during user gesture to avoid popup blockers
   _oidcState.popup = window.open('about:blank', 'oidc_auth');
   _oidcStartAuthAsync(op, rememberMe);
@@ -58,7 +58,7 @@ async function _oidcStartAuthAsync(op, rememberMe) {
     }
     _oidcState.code = data.code;
     _oidcState.verifier = verifier;
-    _oidcState.state_msg = 'WaitingAccountAuth';
+    _oidcState.state_msg = 'Waiting account auth';
     if (_oidcState.popup && !_oidcState.popup.closed) {
       _oidcState.popup.location.href = data.url;
     } else {
@@ -100,7 +100,7 @@ function _oidcAwaitResult(apiServer, id, uuid, rememberMe) {
         return;
       }
       state.auth_body = data;
-      state.state_msg = 'LoginAccountAuth';
+      state.state_msg = 'Login account auth';
       if (rememberMe) {
         localStorage.setItem('access_token', data.access_token || '');
         localStorage.setItem('user_info', JSON.stringify(data.user || {}));

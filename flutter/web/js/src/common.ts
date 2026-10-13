@@ -39,9 +39,13 @@ export function translate(locale: string, text: string): string {
   let en = LANGS.en as any;
   let dict = (LANGS as any)[lang];
   if (!dict) dict = en;
-  let res = dict[text];
-  if (!res && lang != "en") res = en[text];
-  return res || text;
+  // Same convention as the native client: "{value}" in the text, "{}" in the dictionaries.
+  const m = /\{(.*?)\}/.exec(text);
+  const key = m ? text.replace(m[0], "{}") : text;
+  let res = dict[key];
+  if (!res && lang != "en") res = en[key];
+  res = res || key;
+  return m ? res.replace("{}", m[1]) : res;
 }
 
 const zCode = "z".charCodeAt(0);
