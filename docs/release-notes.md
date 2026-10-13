@@ -2,6 +2,15 @@
 
 Newest first. The release workflow copies a version's section into its GitHub Release.
 
+## 1.5.0-1
+
+- Based on upstream RustDesk 1.5.0: handshake hardening and security fixes, plus capture and input fixes. Our `hbb_common` fork merges upstream's matching changes.
+- Log in first: while logged out, a login button takes the place of the remote ID field, and connecting asks for the login first. With one identity provider, the button starts the sign-in at once. A line at the bottom shows who is logged in.
+- Both `custom.txt` files lock two new upstream options off: WebRTC peer-to-peer connections and clipboard sync between sessions.
+- Linux: headless mode (starting a desktop session for a logged-out machine) is gone upstream; the packages no longer ship its PAM and Xorg files.
+- Web client: the login button shows the provider name without braces, and the login progress reads as on the native app.
+- Works with the current servers (rustdesk-server 1.1.16-5, rustdesk-api 3.6.0, Helm chart 0.11.0) and next to 1.4.9-9 clients; nothing on the server side needs upgrading.
+
 ## 1.4.9-9
 
 - The relay is always the one hbbs hands out: the relay-server setting is gone from our native builds (not read, not shown, not exported; `--config` ignores `relay`), and the web client dials the relay URL hbbs returns. Clients dial it as given, only as a `ws(s)://` URL, and fail without one; they no longer fall back to the rendezvous host, a default port or `/ws/relay`. Needed for several hbbr pods.
