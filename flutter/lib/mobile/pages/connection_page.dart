@@ -13,6 +13,8 @@ import 'package:flutter_hbb/models/peer_model.dart';
 import '../../common.dart';
 import '../../common/widgets/peer_tab_page.dart';
 import '../../common/widgets/autocomplete.dart';
+import '../../common/widgets/login.dart';
+import '../../common/widgets/login_prompt.dart';
 import '../../consts.dart';
 import '../../models/model.dart';
 import '../../models/platform_model.dart';
@@ -75,18 +77,24 @@ class _ConnectionPageState extends State<ConnectionPage> {
       });
     }
     Get.put<TextEditingController>(_idEditingController);
+    if (isWeb) prefetchLoginOptions();
   }
 
   @override
   Widget build(BuildContext context) {
     Provider.of<FfiModel>(context);
-    return CustomScrollView(
+    final page = CustomScrollView(
       slivers: [
         SliverList(
             delegate: SliverChildListDelegate([
           if (!bind.isCustomClient() && !isIOS)
             Obx(() => _buildUpdateUI(stateGlobal.updateUrl.value)),
-          _buildRemoteIDTextField(),
+          if (isWeb)
+            Obx(() => isLoggedOut
+                ? _buildLoginPrompt()
+                : _buildRemoteIDTextField())
+          else
+            _buildRemoteIDTextField(),
         ])),
         SliverFillRemaining(
           hasScrollBody: true,
@@ -94,6 +102,24 @@ class _ConnectionPageState extends State<ConnectionPage> {
         )
       ],
     ).marginOnly(top: 2, left: 10, right: 10);
+    if (!isWeb) return page;
+    return Column(children: [
+      Expanded(child: page),
+      const Divider(height: 1),
+      SizedBox(height: 42, child: const AccountStatus().marginOnly(left: 16, right: 8)),
+    ]);
+  }
+
+  Widget _buildLoginPrompt() {
+    return Align(
+        alignment: Alignment.topCenter,
+        child: Container(
+            constraints: kMobilePageConstraints,
+            child: Column(children: [
+              getConnectionPageTitle(context, true)
+                  .marginOnly(bottom: 10, top: 15, left: 12),
+              const LoginPrompt(),
+            ])));
   }
 
   /// Callback for the connect button.

@@ -784,5 +784,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("server_not_configured_tip", "השרת אינו מוגדר. פנה למנהל המערכת."),
         ("Public server is not allowed", "שרת ציבורי אינו מותר"),
         ("stock_rustdesk_installed_tip", ""),
+        ("Log in to connect to remote devices.", ""),
+        ("Logged in as {}", ""),
+        ("Not logged in", ""),
     ].iter().cloned().collect();
 }

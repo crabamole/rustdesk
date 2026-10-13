@@ -256,6 +256,8 @@ class WidgetOP extends StatefulWidget {
   final Future<bool> Function(String) startAuth;
   final Future<bool> Function(String) cancelAuth;
   final bool Function() canStartAuth;
+  // An attempt already started by the caller, for one-click login.
+  final Future<bool>? autoStart;
   const WidgetOP({
     Key? key,
     required this.config,
@@ -264,6 +266,7 @@ class WidgetOP extends StatefulWidget {
     required this.startAuth,
     required this.cancelAuth,
     required this.canStartAuth,
+    this.autoStart,
   }) : super(key: key);
 
   @override
@@ -279,6 +282,23 @@ class _WidgetOPState extends State<WidgetOP> {
   String _stateMsg = '';
   String _failedMsg = '';
   String _url = '';
+
+  @override
+  void initState() {
+    super.initState();
+    final autoStart = widget.autoStart;
+    if (autoStart == null) return;
+    _invalidateAuthAttempt();
+    _stateMsg = _waitingAccountAuth;
+    final authAttempt = _authAttempt;
+    autoStart.then((started) {
+      if (started && _isCurrentAuthAttempt(authAttempt)) {
+        _beginQueryState(authAttempt);
+      }
+    }, onError: (e) {
+      _handleAuthFailure(authAttempt, e, 'start account authentication');
+    });
+  }
 
   @override
   void dispose() {
@@ -584,6 +604,8 @@ class LoginWidgetOP extends StatelessWidget {
   final Future<bool> Function(String) startAuth;
   final Future<bool> Function(String) cancelAuth;
   final bool Function() canStartAuth;
+  final String? autoStartOp;
+  final Future<bool>? autoStart;
 
   LoginWidgetOP({
     Key? key,
@@ -593,6 +615,8 @@ class LoginWidgetOP extends StatelessWidget {
     required this.startAuth,
     required this.cancelAuth,
     required this.canStartAuth,
+    this.autoStartOp,
+    this.autoStart,
   }) : super(key: key);
 
   @override
@@ -606,6 +630,7 @@ class LoginWidgetOP extends StatelessWidget {
                 startAuth: startAuth,
                 cancelAuth: cancelAuth,
                 canStartAuth: canStartAuth,
+                autoStart: op.op == autoStartOp ? autoStart : null,
               ),
               const Divider(
                 indent: 5,
@@ -700,26 +725,50 @@ const kAuthReqTypeOidc = 'oidc/';
 
 Future<bool?>? _activeLoginDialog;
 
+List<dynamic>? _prefetchedLoginOptions;
+
+/// The identity provider a login button can start directly: set when the server offers exactly one.
+final RxString oneClickLoginOp = ''.obs;
+
+/// Fetches the login options ahead of a click: the web client may open the
+/// sign-in popup only while handling the click itself.
+Future<void> prefetchLoginOptions() async {
+  try {
+    final options = await UserModel.queryOidcLoginOptions();
+    _prefetchedLoginOptions = options;
+    oneClickLoginOp.value =
+        options.length == 1 ? (options.first['name'] as String? ?? '') : '';
+  } catch (e) {
+    debugPrint('prefetchLoginOptions failed: $e');
+  }
+}
+
+/// Opens the login dialog; with one identity provider, its sign-in starts at once.
+Future<bool?> loginWithOneClick() {
+  final op = oneClickLoginOp.value;
+  return loginDialog(startOp: op.isEmpty ? null : op);
+}
+
 // call this directly
-Future<bool?> loginDialog() {
+Future<bool?> loginDialog({String? startOp}) {
   final activeDialog = _activeLoginDialog;
   if (activeDialog != null) {
     return activeDialog;
   }
-  final dialog = _openLoginDialogOnce();
+  final dialog = _openLoginDialogOnce(startOp);
   _activeLoginDialog = dialog;
   return dialog;
 }
 
-Future<bool?> _openLoginDialogOnce() async {
+Future<bool?> _openLoginDialogOnce(String? startOp) async {
   try {
-    return await _openLoginDialog();
+    return await _openLoginDialog(startOp);
   } finally {
     _activeLoginDialog = null;
   }
 }
 
-Future<bool?> _openLoginDialog() async {
+Future<bool?> _openLoginDialog(String? startOp) async {
   var username =
       TextEditingController(text: UserModel.getLocalUserInfo()?['name'] ?? '');
   var password = TextEditingController();
@@ -731,10 +780,12 @@ Future<bool?> _openLoginDialog() async {
   var isInProgress = false;
   final oidcAuth = _OidcAuthController();
   final curOP = oidcAuth.curOP;
+  // Started before the first await, so a web popup still belongs to the click.
+  final autoStart = startOp == null ? null : oidcAuth.start(startOp);
   // Track hover state for the close icon
   bool isCloseHovered = false;
 
-  final loginOptions = [].obs;
+  final loginOptions = List<dynamic>.of(_prefetchedLoginOptions ?? []).obs;
   final loginOptionsError = Rxn<Object>();
   final loginOptionsInProgress = false.obs;
   fetchLoginOptions() async {
@@ -902,6 +953,8 @@ Future<bool?> _openLoginDialog() async {
                   startAuth: oidcAuth.start,
                   cancelAuth: oidcAuth.cancelCurrent,
                   canStartAuth: oidcAuth.canStart,
+                  autoStartOp: startOp,
+                  autoStart: autoStart,
                   cbLogin: (Map<String, dynamic> authBody) async {
                     LoginResponse? resp;
                     try {

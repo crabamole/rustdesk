@@ -30,6 +30,7 @@ import 'package:window_manager/window_manager.dart';
 import 'package:window_size/window_size.dart' as window_size;
 
 import '../consts.dart';
+import 'common/widgets/login.dart';
 import 'common/widgets/overlay.dart';
 import 'mobile/pages/file_manager_page.dart';
 import 'mobile/pages/remote_page.dart';
@@ -2586,6 +2587,11 @@ connect(BuildContext context, String id,
         translate("Web client does not support direct IP connections. Please use a numeric ID instead."),
         timeout: const Duration(seconds: 5));
     return;
+  }
+  // The server refuses viewers that are not logged in, so log in first.
+  if ((isWeb || (isDesktop && desktopType == DesktopType.main)) &&
+      bind.mainGetLocalOption(key: 'access_token').isEmpty) {
+    if (await loginWithOneClick() != true) return;
   }
   if (!isDesktop || desktopType == DesktopType.main) {
     try {

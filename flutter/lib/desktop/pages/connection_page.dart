@@ -16,6 +16,8 @@ import 'package:flutter_hbb/models/peer_model.dart';
 
 import '../../common.dart';
 import '../../common/formatter/id_formatter.dart';
+import '../../common/widgets/login.dart';
+import '../../common/widgets/login_prompt.dart';
 import '../../common/widgets/peer_tab_page.dart';
 import '../../common/widgets/autocomplete.dart';
 import '../../models/platform_model.dart';
@@ -134,6 +136,8 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
             // ready && public
             // No need to show the guide if is custom client.
             if (!isIncomingOnly) setupServerWidget(),
+            if (!isIncomingOnly)
+              Flexible(child: const AccountStatus(compact: true).marginOnly(left: em)),
           ],
         );
 
@@ -242,6 +246,7 @@ class _ConnectionPageState extends State<ConnectionPage>
     Get.put<TextEditingController>(_idEditingController);
     Get.put<IDTextEditingController>(_idController);
     windowManager.addListener(this);
+    prefetchLoginOptions();
   }
 
   @override
@@ -317,17 +322,22 @@ class _ConnectionPageState extends State<ConnectionPage>
         Expanded(
             child: Column(
           children: [
-            Row(
-              children: [
-                Flexible(child: _buildRemoteIDTextField(context)),
-              ],
-            ).marginOnly(top: 22),
+            Obx(() => isLoggedOut && bind.mainIsServerConfigured()
+                ? Row(children: [_buildLoginPrompt(context)]).marginOnly(top: 22)
+                : Row(
+                    children: [
+                      Flexible(child: _buildRemoteIDTextField(context)),
+                    ],
+                  ).marginOnly(top: 22)),
             SizedBox(height: 12),
             Divider().paddingOnly(right: 12),
             Expanded(child: PeerTabPage()),
           ],
         ).paddingOnly(left: 12.0)),
         if (isOutgoingOnly && !isWeb) const _ServerNotConfiguredTip(),
+        if (isOutgoingOnly) const Divider(height: 1),
+        if (isOutgoingOnly)
+          SizedBox(height: 42, child: const AccountStatus().marginOnly(left: 14, right: 8)),
         if (!isOutgoingOnly) const Divider(height: 1),
         if (!isOutgoingOnly) OnlineStatusWidget()
       ],
@@ -347,6 +357,19 @@ class _ConnectionPageState extends State<ConnectionPage>
         isViewCamera: isViewCamera,
         isTerminal: isTerminal,
         isTcpTunneling: isTcpTunneling);
+  }
+
+  Widget _buildLoginPrompt(BuildContext context) {
+    return Container(
+      width: 320 + 20 * 2,
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 22),
+      child: Column(
+        children: [
+          getConnectionPageTitle(context, false).marginOnly(bottom: 15),
+          const LoginPrompt(),
+        ],
+      ),
+    );
   }
 
   /// UI for the remote ID TextField.

@@ -784,5 +784,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("server_not_configured_tip", "Servilo ne agordita. Kontaktu vian administranton."),
         ("Public server is not allowed", "Publika servilo ne estas permesata"),
         ("stock_rustdesk_installed_tip", ""),
+        ("Log in to connect to remote devices.", ""),
+        ("Logged in as {}", ""),
+        ("Not logged in", ""),
     ].iter().cloned().collect();
 }

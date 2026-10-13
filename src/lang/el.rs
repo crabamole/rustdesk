@@ -784,5 +784,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("server_not_configured_tip", "Ο διακομιστής δεν έχει ρυθμιστεί. Επικοινωνήστε με τον διαχειριστή σας."),
         ("Public server is not allowed", "Ο δημόσιος διακομιστής δεν επιτρέπεται"),
         ("stock_rustdesk_installed_tip", ""),
+        ("Log in to connect to remote devices.", ""),
+        ("Logged in as {}", ""),
+        ("Not logged in", ""),
     ].iter().cloned().collect();
 }

@@ -784,5 +784,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("server_not_configured_tip", "未配置服务器。请联系管理员。"),
         ("Public server is not allowed", "不允许使用公共服务器"),
         ("stock_rustdesk_installed_tip", "已安装标准版 RustDesk。请先卸载。"),
+        ("Log in to connect to remote devices.", ""),
+        ("Logged in as {}", ""),
+        ("Not logged in", ""),
     ].iter().cloned().collect();
 }
