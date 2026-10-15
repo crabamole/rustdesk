@@ -13,23 +13,15 @@ This repo builds:
 
 It is a fork of [rustdesk/rustdesk](https://github.com/rustdesk/rustdesk) and follows
 upstream releases; the [release notes](docs/release-notes.md) name the upstream version
-each release is built on.
+each release is built on. The [org page](https://github.com/crabamole) lists the other
+repos and how they fit; the server side is deployed with
+[rustdesk-charts](https://github.com/crabamole/rustdesk-charts).
 
 > [!Caution]
 > **Misuse disclaimer:** this project does not condone or support any unethical or
 > illegal use of this software. Misuse, such as unauthorized access, control or invasion
 > of privacy, is strictly against our guidelines. The authors are not responsible for
 > any misuse of the application.
-
-## The crabamole stack
-
-| Repository | What it is |
-|------------|------------|
-| [rustdesk-charts](https://github.com/crabamole/rustdesk-charts) | **Start here.** Helm chart that deploys the server side. |
-| **rustdesk** (this repo) | Web client and cRustDesk native clients. |
-| [rustdesk-server](https://github.com/crabamole/rustdesk-server) | hbbs and hbbr with WebSocket registration and PostgreSQL. |
-| [rustdesk-api](https://github.com/crabamole/rustdesk-api) | API server and web console: OIDC login, users, groups, address books. |
-| [hbb_common](https://github.com/crabamole/hbb_common) | Library shared by the clients and the server (`libs/hbb_common`). |
 
 ## What it adds to RustDesk
 
