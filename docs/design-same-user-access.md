@@ -24,17 +24,24 @@ vouches for both sides. Unattended devices where nobody logs in never get this a
 
 ## Design
 
-1. **Device owner.** A device login records its session as the device's owner session
-   (`peer.owner_session`). One owner per device; the last login wins. Logout or expiry deletes
+1. **Device owner.** A device login proves it comes from the device: `POST /api/oidc/auth`
+   returns a challenge, the device signs it with its own key (the key registered with hbbs),
+   and `/api/oidc/token` carries the signature. The api-server checks it against the device's
+   registered key, and only then records the session as the device's owner session
+   (`peer.owner_session`) together with the key that signed it (`peer.owner_pk`). A login without a valid signature still works but sets no owner.
+   One owner per device; the last login wins. Logout or expiry deletes
    the session, so the owner is gone at once. No separate lifetime.
 2. **Decision in the api-server.** The `/api/audit/ref` answer carries `same_user: true` when
    all hold:
    - `SAME_USER_ACCESS=Y` on the api-server (chart `apiserver.sameUserAccess`, off by default);
    - the target device has a current owner session;
    - that session's user is the viewer's user, and the user is active.
-3. **hbbs** copies the flag into `ControlledContext.same_user`, beside `conn_audit_ref`. It
-   decides nothing.
-4. **Device.** When `same_user` is set, the device admits the viewer as for a correct
+3. **hbbs** copies the flag and the owner key into `ControlledContext` (`same_user`,
+   `owner_pk`), beside `conn_audit_ref`. It decides nothing.
+4. **Device.** The device honours `same_user` only when its link to hbbs is `wss://` with a
+   verified certificate and `owner_pk` is its own public key; otherwise it ignores the flag and
+   logs why. A key change (reinstall) therefore ends the ownership. When it honours it, the
+   device admits the viewer as for a correct
    password: no password, no Accept dialog, in every approve mode. 2FA (if set), the locked
    settings and the session notice stay. Without the flag nothing changes; stock clients
    ignore the field.
@@ -47,10 +54,10 @@ server's flag.
 
 | Repo | Change |
 |------|--------|
-| hbb_common | `bool same_user = 2;` in `ControlledContext` (`rendezvous.proto`); bump the submodule in rustdesk and rustdesk-server |
-| rustdesk-api | Migration `peer.owner_session`; set at device login; `same_user` in the `/api/audit/ref` answer; admission field in the audit record |
-| rustdesk-server | `check_viewer_token` reads `same_user`; `controlled_context()` sets it |
-| rustdesk | `connection.rs`: a new branch before the approve-mode check, doing what the recent-session branch does (logon response, then `try_start_cm` as authorized); the check in a new function |
+| hbb_common | `bool same_user = 2; bytes owner_pk = 3;` in `ControlledContext` (`rendezvous.proto`); bump the submodule in rustdesk and rustdesk-server |
+| rustdesk-api | Migration `peer.owner_session`, `peer.owner_pk`; a challenge in `/api/oidc/auth`; owner set at device login only with a valid device signature; `same_user` and `owner_pk` in the `/api/audit/ref` answer; admission field in the audit record |
+| rustdesk-server | `check_viewer_token` reads `same_user` and `owner_pk`; `controlled_context()` sets them |
+| rustdesk | Login: an IPC request asks the server process to sign the challenge (the private key never leaves it), the signature goes with `/api/oidc/token`. `connection.rs`: a new branch before the approve-mode check, doing what the recent-session branch does (logon response, then `try_start_cm` as authorized); the check in a new function, which also requires a verified `wss://` link to hbbs and `owner_pk` equal to the device's key |
 | rustdesk-charts | `apiserver.sameUserAccess: false` sets `SAME_USER_ACCESS` |
 
 ## Failure Behaviour
@@ -64,17 +71,18 @@ server's flag.
 
 The device stops being the only judge of access: anyone who controls hbbs or the api-server,
 or holds a user's login token, can open that user's own devices. This matches SSO-style remote
-desktop and is why the feature is per deployment and off by default. How the device ties the
-flag to the connection that then arrives needs a threat analysis in the private e2e repo
-before implementation.
+desktop and is why the feature is per deployment and off by default. The feature needs
+`wss://` with a valid certificate between devices and hbbs.
 
 ## Testing
 
 - api-server: owner set at login, cleared at logout and expiry; `same_user` only for the
   owner, not when the switch is off, for another user or for a disabled user.
 - rustdesk-server: the flag is copied.
-- rustdesk: unit test of the new check.
-- e2e: a user logs in on a test device; the same user's browser connects without a password;
+- api-server: no owner for a missing or wrong device signature.
+- rustdesk: unit test of the new check, including the flag ignored on `ws://` and on a link
+  whose certificate was not verified, and for an `owner_pk` that is not the device's key.
+- e2e: a device login without a signature gives no same-user access; a user logs in on a test device; the same user's browser connects without a password;
   another user still gets the prompt; after logout the password is needed again.
 
 ## Not Included
