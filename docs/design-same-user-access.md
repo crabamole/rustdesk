@@ -1,58 +1,91 @@
 # Design: Same-User Access Without a Password
 
-**Status: future (roadmap Phase 3).** Not scheduled.
+**Status: designed, not scheduled** (roadmap Phase 3).
 
 ## Goal
 
-A logged-in user connects to a device where the same user is logged in, without typing
-the device's password. Other viewers, and devices with no logged-in user, keep the
+A logged-in user connects to a device where the same user is logged in to cRustDesk, without
+typing the device's password. Other viewers, and devices with no logged-in user, keep the
 password or click-to-accept as today.
+
+"Logged in" means a cRustDesk login through the IdP on that device, not the OS login: the IdP
+vouches for both sides. Unattended devices where nobody logs in never get this access.
 
 ## Today
 
-- hbbs checks the viewer's login token (`admit_viewer` in rustdesk-server) and forwards an
-  opaque `conn_audit_ref` to the device in `ControlledContext` (`PunchHole`,
-  `RequestRelay`).
-- The device validates the password itself (`validate_password` in
-  `src/server/connection.rs`). It does not know who the viewer is.
-- A login on the device sends its `id` and `uuid` to the api-server
-  (`POST /api/oidc/token`). The `peer` table has a `user` column, but nothing fills it.
+- hbbs checks the viewer's login token (`admit_viewer` in rustdesk-server) by asking the
+  api-server (`POST /api/audit/ref`), and forwards the returned `conn_audit_ref` to the
+  device in `ControlledContext` (`PunchHole`, `RequestRelay`).
+- The device validates the password itself (`src/server/connection.rs`). It does not know
+  who the viewer is.
+- A login on the device sends its `id` and `uuid` (`POST /api/oidc/token`) and creates a
+  session that lasts 30 days; logout deletes it. The `peer` table has a `user` column, but
+  nothing fills it.
 
 ## Design
 
-1. **Device owner.** A login on the device records the user as the owner of that
-   `(id, uuid)` in `peer.user`; logout clears it. One owner per device.
-2. **Server decision.** When the deployment enables the feature, hbbs asks the api-server
-   (with the viewer token it already checks) whether the viewer's user owns the target
-   device. If so, it sets `same_user = true` and the viewer's ID in `ControlledContext`.
-3. **Device decision.** Our build skips the password only if all hold:
-   - `same-user-access` is `Y` in `custom.txt` (locked, off by default);
-   - `ControlledContext.same_user` is set and its viewer ID equals `LoginRequest.my_id`;
-   - the device itself is still logged in as a user.
+1. **Device owner.** A device login records its session as the device's owner session
+   (`peer.owner_session`). One owner per device; the last login wins. Logout or expiry deletes
+   the session, so the owner is gone at once. No separate lifetime.
+2. **Decision in the api-server.** The `/api/audit/ref` answer carries `same_user: true` when
+   all hold:
+   - `SAME_USER_ACCESS=Y` on the api-server (chart `apiserver.sameUserAccess`, off by default);
+   - the target device has a current owner session;
+   - that session's user is the viewer's user, and the user is active.
+3. **hbbs** copies the flag into `ControlledContext.same_user`, beside `conn_audit_ref`. It
+   decides nothing.
+4. **Device.** When `same_user` is set, the device admits the viewer as for a correct
+   password: no password, no Accept dialog, in every approve mode. 2FA (if set), the locked
+   settings and the session notice stay. Without the flag nothing changes; stock clients
+   ignore the field.
+5. **Audit.** The connection record states that the session was admitted as same user.
 
-   Otherwise it falls back to the normal password check. Stock clients ignore the
-   unknown field and ask for the password.
-4. **Audit.** The connection record states how the session was admitted (password,
-   click-to-accept, same user).
+There is no `custom.txt` key: the deployment switch is the opt-in, and the device trusts its
+server's flag.
+
+## Changes
+
+| Repo | Change |
+|------|--------|
+| hbb_common | `bool same_user = 2;` in `ControlledContext` (`rendezvous.proto`); bump the submodule in rustdesk and rustdesk-server |
+| rustdesk-api | Migration `peer.owner_session`; set at device login; `same_user` in the `/api/audit/ref` answer; admission field in the audit record |
+| rustdesk-server | `check_viewer_token` reads `same_user`; `controlled_context()` sets it |
+| rustdesk | `connection.rs`: a new branch before the approve-mode check, doing what the recent-session branch does (logon response, then `try_start_cm` as authorized); the check in a new function |
+| rustdesk-charts | `apiserver.sameUserAccess: false` sets `SAME_USER_ACCESS` |
+
+## Failure Behaviour
+
+- api-server down or slow: `admit_viewer` already refuses (`LOGGED_IN_ONLY`) or sends no ref.
+  No flag, so the password applies.
+- Mixed versions: if any of api-server, hbbs or the DC build is older, no flag arrives and the
+  password applies. Release notes state the version pairing.
 
 ## Trust
 
-The device stops being the only judge of access: anyone who controls hbbs or the
-api-server, or holds a user's login token, can open that user's own devices. This matches
-SSO-style remote desktop and is why the feature is per deployment and opt-in on both sides
-(server setting and `custom.txt`). The threat analysis lives in the private e2e repo.
+The device stops being the only judge of access: anyone who controls hbbs or the api-server,
+or holds a user's login token, can open that user's own devices. This matches SSO-style remote
+desktop and is why the feature is per deployment and off by default. How the device ties the
+flag to the connection that then arrives needs a threat analysis in the private e2e repo
+before implementation.
 
-## Open Questions
+## Testing
 
-- On Windows the connection runs in the service while the login token belongs to the
-  user's app. How does the service learn that the device is still logged in?
-- Should 2FA and the session-recording or permission rules still apply? (Proposed: yes,
-  only the password step is skipped.)
-- Owner vs. group: allow members of the owner's device group too, or only the owner?
-- Token lifetime: the device's login must expire or be revocable from the console.
+- api-server: owner set at login, cleared at logout and expiry; `same_user` only for the
+  owner, not when the switch is off, for another user or for a disabled user.
+- rustdesk-server: the flag is copied.
+- rustdesk: unit test of the new check.
+- e2e: a user logs in on a test device; the same user's browser connects without a password;
+  another user still gets the prompt; after logout the password is needed again.
+
+## Not Included
+
+- Members of the owner's group (needs Control Role Enforcement).
+- A device-side check of its own login state: the api-server is the authority, and on Windows
+  the login token lives in the user's app, not in the service that checks the password.
+- A viewer ID check against `LoginRequest.my_id`: the viewer sets it, and the web client always
+  sends `web`.
 
 ## Depends On
 
 - [Login Bound to Its Starter](design-oidc-login.md) (done): device logins carry `id` and `uuid`.
-- Control Role Enforcement: same per-connection decision path in hbbs.
 - Client attestation strengthens it: only our builds should honour `same_user`.
