@@ -27,13 +27,13 @@ builds already close a connection when the heartbeat answer names it.
 
 | Answer | When |
 |---|---|
-| 200 | The request is stored. A repeat request also answers 200 and keeps the first time. |
+| 200 | The request is stored. A repeat request also answers 200, keeps the first time and adds no console row. |
 | 404 | No row has that guid. |
 | 409 | The row has already ended. |
 
 **Storage.** A migration adds `audit_conn.disconnect_at timestamptz`. The request sets it.
 
-**Delivery.** In the heartbeat handler, after the existing step that ends rows the device no
+**Delivery.** In the heartbeat handler, before the existing step that ends rows the device no
 longer lists, one query selects the `conn_id` of the device's rows (`id` + `uuid`) where all hold:
 
 - the row is open;
@@ -41,7 +41,7 @@ longer lists, one query selects the `conn_id` of the device's rows (`id` + `uuid
 - `conn_id` is in the heartbeat's `conns`.
 
 The query runs only when `conns` is not empty. `HeartbeatResponse` gets `disconnect: [conn_id]`,
-left out when empty.
+left out when empty. The result is the same as after that step, because only rows still in `conns` are selected.
 
 The answer repeats on each heartbeat until the row ends, so a lost heartbeat answer does no harm,
 and the device ignores ids it does not know. The row ends through the device's `close` record or
@@ -85,12 +85,13 @@ Not logged:
 - Users' own address-book entries, which are user actions, not admin actions.
 
 **Row content.** `operator` is the user's guid. `info` holds the target and the new values, for
-example `{"email":"alice@example.org","admin":true}` or
-`{"options":{"enable-clipboard":"N"}}`. A disconnect row holds the device ID, `conn_id`, viewer and
+example `{"email":"alice@example.org","via":"cli"}` (CLI) or
+`{"options":{"enable-clipboard":"N"}}` (API). A disconnect row holds the device ID, `conn_id`, viewer and
 viewer user. Rows never contain secrets or tokens. Old values are not stored.
 
 **CLI.** A migration makes `audit_console.operator` nullable. The CLI writes rows with no operator
-and `info.via = "cli"`. The console shows the operator as "CLI".
+and `info.via = "cli"`. The console shows the operator as "CLI". A row whose operator user was
+deleted lists the operator as "(deleted user)".
 
 **Write failure.** If the row cannot be written, the change still succeeds and the server logs an
 error, as for the other audit writes.
@@ -109,7 +110,7 @@ and Details, and a filter by operator.
 | Migration | `audit_conn.disconnect_at`; `audit_console.operator` nullable |
 | `src/lib.rs` | Disconnect endpoint; `disconnect` in the heartbeat answer; `log_console` calls in the admin handlers; the console log list |
 | `libs/state` | Mark, delivery query, console row write and list |
-| `src/cli.rs` | Rows for promote and demote |
+| `src/cli.rs` | Rows for promote, demote and policy re-push |
 | `webconsole` | Disconnect button; Console tab; code labels |
 | `docs/audit-api-spec.md` | §9 console log and our codes; §10 disconnect endpoint; §14 status |
 
@@ -117,7 +118,7 @@ and Details, and a filter by operator.
 
 - **Heartbeat:** one more query, only when the heartbeat lists connections. Without connections,
   the heartbeat works as before.
-- **Admin handlers and CLI:** one INSERT after a successful change. Their answers do not change.
+- **Admin handlers and CLI:** one INSERT after a successful change. Their answers do not change, except that `POST /api/enable-users` reports in `total` only the users it actually changed.
 - **`audit_conn`:** a new nullable column that existing writes do not touch.
 
 ## Testing
@@ -132,7 +133,7 @@ and Details, and a filter by operator.
 
 **Integration:**
 
-- The disconnect endpoint answers 403 for a non-admin, 404 for an unknown guid and 409 for an
+- The disconnect endpoint answers 401 for a non-admin, 404 for an unknown guid and 409 for an
   ended row.
 - One test per area checks that a change writes its row and that a failed change writes none.
 
