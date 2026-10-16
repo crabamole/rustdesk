@@ -1,6 +1,6 @@
 # Design: Disconnect and Console Action Log
 
-**Status: designed** (api-server roadmap, Phase 2 Audit Logging).
+**Status: implemented** (api-server roadmap, Phase 2 Audit Logging).
 
 ## Goal
 
