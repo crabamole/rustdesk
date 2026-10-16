@@ -24,11 +24,15 @@ vouches for both sides. Unattended devices where nobody logs in never get this a
 
 ## Design
 
-1. **Device owner.** A device login proves it comes from the device: The login `code` that `POST /api/oidc/auth` returns is the challenge: the device's server process signs `"owner-login" 0 code 0 id 0 uuid` with its own key (the key registered with hbbs), and `/api/oidc/token` carries the signature (`ownerSignature`, base64). The api-server checks it against the device's
-   registered key, and only then records the session as the device's owner session
-   (`peer.owner_session`) together with the key that signed it (`peer.owner_pk`). A login without a valid signature still works but sets no owner.
-   One owner per device; the last login wins. Logout or expiry deletes
-   the session, so the owner is gone at once. No separate lifetime.
+1. **Device owner.** A device login proves it comes from the device: the login `code` that
+   `POST /api/oidc/auth` returns is the challenge: the device's server process signs
+   `"owner-login" 0 code 0 id 0 uuid` with its own key (the key registered with hbbs),
+   and `/api/oidc/token` carries the signature (`ownerSignature`, base64). The api-server
+   checks it against the device's registered key, and only then records the session as the
+   device's owner session (`peer.owner_session`) together with the key that signed it
+   (`peer.owner_pk`). A login without a valid signature still works but sets no owner.
+   One owner per device; the last login wins. Logout or expiry deletes the session, so the
+   owner is gone at once. No separate lifetime.
 2. **Decision in the api-server.** The `/api/audit/ref` answer carries `same_user: true` when
    all hold:
    - `SAME_USER_ACCESS=Y` on the api-server (chart `apiserver.env.SAME_USER_ACCESS`, off by default);
@@ -37,13 +41,15 @@ vouches for both sides. Unattended devices where nobody logs in never get this a
 3. **hbbs** copies the flag and the owner key into `ControlledContext` (`same_user`,
    `owner_pk`), beside `conn_audit_ref`. It decides nothing.
 4. **Device.** The device honours `same_user` only when its link to hbbs is `wss://` with a
-   verified certificate and `owner_pk` is its own public key; otherwise it ignores the flag and
-   logs why. The link check runs where the rendezvous message arrives (`rendezvous_mediator.rs`), which clears the flag; the connection checks the owner key. A key change (reinstall) therefore ends the ownership. When it honours it, the
-   device admits the viewer as for a correct
-   password: no password, no Accept dialog, in every approve mode. 2FA (if set), the locked
-   settings and the session notice stay. Without the flag nothing changes; stock clients
-   ignore the field.
-5. **Audit.** The device reports `primary_auth` 5 (same user) in the connection's `authorized` audit record; the console shows "Same user".
+   verified certificate and `owner_pk` is its own public key; otherwise it ignores the flag
+   and logs why. The link check runs where the rendezvous message arrives
+   (`rendezvous_mediator.rs`), which clears the flag; the connection checks the owner key.
+   A key change (reinstall) therefore ends the ownership. When it honours it, the device
+   admits the viewer as for a correct password: no password, no Accept dialog, in every
+   approve mode. 2FA (if set), the locked settings and the session notice stay. Without
+   the flag nothing changes; stock clients ignore the field.
+5. **Audit.** The device reports `primary_auth` 5 (same user) in the connection's
+   `authorized` audit record; the console shows "Same user".
 
 There is no `custom.txt` key: the deployment switch is the opt-in, and the device trusts its
 server's flag.
@@ -53,9 +59,9 @@ server's flag.
 | Repo | Change |
 |------|--------|
 | hbb_common | `bool same_user = 2; bytes owner_pk = 3;` in `ControlledContext` (`rendezvous.proto`); bump the submodule in rustdesk and rustdesk-server; `tls::is_verified_tls` |
-| rustdesk-api | Migration `peer.owner_session`, `peer.owner_pk`; the login code as challenge; owner set at device login only with a valid device signature; `same_user` and `owner_pk` in the `/api/audit/ref` answer; admission field in the audit record |
+| rustdesk-api | Migration `peer.owner_session`, `peer.owner_pk`; the login code as challenge; owner set at device login only with a valid device signature; `same_user` and `owner_pk` in the `/api/audit/ref` answer; "Same user" label for `primary_auth` 5 in the console and audit spec |
 | rustdesk-server | `check_viewer_token` reads `same_user` and `owner_pk`; `controlled_context()` sets them |
-| rustdesk | Login: an IPC request asks the server process to sign the challenge (the private key never leaves it), the signature goes with `/api/oidc/token`. `connection.rs`: a new branch before the approve-mode check, doing what the recent-session branch does (logon response, then `try_start_cm` as authorized); the check in a new function, which also requires a verified `wss://` link to hbbs and `owner_pk` equal to the device's key |
+| rustdesk | Login: an IPC request asks the server process to sign the challenge (the private key never leaves it), the signature goes with `/api/oidc/token`. `connection.rs`: a new branch before the approve-mode check, doing what the recent-session branch does (logon response, then `try_start_cm` as authorized); the owner-key check in a new function (`same_user::admits`); the `wss://` link check is a hook in `rendezvous_mediator.rs` (`same_user::checked_context`) that clears the flag before the connection sees it |
 | rustdesk-charts | `apiserver.env.SAME_USER_ACCESS` (empty by default) |
 
 ## Failure Behaviour
