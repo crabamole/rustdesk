@@ -1,8 +1,11 @@
 //! Same-user access (docs/design-same-user-access.md): the owner proof a device login carries, and
 //! the checks before a viewer is admitted without a password.
-use hbb_common::{config::Config, log, rendezvous_proto::ControlledContext, sodiumoxide::crypto::sign, tokio};
+use hbb_common::{
+    config::Config, log, rendezvous_proto::ControlledContext, sodiumoxide::crypto::sign, tokio,
+};
 
-/// The bytes the device signs; the api-server (`device_owner::owner_login_message`) builds the same.
+/// The bytes the device signs; the api-server (`device_owner::owner_login_message`) builds the
+/// same.
 pub fn owner_login_message(code: &str, id: &str, uuid: &str) -> Vec<u8> {
     [b"owner-login".as_slice(), code.as_bytes(), id.as_bytes(), uuid.as_bytes()].join(&0u8)
 }
@@ -14,7 +17,8 @@ pub fn sign_owner_login(code: &str) -> Option<Vec<u8>> {
         return None;
     }
     let sk = sign::SecretKey::from_slice(&Config::get_key_pair().0)?;
-    let msg = owner_login_message(code, &Config::get_id(), &crate::encode64(hbb_common::get_uuid()));
+    let msg =
+        owner_login_message(code, &Config::get_id(), &crate::encode64(hbb_common::get_uuid()));
     Some(sign::sign_detached(&msg, &sk).to_bytes().to_vec())
 }
 
@@ -36,12 +40,26 @@ pub fn owner_login_signature(_code: &str) -> Option<Vec<u8>> {
     None
 }
 
-/// Clears the same-user flag unless it came over a `wss://` rendezvous link whose certificate was
-/// verified: without that, anyone on the path could forge it.
-pub fn checked_context(ctx: Option<ControlledContext>, rendezvous_url: &str) -> Option<ControlledContext> {
+const SAME_USER_LOG_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60);
+
+/// Keeps the same-user flag only when it arrived over a `wss://` rendezvous link whose
+/// certificate was verified and the relay is `wss://`; otherwise clears it.
+pub fn checked_context(
+    ctx: Option<ControlledContext>,
+    rendezvous_url: &str,
+    relay_server: &str,
+) -> Option<ControlledContext> {
     ctx.map(|mut c| {
-        if c.same_user && !(rendezvous_url.starts_with("wss://") && hbb_common::tls::is_verified_tls(rendezvous_url)) {
-            log::warn!("same-user flag ignored: rendezvous link {rendezvous_url} is not wss with a verified certificate");
+        let secure = rendezvous_url.starts_with("wss://")
+            && hbb_common::tls::is_verified_tls(rendezvous_url)
+            && relay_server.starts_with("wss://");
+        if c.same_user && !secure {
+            hbb_common::throttled_log!(
+                SAME_USER_LOG_INTERVAL,
+                warn,
+                "same-user flag ignored: rendezvous or relay link is not wss with a verified \
+                 certificate"
+            );
             c.same_user = false;
             c.owner_pk = Default::default();
         }
@@ -57,7 +75,11 @@ pub fn admits(ctx: Option<&ControlledContext>) -> bool {
     };
     let ok = owner_matches(c, &Config::get_key_pair().1);
     if !ok {
-        log::warn!("same-user flag ignored: the owner's login was signed with another key");
+        hbb_common::throttled_log!(
+            SAME_USER_LOG_INTERVAL,
+            warn,
+            "same-user flag ignored: the owner's login was signed with another key"
+        );
     }
     ok
 }
@@ -72,7 +94,12 @@ mod tests {
     use hbb_common::tls::{upsert_tls_cache, TlsType};
 
     fn ctx(same_user: bool, owner_pk: &[u8]) -> ControlledContext {
-        ControlledContext { conn_audit_ref: "r".into(), same_user, owner_pk: owner_pk.to_vec().into(), ..Default::default() }
+        ControlledContext {
+            conn_audit_ref: "r".into(),
+            same_user,
+            owner_pk: owner_pk.to_vec().into(),
+            ..Default::default()
+        }
     }
 
     #[test]
@@ -92,12 +119,21 @@ mod tests {
     fn flag_kept_only_on_a_verified_wss_link() {
         upsert_tls_cache("wss://su-verified.test/ws/id", TlsType::Rustls, false);
         upsert_tls_cache("wss://su-fallback.test/ws/id", TlsType::Rustls, true);
-        let kept = |url: &str| checked_context(Some(ctx(true, &[1])), url).unwrap().same_user;
+        let relay = "wss://relay.test/ws/relay";
+        let kept =
+            |url: &str| checked_context(Some(ctx(true, &[1])), url, relay).unwrap().same_user;
         assert!(kept("wss://su-verified.test/ws/id"));
         assert!(!kept("wss://su-fallback.test/ws/id"));
         assert!(!kept("ws://su-verified.test/ws/id"));
         assert!(!kept("su-verified.test:21116"));
-        let dropped = checked_context(Some(ctx(true, &[1])), "ws://x/ws/id").unwrap();
+        let ws_relay = checked_context(
+            Some(ctx(true, &[1])),
+            "wss://su-verified.test/ws/id",
+            "ws://relay.test/ws/relay",
+        );
+        assert!(!ws_relay.unwrap().same_user);
+        let dropped =
+            checked_context(Some(ctx(true, &[1])), "ws://x/ws/id", "ws://x/ws/relay").unwrap();
         assert!(dropped.owner_pk.is_empty());
         assert_eq!(dropped.conn_audit_ref, "r", "the audit ref stays");
     }

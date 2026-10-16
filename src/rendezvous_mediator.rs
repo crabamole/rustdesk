@@ -698,6 +698,7 @@ impl RendezvousMediator {
             crate::same_user::checked_context(
                 rr.controlled_context.into_option(),
                 &hbb_common::websocket::check_ws(&self.host),
+                &rr.relay_server,
             ),
         );
 
@@ -796,6 +797,7 @@ impl RendezvousMediator {
             crate::same_user::checked_context(
                 fla.controlled_context.clone().into_option(),
                 &hbb_common::websocket::check_ws(&self.host),
+                &fla.relay_server,
             ),
         );
         if peer_addr_v6.port() > 0 && !relay {
@@ -1088,6 +1090,7 @@ impl RendezvousMediator {
             crate::same_user::checked_context(
                 ph.controlled_context.clone().into_option(),
                 &hbb_common::websocket::check_ws(&self.host),
+                &ph.relay_server,
             ),
         );
         // The controller's force_relay alone does not say whether ICE must be Relay-only; its
