@@ -362,7 +362,6 @@ pub enum Data {
     Config((String, Option<String>)),
     Options(Option<HashMap<String, String>>),
     NatType(Option<i32>),
-    ConfirmedKey(Option<(Vec<u8>, Vec<u8>)>),
     RawMessage(Vec<u8>),
     Socks(Option<config::Socks5Server>),
     FS(FS),
@@ -884,14 +883,6 @@ async fn handle(data: Data, stream: &mut Connection) {
             let x = config::get_online_state();
             let confirmed = Config::get_key_confirmed();
             allow_err!(stream.send(&Data::OnlineStatus(Some((x, confirmed)))).await);
-        }
-        Data::ConfirmedKey(None) => {
-            let out = if Config::get_key_confirmed() {
-                Some(Config::get_key_pair())
-            } else {
-                None
-            };
-            allow_err!(stream.send(&Data::ConfirmedKey(out)).await);
         }
         Data::Socks(s) => match s {
             None => {
