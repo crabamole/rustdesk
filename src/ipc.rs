@@ -359,6 +359,7 @@ pub enum Data {
     SAS,
     UserSid(Option<u32>),
     OnlineStatus(Option<(i64, bool)>),
+    OwnerLoginSignature((String, Option<Vec<u8>>)),
     Config((String, Option<String>)),
     Options(Option<HashMap<String, String>>),
     NatType(Option<i32>),
