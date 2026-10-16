@@ -3,7 +3,7 @@
 Corporate deployment features for [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api).
 
 **Base:** sctgdesk-api-server (AGPL-3.0)  
-**Updated:** 2026-10-12
+**Updated:** 2026-10-16
 
 ## Architecture Context
 
@@ -80,11 +80,11 @@ Spec: [rustdesk-api/docs/audit-api-spec.md](https://github.com/crabamole/rustdes
 - [x] Viewer machine on connection rows: hostname, OS and login address from the viewer's latest native login by the same user (self-reported); viewer rows are per machine and user
 - [x] Login audit: one row per OIDC sign-in (native, web, console) with user, client type, RustDesk ID, hostname, OS, address and outcome, including failures (design: [design-login-audit.md](design-login-audit.md))
 - [ ] Device registration audit: first registration, key change and owner change per device ID
-- [ ] Console page: disconnect an active connection
+- [x] Console page: disconnect an active connection
 - [ ] Console page: date, user and viewer filters, a detail view per record, and full alarm details
 - [ ] CSV export of the audit log
 - [ ] Log retention (purge after N days)
-- [ ] Console (admin action) logging
+- [x] Console (admin action) logging: every admin change and CLI admin command (design: [design-console-audit.md](design-console-audit.md))
 - [x] Reject audit records from unregistered devices (spec §12.1); bind audit references to the target device (design: [design-audit-authentication.md](design-audit-authentication.md))
 - [ ] hbbs raw-TCP proxy for api-server calls (spec §2.2; only with `USE_RAW_TCP_FOR_API=Y` or api-server errors)
 - [x] End a device's open rows whose `close` record was lost (e.g. the Linux client restarting `--server` right after the last connection closes), by diffing against heartbeat `conns`

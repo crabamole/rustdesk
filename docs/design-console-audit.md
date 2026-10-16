@@ -6,7 +6,7 @@
 
 1. An admin ends an active connection from the console's audit page.
 2. Every admin change to users, groups, address books and the device policy, every disconnect,
-   and every admin promote or demote through the CLI leaves a row in the console log.
+   and every admin command of the CLI (promote, demote, policy re-push) leaves a row in the console log.
 
 Both are api-server work only. hbbs, hbbr and the clients do not change: stock RustDesk and our
 builds already close a connection when the heartbeat answer names it.
@@ -77,6 +77,7 @@ the connection.
 | Address book | `POST /api/ab/rule` / `DELETE /api/ab/rule` | 3 | 20 Add / 21 Delete AB Permission |
 | Policy | `PUT /api/strategies/<guid>` | 4 | 25 Update Policy |
 | Policy | `POST /api/strategies/<guid>/repush` | 4 | 26 Re-push Policy |
+| Policy | CLI `policy repush` | 4 | 26 Re-push Policy |
 
 Not logged:
 
