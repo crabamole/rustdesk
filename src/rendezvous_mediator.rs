@@ -695,7 +695,10 @@ impl RendezvousMediator {
         }
         let meta = connection_meta(
             rr.control_permissions.into_option(),
-            rr.controlled_context.into_option(),
+            crate::same_user::checked_context(
+                rr.controlled_context.into_option(),
+                &hbb_common::websocket::check_ws(&self.host),
+            ),
         );
 
         self.create_relay(
@@ -790,7 +793,10 @@ impl RendezvousMediator {
         let mut socket_addr_v6 = Default::default();
         let meta = connection_meta(
             fla.control_permissions.clone().into_option(),
-            fla.controlled_context.clone().into_option(),
+            crate::same_user::checked_context(
+                fla.controlled_context.clone().into_option(),
+                &hbb_common::websocket::check_ws(&self.host),
+            ),
         );
         if peer_addr_v6.port() > 0 && !relay {
             socket_addr_v6 = start_ipv6(
@@ -1079,7 +1085,10 @@ impl RendezvousMediator {
         let mut socket_addr_v6 = Default::default();
         let meta = connection_meta(
             ph.control_permissions.clone().into_option(),
-            ph.controlled_context.clone().into_option(),
+            crate::same_user::checked_context(
+                ph.controlled_context.clone().into_option(),
+                &hbb_common::websocket::check_ws(&self.host),
+            ),
         );
         // The controller's force_relay alone does not say whether ICE must be Relay-only; its
         // offer envelope does. `ice_policy: "all"` means the relay was forced by the transport

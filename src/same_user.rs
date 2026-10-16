@@ -1,6 +1,6 @@
 //! Same-user access (docs/design-same-user-access.md): the owner proof a device login carries, and
 //! the checks before a viewer is admitted without a password.
-use hbb_common::{config::Config, log, rendezvous_proto::ControlledContext, sodiumoxide::crypto::sign};
+use hbb_common::{config::Config, log, rendezvous_proto::ControlledContext, sodiumoxide::crypto::sign, tokio};
 
 /// The bytes the device signs; the api-server (`device_owner::owner_login_message`) builds the same.
 pub fn owner_login_message(code: &str, id: &str, uuid: &str) -> Vec<u8> {
@@ -10,6 +10,9 @@ pub fn owner_login_message(code: &str, id: &str, uuid: &str) -> Vec<u8> {
 /// Signs the owner proof of login `code` with this device's key. Runs in the server process,
 /// which holds the key hbbs registered; the key itself never leaves it.
 pub fn sign_owner_login(code: &str) -> Option<Vec<u8>> {
+    if code.contains('\0') {
+        return None;
+    }
     let sk = sign::SecretKey::from_slice(&Config::get_key_pair().0)?;
     let msg = owner_login_message(code, &Config::get_id(), &crate::encode64(hbb_common::get_uuid()));
     Some(sign::sign_detached(&msg, &sk).to_bytes().to_vec())
@@ -66,7 +69,7 @@ fn owner_matches(ctx: &ControlledContext, own_pk: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hbb_common::{sodiumoxide::crypto::sign, tls::{upsert_tls_cache, TlsType}};
+    use hbb_common::tls::{upsert_tls_cache, TlsType};
 
     fn ctx(same_user: bool, owner_pk: &[u8]) -> ControlledContext {
         ControlledContext { conn_audit_ref: "r".into(), same_user, owner_pk: owner_pk.to_vec().into(), ..Default::default() }
@@ -74,6 +77,7 @@ mod tests {
 
     #[test]
     fn signature_matches_the_api_server_vector() {
+        assert!(sign_owner_login("a\0b").is_none());
         let (pk, sk) = sign::keypair_from_seed(&sign::Seed([7u8; 32]));
         let msg = owner_login_message("code1", "123456789", "dXVpZA==");
         assert_eq!(msg, b"owner-login\0code1\0123456789\0dXVpZA==".to_vec());

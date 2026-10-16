@@ -885,6 +885,10 @@ async fn handle(data: Data, stream: &mut Connection) {
             let confirmed = Config::get_key_confirmed();
             allow_err!(stream.send(&Data::OnlineStatus(Some((x, confirmed)))).await);
         }
+        Data::OwnerLoginSignature((code, None)) => {
+            let signature = crate::same_user::sign_owner_login(&code);
+            allow_err!(stream.send(&Data::OwnerLoginSignature((code, signature))).await);
+        }
         Data::Socks(s) => match s {
             None => {
                 allow_err!(stream.send(&Data::Socks(Config::get_socks())).await);

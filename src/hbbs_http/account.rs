@@ -186,12 +186,14 @@ impl OidcSession {
         code_verifier: &str,
         id: &str,
         uuid: &str,
+        owner_signature: &str,
     ) -> ResultType<HbbHttpResponse<AuthBody>> {
         let body = serde_json::json!({
             "result": result,
             "codeVerifier": code_verifier,
             "id": id,
             "uuid": uuid,
+            "ownerSignature": owner_signature,
         })
         .to_string();
         let resp = crate::post_request_sync(format!("{}/api/oidc/token", api_server), body, "")?;
@@ -354,7 +356,11 @@ impl OidcSession {
                 return;
             }
         };
-        match Self::redeem(&api_server, &result, &code_verifier, &id, &uuid) {
+        // Proves to the api-server that this login runs on the device `id` names (same-user access).
+        let owner_signature = crate::same_user::owner_login_signature(&login_code)
+            .map(crate::encode64)
+            .unwrap_or_default();
+        match Self::redeem(&api_server, &result, &code_verifier, &id, &uuid, &owner_signature) {
             Ok(HbbHttpResponse::<_>::Data(auth_body)) => {
                 let mut session = OIDC_SESSION.write().unwrap();
                 if !session.is_current_auth_attempt(auth_attempt) {
