@@ -18,6 +18,8 @@ Widget getConnectionPageTitle(BuildContext context, bool isWeb) {
                 .titleLarge
                 ?.merge(TextStyle(height: 1)),
           ).marginOnly(right: 4),
+          // The web tip describes <id>@<server> and <id>@public, which our web client ignores.
+          if (!isWeb)
           Tooltip(
             waitDuration: Duration(milliseconds: 300),
             message: translate(isWeb ? "web_id_input_tip" : "id_input_tip"),
