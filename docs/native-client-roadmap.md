@@ -1,14 +1,15 @@
 # Native Client Build Roadmap
 
-**Updated:** 2026-10-14
+**Updated:** 2026-10-17
 
 Stock RustDesk clients work with our server stack, but some features need a client built from this fork. This roadmap tracks what shipping our own Windows, macOS and Linux builds requires, and the features waiting on it.
 
 ## Next
 
-1. Windows code signing: on hold; SignPath asks for a product keyword findable on Google. Revisit when the fork is findable ([Build Pipeline](#build-pipeline))
-2. CI speed
-3. Tracking upstream releases: 1.5.1 is on upstream master, not released yet ([Build Pipeline](#build-pipeline))
+1. Windows code signing: Certum Open Source Code Signing (cloud, SimplySign) applied for; waiting for Certum's review ([Build Pipeline](#build-pipeline))
+2. Same-user access: test on Windows and macOS, then release ([Same-User Access](#same-user-access))
+3. CI speed
+4. Tracking upstream releases: 1.5.1 is on upstream master, not released yet ([Build Pipeline](#build-pipeline))
 
 ## Build Pipeline
 
@@ -22,7 +23,7 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 - [ ] Linux build base: Rust builds in an Ubuntu 18.04 container (as upstream) while vcpkg builds the codecs on the Ubuntu 22.04 runner; since 1.5.0 the codecs need glibc 2.28 (`fcntl64`), so the package no longer runs on 18.04 anyway and the tests skip `hwcodec` to link. Decide with the supported-distro list whether to build everything on 22.04 (glibc 2.35, Ubuntu 22.04+ / Debian 12+)
 - [x] `custom.txt` signing key is a required build parameter (`RUSTDESK_CUSTOM_CLIENT_PK`, base64 Ed25519 public key); builds fail without it and never trust RustDesk's key. Sign with `rustdesk-utils signcustom` (rustdesk-server)
 - [x] macOS: Apple Developer ID signing and notarization (Gatekeeper)
-- [ ] Windows: code-signing certificate (SmartScreen); stays unsigned for now. SignPath (free for open source) asks for a search keyword that finds the product on Google, so revisit when the fork is findable; alternatives are Azure Artifact Signing (from $9.99/month; check organisation eligibility) and Certum (about €49/yr). Organisations can instead sign with their internal CA or allow the MSI by hash in WDAC/MDM. The workflow's signing steps have never run; before first use, keep the certificate password off signtool's command line, delete the PFX afterwards, and sign only our own binaries
+- [ ] Windows: code-signing certificate (SmartScreen); stays unsigned for now. Applied for Certum Open Source Code Signing in the cloud (SimplySign); waiting for Certum's review. SignPath (free for open source) asked for a search keyword that finds the product on Google; Azure Artifact Signing (from $9.99/month; check organisation eligibility) is the other alternative. A portable client-only Windows build waits for the certificate. Organisations can instead sign with their internal CA or allow the MSI by hash in WDAC/MDM. The workflow's signing steps have never run; before first use, keep the certificate password off signtool's command line, delete the PFX afterwards, and sign only our own binaries
 - [x] Release process: a version bump in `flutter/web/js/package.json` (`<upstream>-<n>`) releases every client under one tag (`release.yml`): the web-client image plus a GitHub Release with the six installers and `SHA256SUMS`. From 1.4.9-8 each installer carries a GitHub build attestation (`gh attestation verify <file> --repo crabamole/rustdesk`). From 1.4.9-9 the installers are also published as an image, `ghcr.io/crabamole/rustdesk/installers:<version>`, for networks that pull from a registry only
 - [ ] Tracking upstream releases
 - [x] Merge upstream 1.5.0 (clients 1.5.0-1): handshake hardening (Kx v1) and security fixes; our `hbb_common` fork merges upstream too. `custom.txt` locks its new WebRTC transport and clipboard sync between sessions off
@@ -137,6 +138,14 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 ### OIDC-Only Login Form
 - [x] The login dialog shows only the OIDC button (web client and native builds, 1.4.9-7); the api-server accepts OIDC logins only
 - Stock clients still show the password fields; password logins from them always fail
+
+### Same-User Access
+- [x] A viewer opens a device without its password when the same user is logged in on the device with OIDC (api-server switch `SAME_USER_ACCESS`, off by default)
+- [x] Our builds sign the device login with the device key (the request goes to the server process over IPC, so the private key stays there) and accept the flag only on a verified `wss` rendezvous link with a `wss` relay, when the owner key is their own key
+- [x] Audit: such sessions have `primary_auth` 5 (same user)
+- Stock clients never get same-user access; they keep asking for the password
+- Status: on master, not released. Verified on Linux; Windows and macOS not tested yet
+- Design: [design-same-user-access.md](design-same-user-access.md); tracked in [api-server-roadmap.md](api-server-roadmap.md) (Phase 3)
 
 ### ScreenCaptureKit on macOS ([#26](https://github.com/crabamole/rustdesk/issues/26))
 - [ ] ScreenCaptureKit video backend behind the `screencapturekit` feature, parked on branch `feat/screencapturekit`

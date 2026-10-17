@@ -3,7 +3,7 @@
 Corporate deployment features for [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api).
 
 **Base:** sctgdesk-api-server (AGPL-3.0)  
-**Updated:** 2026-10-16
+**Updated:** 2026-10-17
 
 ## Architecture Context
 
@@ -49,7 +49,7 @@ Core infrastructure that unblocks everything else.
 - [x] Accounts keyed on the OIDC `sub` claim; `name` and `email` are display fields
 - [x] Provider file validated at startup and by `rustdesk-api oidc check`; generic `Oauth2` provider needs `issuer`
 - [x] ID token `iss`, `aud` and `exp` checked
-- [x] Logins bound to the browser that started them; logins from native clients show an approval page; pending logins expire after 3 minutes
+- [x] Logins return only to the browser or native client that started them (see Login Bound to Its Starter); pending logins expire after 3 minutes
 - [x] Web console loads nothing from the internet; `/api/doc` removed (`rustdesk-api openapi` prints the spec)
 
 ## Phase 2: Auth & Observability
@@ -122,9 +122,13 @@ Enforce organizational policies on client behavior during remote sessions.
 - **Depends on:** Strategy Push
 
 ### Same-User Access
-- [ ] A viewer connects without the device password when the same user is logged in on the device (opt-in per deployment)
-- Design: `docs/design-same-user-access.md` (designed, not scheduled)
-- Switch on the api-server (`SAME_USER_ACCESS`), off by default; no `custom.txt` key
+- [x] A viewer connects without the device password when the same user is logged in on the device (opt-in per deployment)
+- [x] The device login is signed with the device key; the api-server records the owner only when the signature matches the registered key
+- [x] The device accepts the flag only on a verified `wss` rendezvous link with a `wss` relay, and only when the owner key is its own key
+- [x] Audit: such sessions have `primary_auth` 5 (same user)
+- Switch on the api-server (`SAME_USER_ACCESS`), off by default; no `custom.txt` key. Owners are recorded even when the switch is off
+- Status: on main/master, not released. Verified by e2e and on Linux; Windows and macOS not tested yet
+- Design: [design-same-user-access.md](design-same-user-access.md); needs our native builds on the device ([native-client-roadmap.md](native-client-roadmap.md))
 
 ## Phase 4: DLP & Compliance
 
