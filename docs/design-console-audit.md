@@ -87,7 +87,8 @@ Not logged:
 **Row content.** `operator` is the user's guid. `info` holds the target and the new values, for
 example `{"email":"alice@example.org","via":"cli"}` (CLI) or
 `{"options":{"enable-clipboard":"N"}}` (API). A disconnect row holds the device ID, `conn_id`, viewer and
-viewer user. Rows never contain secrets or tokens. Old values are not stored.
+viewer user. User rows name each user as `{guid, name, email}`, so a row stays readable after the
+user is deleted. Rows never contain secrets or tokens. Old values are not stored.
 
 **CLI.** A migration makes `audit_console.operator` nullable. The CLI writes rows with no operator
 and `info.via = "cli"`. The console shows the operator as "CLI". A row whose operator user was
