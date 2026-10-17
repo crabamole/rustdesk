@@ -1688,7 +1688,7 @@ impl Connection {
         loop {
             attempt += 1;
             let (retryable, err) =
-                match crate::post_request_with_status(url.clone(), body.clone(), "").await {
+                match crate::post_request_with_status(url.clone(), body.clone(), &crate::device_call::header(&url, &body)).await {
                     Ok((status, text)) => {
                         if (200..300).contains(&status) {
                             // Success is an empty body. hbbs reports handler

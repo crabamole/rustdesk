@@ -211,7 +211,9 @@ async fn start_hbbs_sync_async() {
                             }
                         }
                     }
-                    match crate::post_request(url.replace("heartbeat", "sysinfo"), v, "").await {
+                    let sysinfo_url = url.replace("heartbeat", "sysinfo");
+                    let signed = crate::device_call::header(&sysinfo_url, &v);
+                    match crate::post_request(sysinfo_url, v, &signed).await {
                         Ok(x)  => {
                             if x == "SYSINFO_UPDATED" {
                                 info_uploaded = InfoUploaded::uploaded(url.clone(), id.clone(), sys_username);
@@ -245,7 +247,9 @@ async fn start_hbbs_sync_async() {
                 }
                 let modified_at = LocalConfig::get_option("strategy_timestamp").parse::<i64>().unwrap_or(0);
                 v["modified_at"] = json!(modified_at);
-                let response = crate::post_request(url.clone(), v.to_string(), "").await;
+                let body = v.to_string();
+                let signed = crate::device_call::header(&url, &body);
+                let response = crate::post_request(url.clone(), body, &signed).await;
                 if let Err(err) = &response {
                     hbb_common::throttled_log!(API_LOG_INTERVAL, warn, "Heartbeat failed: {err:?}");
                 }

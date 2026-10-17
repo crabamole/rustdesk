@@ -23,6 +23,7 @@ pub use self::rendezvous_mediator::*;
 pub mod common;
 pub mod stock_guard;
 pub mod same_user;
+pub mod device_call;
 #[cfg(not(any(target_os = "ios")))]
 pub mod ipc;
 #[cfg(not(any(
