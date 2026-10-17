@@ -32,9 +32,13 @@ All of them run in the device's server process, which holds the key pair registe
 2. **Check.** The api-server reads the raw body, looks up `peer.pk` for the body's `id` + `uuid`,
    and accepts the call only when the signature is valid for that key and `ts` is within 300 s of
    its clock. Otherwise it answers 401 and does nothing.
-3. **No unsigned path.** Unsigned calls are refused. Stock RustDesk clients on devices therefore
+   The one exception is a viewer's session menu note (`send_note`: `id`, `session_id`, `note`, no
+   `uuid`): the viewer cannot sign as the device. It still lands only on an existing row of that
+   session, as before.
+3. **No unsigned device path.** Unsigned device calls are refused. Stock RustDesk clients on devices therefore
    get no heartbeat answers (no policy, no disconnect) and their audit records are not stored.
-   Viewers are not affected: these calls come only from the controlled side. Release notes and
+   Viewers are not affected: apart from the menu note, these calls come only from the controlled
+   side. Release notes and
    `UPGRADING.md` state the version pairing (no backward compatibility).
 
 Nothing is stored for the check: no nonce table, no new column.
