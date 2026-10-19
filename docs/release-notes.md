@@ -2,6 +2,14 @@
 
 Newest first. The release workflow copies a version's section into its GitHub Release.
 
+## 1.5.0-2
+
+- Devices sign their calls to the api-server (heartbeat, system info, connection, file and alarm records) with the key they registered with hbbs. An api-server that checks the signature accepts these calls only from the device itself.
+- A device keeps its ID when hbbs refuses a changed key (for example after its configuration was lost). The status line says so and offers "Log in to keep this ID": the device's owner logs in on it to approve the new key, or an administrator resets the key.
+- Same-user access: when the api-server allows it, the user who logged in on a device connects to it without its password.
+- Web client: the settings page no longer shows the language card, which failed to render, and the ID help no longer lists forms the web client ignores.
+- Works with the current servers (rustdesk-server 1.1.16-5, rustdesk-api 3.6.0, Helm chart 0.11.0); there the new device features have no effect. They need the next server release, whose notes state the pairing.
+
 ## 1.5.0-1
 
 - Based on upstream RustDesk 1.5.0: handshake hardening and security fixes, plus capture and input fixes. Our `hbb_common` fork merges upstream's matching changes.
