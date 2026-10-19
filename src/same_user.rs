@@ -10,16 +10,31 @@ pub fn owner_login_message(code: &str, id: &str, uuid: &str) -> Vec<u8> {
     [b"owner-login".as_slice(), code.as_bytes(), id.as_bytes(), uuid.as_bytes()].join(&0u8)
 }
 
-/// Signs the owner proof of login `code` with this device's key. Runs in the server process,
-/// which holds the key hbbs registered; the key itself never leaves it.
+/// Signs the owner proof of login `code` with this device's key and appends the public key, which
+/// lets the owner approve a changed key (docs/design-device-key-change.md). Runs in the server
+/// process, which holds the key hbbs registered; the secret key never leaves it.
 pub fn sign_owner_login(code: &str) -> Option<Vec<u8>> {
     if code.contains('\0') {
         return None;
     }
-    let sk = sign::SecretKey::from_slice(&Config::get_key_pair().0)?;
+    let (sk, pk) = Config::get_key_pair();
+    let sk = sign::SecretKey::from_slice(&sk)?;
     let msg =
         owner_login_message(code, &Config::get_id(), &crate::encode64(hbb_common::get_uuid()));
-    Some(sign::sign_detached(&msg, &sk).to_bytes().to_vec())
+    let mut proof = sign::sign_detached(&msg, &sk).to_bytes().to_vec();
+    proof.extend_from_slice(&pk);
+    Some(proof)
+}
+
+/// The base64 signature and public key of a `sign_owner_login` proof; empty without one.
+pub fn owner_proof_fields(proof: Option<Vec<u8>>) -> (String, String) {
+    match proof {
+        Some(p) if p.len() == sign::SIGNATUREBYTES + sign::PUBLICKEYBYTES => (
+            crate::encode64(&p[..sign::SIGNATUREBYTES]),
+            crate::encode64(&p[sign::SIGNATUREBYTES..]),
+        ),
+        _ => Default::default(),
+    }
 }
 
 /// Asks the server process for the owner proof of login `code`; `None` when it does not answer.
@@ -113,6 +128,17 @@ mod tests {
             crate::encode64(sign::sign_detached(&msg, &sk).to_bytes()),
             "CHBQueEnh5risrgJk9BCNDWL4oY4avo0EvOsri+0BfgkiMu+jojKu7M6fL+fwmb9AYJayOiGO/dh3LezDdeXAg=="
         );
+    }
+
+    #[test]
+    fn owner_proof_carries_the_signature_and_the_key() {
+        let proof = [[1u8; 64].as_slice(), &[2u8; 32]].concat();
+        assert_eq!(
+            owner_proof_fields(Some(proof)),
+            (crate::encode64([1u8; 64]), crate::encode64([2u8; 32]))
+        );
+        assert_eq!(owner_proof_fields(Some(vec![1; 64])), Default::default());
+        assert_eq!(owner_proof_fields(None), Default::default());
     }
 
     #[test]

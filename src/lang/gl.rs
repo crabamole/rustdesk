@@ -790,5 +790,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Logged in as {}", ""),
         ("Not logged in", ""),
         ("key_change_refused_tip", ""),
+        ("Log in to keep this ID", ""),
     ].iter().cloned().collect();
 }

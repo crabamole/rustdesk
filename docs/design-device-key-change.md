@@ -1,6 +1,6 @@
 # Design: Approved Device Key Change
 
-**Status: stage 1 implemented locally, not released; stage 2 designed.**
+**Status: stages 1 and 2 implemented locally, not released.**
 
 ## Goal
 
@@ -55,12 +55,13 @@ hbbs registered for an ID. This design makes a change of that key a deliberate s
 
    When all hold, it writes `peer.approved_pk = ownerPk` and makes the new session the owner
    with `owner_pk = ownerPk`. A console row records it (`typ` 2, `iop` 28 Device Key Changed,
-   `info`: device ID, user, `via: "owner-login"`). Otherwise the login works and changes
+   operator: the user, `info`: device ID, `via: "owner-login"`). Otherwise the login works and changes
    nothing, as a login without a valid proof does today.
 6. **hbbs.** On a `pk` mismatch it also accepts the new key when it equals `peer.approved_pk`,
    and empties `approved_pk` in the same update.
-7. **Client.** While refused, the UI also offers "Log in to keep this ID". After the login the
-   next `RegisterPk` (within 30 s) is accepted.
+7. **Client.** While refused, the UI says "Log in as its owner, or ask your administrator to reset
+   it." and offers "Log in to keep this ID", which starts the device login also when a user is
+   logged in. After the login the next `RegisterPk` (within 30 s) is accepted.
 
 Only the interactive device login counts. A bearer token alone never approves a key.
 
@@ -96,7 +97,8 @@ resets the key. Release notes and `UPGRADING.md` state the pairing.
 ## Limits
 
 - A device without a live owner session (unattended devices, owners who logged out or whose
-  session expired) needs the admin reset.
+  session expired) needs the admin reset. A logout ends the owner session, so the owner logs in
+  again without logging out first.
 - After a reset, the next registration for that `id` + `uuid` wins. An admin resets the key while
   the device is being set up again.
 - Cloned machines with the same config and machine UID share one key; this design cannot tell

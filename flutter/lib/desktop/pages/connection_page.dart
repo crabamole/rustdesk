@@ -80,6 +80,17 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
               .marginOnly(left: em),
         );
 
+    keyChangeLoginWidget() => Offstage(
+          offstage: _svcStopped.value ||
+              stateGlobal.svcStatus.value != SvcStatus.keyChangeRefused,
+          child: InkWell(
+                  onTap: loginWithOneClick,
+                  child: Text(translate("Log in to keep this ID"),
+                      style: TextStyle(
+                          decoration: TextDecoration.underline, fontSize: em)))
+              .marginOnly(left: em),
+        );
+
     setupServerWidget() => Flexible(
           child: Offstage(
             offstage: !(!_svcStopped.value &&
@@ -133,6 +144,7 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
             ),
             // stop
             if (!isIncomingOnly) startServiceWidget(),
+            if (!isIncomingOnly) keyChangeLoginWidget(),
             // ready && public
             // No need to show the guide if is custom client.
             if (!isIncomingOnly) setupServerWidget(),
@@ -149,6 +161,10 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
                 basicWidget(),
                 Align(
                         child: startServiceWidget(),
+                        alignment: Alignment.centerLeft)
+                    .marginOnly(top: 2.0, left: 22.0),
+                Align(
+                        child: keyChangeLoginWidget(),
                         alignment: Alignment.centerLeft)
                     .marginOnly(top: 2.0, left: 22.0),
               ],

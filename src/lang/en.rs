@@ -281,6 +281,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("video_render_error_tip", "Video is being received but cannot be displayed in this browser. Enable graphics acceleration (WebGL) in the browser settings, or try another browser."),
         ("server_not_configured_tip", "Server not configured. Contact your administrator."),
         ("stock_rustdesk_installed_tip", "Stock RustDesk is installed. Uninstall it first."),
-        ("key_change_refused_tip", "This device's key changed. Ask your administrator to reset it."),
+        ("key_change_refused_tip", "This device's key changed. Log in as its owner, or ask your administrator to reset it."),
     ].iter().cloned().collect();
 }
