@@ -1,6 +1,6 @@
 # Design: Approved Device Key Change
 
-**Status: designed, not scheduled.**
+**Status: stage 1 implemented locally, not released; stage 2 designed.**
 
 ## Goal
 

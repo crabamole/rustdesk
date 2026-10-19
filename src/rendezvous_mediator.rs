@@ -210,6 +210,10 @@ static SHOULD_EXIT: AtomicBool = AtomicBool::new(false);
 static MANUAL_RESTARTED: AtomicBool = AtomicBool::new(false);
 static SENT_REGISTER_PK: AtomicBool = AtomicBool::new(false);
 pub(crate) static NEEDS_DEPLOY: AtomicBool = AtomicBool::new(false);
+// hbbs refused this device's key for its ID; an admin reset lets it register (design-device-key-change.md)
+static KEY_CHANGE_REFUSED: AtomicBool = AtomicBool::new(false);
+/// `OnlineStatus` value the UI shows as "key change refused".
+pub const KEY_CHANGE_REFUSED_STATUS: i64 = -4;
 #[cfg(target_os = "android")]
 static NOTIFIED_NEEDS_DEPLOY: AtomicBool = AtomicBool::new(false);
 // register_pk retry interval (ms) when device is awaiting deployment
@@ -226,7 +230,7 @@ lazy_static::lazy_static! {
 // last_register_sent / fails / latency / UDP-rebind churn the loop would
 // otherwise spin on while no response ever comes back.
 async fn deploy_register_throttled() -> bool {
-    if !NEEDS_DEPLOY.load(Ordering::SeqCst) {
+    if !waits_for_operator() {
         return false;
     }
     LAST_NOT_DEPLOYED_REGISTER
@@ -234,6 +238,23 @@ async fn deploy_register_throttled() -> bool {
         .await
         .map(|t| (t.elapsed().as_millis() as i64) < DEPLOY_RETRY_INTERVAL)
         .unwrap_or(false)
+}
+
+/// The server refused this device until an operator acts: not deployed, or its key refused.
+fn waits_for_operator() -> bool {
+    NEEDS_DEPLOY.load(Ordering::SeqCst) || KEY_CHANGE_REFUSED.load(Ordering::SeqCst)
+}
+
+pub fn key_change_refused() -> bool {
+    KEY_CHANGE_REFUSED.load(Ordering::SeqCst)
+}
+
+fn handle_key_change_refused(host_prefix: &str) {
+    if !KEY_CHANGE_REFUSED.swap(true, Ordering::SeqCst) {
+        log::warn!("Server refused this device's key for ID {}; ask an administrator to reset it (rustdesk-api peer reset-key).", Config::get_id());
+    }
+    Config::set_key_confirmed(false);
+    Config::set_host_key_confirmed(host_prefix, false);
 }
 
 #[cfg(target_os = "android")]
@@ -524,6 +545,7 @@ impl RendezvousMediator {
                         Config::set_host_key_confirmed(&self.host_prefix, true);
                         *SOLVING_PK_MISMATCH.lock().await = "".to_owned();
                         NEEDS_DEPLOY.store(false, Ordering::SeqCst);
+                        KEY_CHANGE_REFUSED.store(false, Ordering::SeqCst);
                         #[cfg(target_os = "android")]
                         reset_needs_deploy_notification();
                     }
@@ -542,6 +564,9 @@ impl RendezvousMediator {
                         Config::set_host_key_confirmed(&self.host_prefix, false);
                         #[cfg(target_os = "android")]
                         notify_android_needs_deploy();
+                    }
+                    Ok(register_pk_response::Result::KEY_CHANGE_REFUSED) => {
+                        handle_key_change_refused(&self.host_prefix);
                     }
                     _ => {
                         log::error!("unknown RegisterPkResponse");
@@ -1284,7 +1309,7 @@ impl RendezvousMediator {
         // already told us we're not in its db; sending more often than every
         // DEPLOY_RETRY_INTERVAL ms is wasted traffic until the operator runs
         // `rustdesk --deploy --token <api_token>`.
-        if NEEDS_DEPLOY.load(Ordering::SeqCst) {
+        if waits_for_operator() {
             let mut last = LAST_NOT_DEPLOYED_REGISTER.lock().await;
             if let Some(t) = *last {
                 if (t.elapsed().as_millis() as i64) < DEPLOY_RETRY_INTERVAL {

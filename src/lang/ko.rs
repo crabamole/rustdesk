@@ -787,5 +787,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Log in to connect to remote devices.", ""),
         ("Logged in as {}", ""),
         ("Not logged in", ""),
+        ("key_change_refused_tip", ""),
     ].iter().cloned().collect();
 }
