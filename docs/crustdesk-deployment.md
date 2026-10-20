@@ -226,7 +226,7 @@ variant (no service), seed only the users' homes (and `/etc/skel/.config/crustde
 ### 2.6 Unattended access (DC variant)
 
 Set a permanent password after installing, as administrator/root: `cRustDesk --password '<password>'`
-(Linux: `crustdesk`). It prints `Done!`. The argument is visible in the process list while it runs; set it
+(Linux: `crustdesk`). It prints `Done!`. The password needs at least 8 characters; a shorter one is refused with a non-zero exit code. The argument is visible in the process list while it runs; set it
 from a script, not an interactive shell history.
 
 ### 2.7 Verify
