@@ -449,7 +449,7 @@ pub fn core_main() -> Option<Vec<String>> {
                     std::process::exit(1);
                 }
                 if crate::platform::is_installed() && is_root() {
-                    if let Err(err) = crate::ipc::set_permanent_password(args[1].to_owned()) {
+                    if let Err(err) = crate::ipc::set_permanent_password(args[1].trim().to_owned()) {
                         println!("{err}");
                     } else {
                         println!("Done!");
