@@ -7,6 +7,23 @@ import * as globals from "./globals";
 import { decompress, mapKey, sleep } from "./common";
 import { loadConfig, getConfigKey, getDefaultUri, getHost, getApiServer, getRelayUri } from "./url";
 
+// The device waits 5 s for a reply; give up before that.
+const CLIPBOARD_READ_TIMEOUT_MS = 4000;
+
+async function readClipboard(format: message.ClipboardFormat): Promise<string> {
+  const read =
+    format == message.ClipboardFormat.Html
+      ? navigator.clipboard.read().then(async (items) => {
+          const item = items.find((i) => i.types.includes("text/html"));
+          return item ? (await item.getType("text/html")).text() : "";
+        })
+      : navigator.clipboard.readText();
+  const timeout = new Promise<string>((_, reject) =>
+    setTimeout(() => reject(new Error("timed out")), CLIPBOARD_READ_TIMEOUT_MS)
+  );
+  return Promise.race([read, timeout]);
+}
+
 export { loadConfig, getConfigKey, getApiServer };
 
 export function getConfigHost(): string {
@@ -36,7 +53,8 @@ export default class Connection {
   _decodeFailureWarned: boolean | undefined;
   _unsupportedCodecWarned: boolean | undefined;
   _clipboardAllowed: boolean;
-  _lastClipboard: string | undefined;
+  _offerSeq: number;
+  _browserTipShown: boolean;
   //_cursors: { [name: number]: any };
 
   constructor() {
@@ -47,6 +65,8 @@ export default class Connection {
     this._videoTestSpeed = [0, 0];
     this._decoderGeneration = 0;
     this._clipboardAllowed = true;
+    this._offerSeq = 0;
+    this._browserTipShown = false;
     //this._cursors = {};
   }
 
@@ -279,12 +299,13 @@ export default class Connection {
           cb.content = c;
         }
         try {
-          this._lastClipboard = new TextDecoder().decode(cb.content);
-          globals.copyToClipboard(this._lastClipboard);
+          globals.copyToClipboard(new TextDecoder().decode(cb.content));
         } catch (e) {
           console.error(e);
         }
         // globals.pushEvent("clipboard", cb);
+      } else if (msg?.clipboard_request) {
+        this.handleClipboardRequest(msg.clipboard_request);
       } else if (msg?.cursor_data) {
         const cd = msg?.cursor_data;
         const c = await decompress(cd.colors);
@@ -624,15 +645,45 @@ export default class Connection {
     this._ws?.sendMessage({ key_event });
   }
 
-  sendClipboard(text: string) {
-    if (!text || text == this._lastClipboard) return;
+  /** Whether the device takes clipboard text on request (`lazy_text_clipboard`). */
+  lazyTextClipboard(): boolean {
+    try {
+      return JSON.parse(this._peerInfo?.platform_additions || "{}").lazy_text_clipboard === true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Tells the device text may be pasted; the browser clipboard is read only on its request. */
+  offerClipboard() {
+    if (!this.lazyTextClipboard()) return;
     if (!this._clipboardAllowed || this._options["disable-clipboard"]) return;
-    this._lastClipboard = text;
-    const clipboard = message.Clipboard.fromPartial({
-      content: new TextEncoder().encode(text),
-      format: message.ClipboardFormat.Text,
+    this._offerSeq += 1;
+    const clipboard_offer = message.ClipboardOffer.fromPartial({
+      seq: this._offerSeq,
+      formats: [message.ClipboardFormat.Text, message.ClipboardFormat.Html],
     });
-    this._ws?.sendMessage({ clipboard });
+    this._ws?.sendMessage({ clipboard_offer });
+  }
+
+  async handleClipboardRequest(req: message.ClipboardRequest) {
+    let text = "";
+    if (req.seq == this._offerSeq && this._clipboardAllowed && !this._options["disable-clipboard"]) {
+      try {
+        text = await readClipboard(req.format);
+      } catch (e) {
+        console.debug("Reading the clipboard failed:", e);
+        if (!this._browserTipShown) {
+          this._browserTipShown = true;
+          this.msgbox("custom-nook-nocancel-hasclose", "Clipboard", "clipboard_on_request_browser_tip");
+        }
+      }
+    }
+    const clipboard = message.Clipboard.fromPartial({
+      format: req.format,
+      content: new TextEncoder().encode(text),
+    });
+    this._ws?.sendMessage({ clipboard_reply: message.ClipboardReply.fromPartial({ seq: req.seq, clipboard }) });
   }
 
   inputString(seq: string) {

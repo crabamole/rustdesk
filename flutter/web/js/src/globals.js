@@ -367,26 +367,6 @@ export function decrypt(signed, nonce, key) {
   return requireSodium().crypto_secretbox_open_easy(signed, makeOnce(nonce), key);
 }
 
-// Keys wait behind a pending clipboard read so Ctrl/Cmd+V reaches the host after the text.
-let _keyQueue = null;
-function queueKey(before, send) {
-  if (!_keyQueue && !before) return send();
-  const p = (_keyQueue || Promise.resolve()).then(before).then(send).catch(e => console.error(e));
-  _keyQueue = p;
-  p.finally(() => { if (_keyQueue === p) _keyQueue = null; });
-}
-
-async function syncClipboard() {
-  const conn = window.curConn;
-  if (!conn || !navigator.clipboard?.readText) return;
-  try {
-    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timed out')), 300));
-    conn.sendClipboard(await Promise.race([navigator.clipboard.readText(), timeout]));
-  } catch (e) {
-    console.debug('Reading the clipboard failed:', e);
-  }
-}
-
 window.setByName = (name, value) => {
   switch (name) {
     case 'remote_id':
@@ -443,11 +423,13 @@ window.setByName = (name, value) => {
       const k = JSON.parse(value);
       const conn = curConn;
       const paste = k.name == 'VK_V' && (k.down == 'true' || k.press == 'true') && (k.ctrl == 'true' || k.command == 'true');
-      queueKey(paste ? syncClipboard : undefined, () => conn.inputKey(k.name, k.down == 'true', k.press == 'true', k.alt == 'true', k.ctrl == 'true', k.shift == 'true', k.command == 'true'));
+      // The offer reaches the device before the key, so the paste there finds the entry.
+      if (paste) conn.offerClipboard();
+      conn.inputKey(k.name, k.down == 'true', k.press == 'true', k.alt == 'true', k.ctrl == 'true', k.shift == 'true', k.command == 'true');
       break;
     }
     case 'enter_or_leave':
-      if (value === true || value == 'true') syncClipboard();
+      if (value === true || value == 'true') window.curConn?.offerClipboard();
       break;
     case 'input_string':
       curConn.inputString(value);

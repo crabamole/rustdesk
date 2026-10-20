@@ -16,7 +16,7 @@ vi.mock("./connection", () => {
     ctrlAltDel = vi.fn();
     switchDisplay = vi.fn();
     inputKey = vi.fn();
-    sendClipboard = vi.fn();
+    offerClipboard = vi.fn();
     inputString = vi.fn();
     inputMouse = vi.fn();
     setOption = vi.fn();
@@ -357,66 +357,37 @@ describe("setByName / getByName", () => {
   describe("clipboard", () => {
     const key = (name: string, extra: Record<string, string> = {}) =>
       (window as any).setByName("input_key", JSON.stringify({ name, down: "true", ...extra }));
-    let readText: ReturnType<typeof vi.fn>;
-
-    beforeEach(() => {
-      readText = vi.fn().mockResolvedValue("copied");
-      Object.defineProperty(navigator, "clipboard", { value: { readText }, configurable: true });
-    });
-
-    it("sends the browser clipboard before forwarding Ctrl+V, keeping later keys in order", async () => {
+    it("offers the clipboard before forwarding Ctrl+V, keeping later keys in order", () => {
       const conn = newConn();
       const order: string[] = [];
-      conn.sendClipboard.mockImplementation((t: string) => order.push(`clip:${t}`));
+      conn.offerClipboard.mockImplementation(() => order.push("offer"));
       conn.inputKey.mockImplementation((n: string) => order.push(n));
       key("VK_V", { ctrl: "true" });
       key("a");
-      await vi.waitFor(() => expect(order).toEqual(["clip:copied", "VK_V", "a"]));
+      expect(order).toEqual(["offer", "VK_V", "a"]);
     });
 
-    it("also syncs on Cmd+V", async () => {
+    it("also offers on Cmd+V", () => {
       const conn = newConn();
       key("VK_V", { command: "true" });
-      await vi.waitFor(() => expect(conn.inputKey).toHaveBeenCalled());
-      expect(conn.sendClipboard).toHaveBeenCalledWith("copied");
+      expect(conn.offerClipboard).toHaveBeenCalledTimes(1);
+      expect(conn.inputKey).toHaveBeenCalled();
     });
 
-    it("does not read the clipboard for other keys", () => {
+    it("does not offer for other keys", () => {
       const conn = newConn();
       key("VK_V");
       key("VK_C", { ctrl: "true" });
-      expect(readText).not.toHaveBeenCalled();
+      expect(conn.offerClipboard).not.toHaveBeenCalled();
       expect(conn.inputKey).toHaveBeenCalledTimes(2);
     });
 
-    it("still forwards the key when reading is refused", async () => {
-      const conn = newConn();
-      readText.mockRejectedValue(new Error("NotAllowedError"));
-      key("VK_V", { ctrl: "true" });
-      await vi.waitFor(() => expect(conn.inputKey).toHaveBeenCalled());
-      expect(conn.sendClipboard).not.toHaveBeenCalled();
-    });
-
-    it("still forwards the key when reading hangs", async () => {
-      vi.useFakeTimers();
-      try {
-        const conn = newConn();
-        readText.mockReturnValue(new Promise(() => {}));
-        key("VK_V", { ctrl: "true" });
-        await vi.advanceTimersByTimeAsync(1000);
-        expect(conn.inputKey).toHaveBeenCalled();
-        expect(conn.sendClipboard).not.toHaveBeenCalled();
-      } finally {
-        vi.useRealTimers();
-      }
-    });
-
-    it("syncs when the pointer enters the remote view", async () => {
+    it("offers when the pointer enters the remote view", () => {
       const conn = newConn();
       (window as any).setByName("enter_or_leave", true);
-      await vi.waitFor(() => expect(conn.sendClipboard).toHaveBeenCalledWith("copied"));
+      expect(conn.offerClipboard).toHaveBeenCalledTimes(1);
       (window as any).setByName("enter_or_leave", false);
-      expect(readText).toHaveBeenCalledTimes(1);
+      expect(conn.offerClipboard).toHaveBeenCalledTimes(1);
     });
   });
 
