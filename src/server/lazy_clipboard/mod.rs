@@ -11,6 +11,9 @@ use std::{
     time::Duration,
 };
 
+#[cfg(target_os = "linux")]
+mod x11;
+
 /// How long an app on the device waits for the viewer's reply.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 const TEXT_FORMATS: [ClipboardFormat; 3] =
@@ -131,6 +134,16 @@ fn hub() -> &'static Mutex<Option<Hub>> {
 }
 
 fn start_provider() -> Option<Box<dyn Provider>> {
+    #[cfg(target_os = "linux")]
+    if crate::platform::linux::is_x11() {
+        return match x11::X11Provider::start() {
+            Ok(p) => Some(Box::new(p)),
+            Err(e) => {
+                log::error!("lazy clipboard: X11 provider did not start: {}", e);
+                None
+            }
+        };
+    }
     log::info!("lazy clipboard: no provider on this platform");
     None
 }
