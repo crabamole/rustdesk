@@ -444,6 +444,10 @@ pub fn core_main() -> Option<Vec<String>> {
                 return None;
             }
             if args.len() == 2 {
+                if let Err(err) = check_cli_permanent_password_length(&args[1]) {
+                    println!("{err}");
+                    std::process::exit(1);
+                }
                 if crate::platform::is_installed() && is_root() {
                     if let Err(err) = crate::ipc::set_permanent_password(args[1].to_owned()) {
                         println!("{err}");
@@ -735,6 +739,20 @@ pub fn core_main() -> Option<Vec<String>> {
     return Some(args);
 }
 
+const CLI_PERMANENT_PASSWORD_MIN_LEN: usize = 8;
+
+// Same minimum as the "Set Password" dialog (flutter/lib/desktop/pages/desktop_home_page.dart).
+// An empty value stays allowed: it removes the password, like the dialog's Remove button.
+fn check_cli_permanent_password_length(password: &str) -> Result<(), String> {
+    let len = password.trim().chars().count();
+    if len > 0 && len < CLI_PERMANENT_PASSWORD_MIN_LEN {
+        return Err(format!(
+            "Password must be at least {CLI_PERMANENT_PASSWORD_MIN_LEN} characters!"
+        ));
+    }
+    Ok(())
+}
+
 fn import_config(path: &str) {
     use hbb_common::{config::*, get_exe_time, get_modified_time};
     let path2 = path.replace(".toml", "2.toml");
@@ -918,6 +936,14 @@ mod tests {
 
     fn args(values: &[&str]) -> Vec<String> {
         values.iter().map(|value| value.to_string()).collect()
+    }
+
+    #[test]
+    fn cli_permanent_password_requires_min_length() {
+        assert!(check_cli_permanent_password_length("1234567").is_err());
+        assert!(check_cli_permanent_password_length("  1234567  ").is_err());
+        assert!(check_cli_permanent_password_length("12345678").is_ok());
+        assert!(check_cli_permanent_password_length("").is_ok());
     }
 
     #[test]
