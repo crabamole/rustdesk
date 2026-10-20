@@ -163,7 +163,7 @@ pub fn on_close(conn_id: i32) {
 /// to `REQUEST_TIMEOUT`; `None` without an offer for it, on a timeout or on an empty reply.
 pub fn fetch(format: ClipboardFormat) -> Option<Vec<u8>> {
     let pending = hub().lock().unwrap().as_mut()?.request(format)?;
-    log::info!("lazy clipboard: request {:?}", format);
+    hbb_common::throttled_log!(Duration::from_secs(1), info, "lazy clipboard: request {:?}", format);
     if pending.tx.send((Instant::now(), Arc::new(pending.msg))).is_err() {
         forget(pending.id);
         return None;
