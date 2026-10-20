@@ -2706,6 +2706,10 @@ async fn test_bind_ipv6() -> ResultType<SocketAddr> {
 }
 
 pub async fn test_ipv6() -> Option<tokio::task::JoinHandle<()>> {
+    // Websocket mode never punches IPv6 and must not reach the public STUN servers.
+    if use_ws() {
+        return None;
+    }
     {
         // One look and one claim of the minute, under one lock: two connections arriving
         // together would otherwise both find it over and both probe.
@@ -3944,5 +3948,17 @@ mod tests {
     #[tokio::test]
     async fn test_ipv6_route_probe_does_not_wait_on_the_network() {
         assert!(hbb_common::timeout(1_000, test_bind_ipv6()).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_ipv6_does_not_probe_stun_in_websocket_mode() {
+        let key = keys::OPTION_ALLOW_WEBSOCKET.to_owned();
+        config::OVERWRITE_SETTINGS
+            .write()
+            .unwrap()
+            .insert(key.clone(), "Y".to_owned());
+        let res = hbb_common::timeout(1_000, test_ipv6()).await;
+        config::OVERWRITE_SETTINGS.write().unwrap().remove(&key);
+        assert!(matches!(res, Ok(None)));
     }
 }
