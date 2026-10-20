@@ -122,8 +122,19 @@ fn serve(conn: Arc<RustConnection>, atoms: Atoms, formats: Arc<Mutex<Vec<Clipboa
         };
         let r = match event {
             Event::SelectionRequest(req) => answer(&conn, &atoms, &formats, &mut incr, chunk, req),
-            Event::SelectionClear(_) => {
-                formats.lock().unwrap().clear();
+            Event::SelectionClear(e) => {
+                let still_ours = conn
+                    .get_selection_owner(atoms.CLIPBOARD)
+                    .ok()
+                    .and_then(|c| c.reply().ok())
+                    .map_or(false, |r| r.owner == e.owner);
+                if !still_ours {
+                    formats.lock().unwrap().clear();
+                }
+                Ok(())
+            }
+            Event::DestroyNotify(e) => {
+                incr.retain(|(w, _), _| *w != e.window);
                 Ok(())
             }
             Event::PropertyNotify(e) => next_chunk(&conn, &mut incr, chunk, e),
@@ -173,7 +184,7 @@ fn answer(
             Some(data) if data.len() > chunk => {
                 conn.change_window_attributes(
                     req.requestor,
-                    &ChangeWindowAttributesAux::new().event_mask(EventMask::PROPERTY_CHANGE),
+                    &ChangeWindowAttributesAux::new().event_mask(EventMask::PROPERTY_CHANGE | EventMask::STRUCTURE_NOTIFY),
                 )?;
                 conn.change_property32(PropMode::REPLACE, req.requestor, property, atoms.INCR, &[data.len() as u32])?;
                 incr.insert((req.requestor, property), Incr { target: req.target, data, sent: 0 });
