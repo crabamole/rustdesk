@@ -47,7 +47,9 @@ clipboard do not set it.
 - The viewer sends `ClipboardOffer` to devices with the flag, on each local change and when the
   session starts. It never sends `Clipboard` or `MultiClipboards` text.
 - To a device without the flag the viewer sends no text, and the session shows "Paste into this
-  device needs a newer version" once.
+  device is not available with its version or platform" once.
+- The viewer answers a request only when it is for the last offer the viewer sent on that
+  connection; any other request gets an empty reply.
 - The device ignores `Clipboard` and `MultiClipboards` text from every viewer, stock viewers
   included. Paste works only through offer and request.
 - The last offer wins. Requests go to the connection that sent it. When that connection closes,
@@ -84,12 +86,16 @@ the transfer eager again.
   on a change and sends offers. A new function answers `ClipboardRequest`: it checks `seq`, reads
   the one format at that moment in `spawn_blocking`, and sends `ClipboardReply`. The text push and
   the text sync at session start go.
-- **Web** (`flutter/web/js/src/connection.ts`): the page cannot watch the clipboard, so it offers
-  `Text` and `Html` without reading, when the pointer enters the session view and before it
-  forwards Ctrl/Cmd+V. On a request it calls `navigator.clipboard.read()` or `readText()`. When the
-  browser refuses (Firefox and Safari without a user gesture) it sends an empty reply and shows
-  "This browser does not allow paste into the remote device" once. No fallback. The current
-  send goes.
+- **Web** (`flutter/web/js/src/connection.ts`): the page cannot watch the clipboard. When the
+  pointer enters the session view and before it forwards Ctrl/Cmd+V, it reads the browser
+  clipboard locally (`navigator.clipboard.read()`, or `readText()`; 300 ms limit) and offers only
+  when the text is not empty and differs from the last text it offered or the device sent. The
+  offer lists `Text`, and `Html` only when the clipboard holds HTML. Ctrl/Cmd+V waits for this
+  read, then goes to the device. Nothing is sent with the offer. On a request it reads the one
+  format again. When the browser refuses a read (Firefox and Safari without a user gesture) it
+  offers nothing or sends an empty reply, and shows "This browser does not allow paste into the
+  remote device" once per connection. To a device without the flag it shows the note above once
+  per connection. No fallback. The current send goes.
 - **Android, iOS**: not changed. Devices with the flag ignore their eager text.
 
 ## Errors
@@ -105,12 +111,14 @@ the transfer eager again.
   at once, so the transfer is eager there. The audit counts these reads.
 - Firefox and Safari web viewers cannot paste into the device.
 - Android and iOS viewers cannot paste into devices with the flag.
+- Desktop and web viewers cannot paste into Android devices (they do not set the flag) or into
+  Wayland desktops without the portal clipboard.
 - Wayland desktops whose portal has no clipboard interface get no text.
 - Images are no longer sent to the device.
 - A paste after the viewer disconnected gets nothing.
 - The note about a device without the flag shows on every connection to it, also on a reconnect.
 - Text that came into the viewer from another device (sync between sessions, or text on the
-  viewer's clipboard that RustDesk wrote) is not offered to a device with the flag.
+  viewer's clipboard that RustDesk wrote) is not offered or sent to any device.
 
 ## Open Risks (prototype first)
 
@@ -140,8 +148,9 @@ client on either side, text paste does not work. The release notes and `UPGRADIN
 
 - Rust unit: offer state, `seq` and the owner connection; timeout and empty reply; stale `seq`;
   the entry cleared when the connection closes; eager text ignored; the owner-marker check.
-- Web unit: offer on pointer enter and on Ctrl/Cmd+V; reply on request; empty reply and the note
-  when the read fails.
+- Web unit: offer on pointer enter and on Ctrl/Cmd+V only for new text, `Html` only when present,
+  the key after the offer; reply on request; no offer, empty reply and the note when the read
+  fails; the note for a device without the flag.
 - e2e: web Chromium (clipboard permission) → Ubuntu VM (X11): after a copy the device log shows no
   request; `xclip -o` on the VM returns the text and the request appears only then; a later copy
   gives the new text. Firefox → VM: paste gives nothing, the note shows. Native matrix (macOS →
