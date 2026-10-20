@@ -1480,14 +1480,7 @@ fn send_clipboard_msg_impl(msg: Message, _is_file: bool, except_session_id: Opti
         if matches!(
             &msg.union,
             Some(message::Union::Clipboard(_)) | Some(message::Union::MultiClipboards(_))
-        ) && s
-            .lc
-            .read()
-            .unwrap()
-            .peer_info
-            .as_ref()
-            .map_or(false, |pi| crate::client::clipboard_offer::device_supports(&pi.platform_additions))
-        {
+        ) {
             continue;
         }
         if s.is_text_clipboard_required() {

@@ -282,7 +282,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("server_not_configured_tip", "Server not configured. Contact your administrator."),
         ("stock_rustdesk_installed_tip", "Stock RustDesk is installed. Uninstall it first."),
         ("key_change_refused_tip", "This device's key changed. Log in as its owner, or ask your administrator to reset it."),
-        ("clipboard_on_request_old_device_tip", "Paste into this device needs a newer version."),
+        ("clipboard_on_request_old_device_tip", "Paste into this device is not available with its version or platform."),
         ("clipboard_on_request_browser_tip", "This browser does not allow paste into the remote device."),
     ].iter().cloned().collect();
 }
