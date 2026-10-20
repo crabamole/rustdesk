@@ -444,7 +444,7 @@ pub fn core_main() -> Option<Vec<String>> {
                 return None;
             }
             if args.len() == 2 {
-                if let Err(err) = check_cli_permanent_password_length(&args[1]) {
+                if let Err(err) = check_cli_permanent_password_rule(&args[1]) {
                     println!("{err}");
                     std::process::exit(1);
                 }
@@ -741,16 +741,38 @@ pub fn core_main() -> Option<Vec<String>> {
 
 const CLI_PERMANENT_PASSWORD_MIN_LEN: usize = 8;
 
-// Same minimum as the "Set Password" dialog (flutter/lib/desktop/pages/desktop_home_page.dart).
-// An empty value stays allowed: it removes the password, like the dialog's Remove button.
-fn check_cli_permanent_password_length(password: &str) -> Result<(), String> {
-    let len = password.trim().chars().count();
-    if len > 0 && len < CLI_PERMANENT_PASSWORD_MIN_LEN {
-        return Err(format!(
-            "Password must be at least {CLI_PERMANENT_PASSWORD_MIN_LEN} characters!"
-        ));
+// Same rules as the "Set Password" dialog (flutter/lib/desktop/pages/desktop_home_page.dart,
+// flutter/lib/common/widgets/custom_password.dart). An empty value stays allowed: it removes
+// the password, like the dialog's Remove button.
+fn check_cli_permanent_password_rule(password: &str) -> Result<(), String> {
+    let password = password.trim();
+    if password.is_empty() {
+        return Ok(());
     }
-    Ok(())
+    let is_upper = |c: char| {
+        c.to_uppercase().eq(std::iter::once(c)) && !c.to_lowercase().eq(std::iter::once(c))
+    };
+    let is_lower = |c: char| {
+        c.to_lowercase().eq(std::iter::once(c)) && !c.to_uppercase().eq(std::iter::once(c))
+    };
+    let mut failed = vec![];
+    if password.chars().count() < CLI_PERMANENT_PASSWORD_MIN_LEN {
+        failed.push(format!("at least {CLI_PERMANENT_PASSWORD_MIN_LEN} characters"));
+    }
+    if !password.chars().any(|c| c.is_ascii_digit()) {
+        failed.push("a digit".to_owned());
+    }
+    if !password.chars().any(is_upper) {
+        failed.push("an uppercase letter".to_owned());
+    }
+    if !password.chars().any(is_lower) {
+        failed.push("a lowercase letter".to_owned());
+    }
+    if failed.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("Password rule not met, it needs: {}!", failed.join(", ")))
+    }
 }
 
 fn import_config(path: &str) {
@@ -939,11 +961,15 @@ mod tests {
     }
 
     #[test]
-    fn cli_permanent_password_requires_min_length() {
-        assert!(check_cli_permanent_password_length("1234567").is_err());
-        assert!(check_cli_permanent_password_length("  1234567  ").is_err());
-        assert!(check_cli_permanent_password_length("12345678").is_ok());
-        assert!(check_cli_permanent_password_length("").is_ok());
+    fn cli_permanent_password_follows_ui_rule() {
+        let check = check_cli_permanent_password_rule;
+        assert!(check("Abcdef1").unwrap_err().contains("8 characters"));
+        assert!(check("abcdefg1h").unwrap_err().contains("uppercase"));
+        assert!(check("ABCDEFG1H").unwrap_err().contains("lowercase"));
+        assert!(check("Abcdefghi").unwrap_err().contains("digit"));
+        assert!(check("  Abcdef1  ").is_err());
+        assert!(check("Abcdefg1").is_ok());
+        assert!(check("").is_ok());
     }
 
     #[test]

@@ -6,7 +6,7 @@ Newest first. The release workflow copies a version's section into its GitHub Re
 
 - With WebSocket on (always in our builds), clients no longer look up or contact public STUN servers at service or app start to find a public IPv6 address. IPv6 hole punching does not run over WebSocket, so nothing used that address.
 - The DC variant's `custom.txt` locks LAN discovery off: the device no longer answers LAN discovery broadcasts. The client variant never answered them.
-- `cRustDesk --password` refuses a permanent password shorter than 8 characters, as the "Set Password" dialog does. It prints an error, exits with a non-zero code and leaves the password unchanged.
+- `cRustDesk --password` applies the "Set Password" dialog's rule: at least 8 characters with a digit, an uppercase and a lowercase letter. A password that breaks it is refused with an error naming the rule, a non-zero exit code and no change. An empty value still removes the password.
 
 ## 1.5.0-2
 
