@@ -357,21 +357,27 @@ describe("setByName / getByName", () => {
   describe("clipboard", () => {
     const key = (name: string, extra: Record<string, string> = {}) =>
       (window as any).setByName("input_key", JSON.stringify({ name, down: "true", ...extra }));
-    it("offers the clipboard before forwarding Ctrl+V, keeping later keys in order", () => {
+    it("forwards Ctrl+V after the offer finished, keeping later keys in order", async () => {
       const conn = newConn();
       const order: string[] = [];
-      conn.offerClipboard.mockImplementation(() => order.push("offer"));
+      let finish = () => {};
+      conn.offerClipboard.mockImplementation(
+        () => new Promise<void>((r) => (finish = () => { order.push("offer"); r(); }))
+      );
       conn.inputKey.mockImplementation((n: string) => order.push(n));
       key("VK_V", { ctrl: "true" });
       key("a");
-      expect(order).toEqual(["offer", "VK_V", "a"]);
+      await Promise.resolve();
+      expect(order).toEqual([]);
+      finish();
+      await vi.waitFor(() => expect(order).toEqual(["offer", "VK_V", "a"]));
     });
 
-    it("also offers on Cmd+V", () => {
+    it("also offers on Cmd+V", async () => {
       const conn = newConn();
       key("VK_V", { command: "true" });
+      await vi.waitFor(() => expect(conn.inputKey).toHaveBeenCalled());
       expect(conn.offerClipboard).toHaveBeenCalledTimes(1);
-      expect(conn.inputKey).toHaveBeenCalled();
     });
 
     it("does not offer for other keys", () => {

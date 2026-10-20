@@ -489,33 +489,103 @@ describe("Connection", () => {
         displays: [{ x: 0, y: 0, width: 1920, height: 1080 }],
         platform_additions: JSON.stringify({ lazy_text_clipboard: lazy }),
       } as any);
+    const browserClipboard = (plain: string, html?: string) => {
+      const item = {
+        types: html === undefined ? ["text/plain"] : ["text/plain", "text/html"],
+        getType: async (t: string) => ({ text: async () => (t == "text/html" ? html : plain) }),
+      };
+      const clipboard = { read: vi.fn().mockResolvedValue([item]), readText: vi.fn().mockResolvedValue(plain) };
+      vi.stubGlobal("navigator", { clipboard });
+      return clipboard;
+    };
+    const tips = (msgbox: any, tip: string) => msgbox.mock.calls.filter((c: any[]) => c[2] === tip).length;
 
     afterEach(() => vi.unstubAllGlobals());
 
-    it("offers Text and Html to a device that takes text on request", () => {
+    it("offers only Text when the browser clipboard holds no HTML", async () => {
+      browserClipboard("copied");
       connectTo(true);
-      conn.offerClipboard();
-      expect(sent("clipboard_offer")).toEqual([{ seq: 1, formats: [0, 2] }]);
+      await conn.offerClipboard();
+      expect(sent("clipboard_offer")).toEqual([{ seq: 1, formats: [0] }]);
       expect(sent("clipboard")).toEqual([]);
     });
 
-    it("offers nothing to an older device", () => {
-      connectTo(false);
-      conn.offerClipboard();
+    it("offers Text and Html when the browser clipboard holds HTML", async () => {
+      browserClipboard("copied", "<b>copied</b>");
+      connectTo(true);
+      await conn.offerClipboard();
+      expect(sent("clipboard_offer")).toEqual([{ seq: 1, formats: [0, 2] }]);
+    });
+
+    it("offers nothing when the browser clipboard is empty or unchanged", async () => {
+      const clipboard = browserClipboard("");
+      connectTo(true);
+      await conn.offerClipboard();
+      clipboard.read.mockResolvedValue([{ types: ["text/plain"], getType: async () => ({ text: async () => "a" }) }]);
+      await conn.offerClipboard();
+      await conn.offerClipboard();
+      expect(sent("clipboard_offer")).toEqual([{ seq: 1, formats: [0] }]);
+    });
+
+    it("offers nothing for text the device just sent", async () => {
+      browserClipboard("from-device");
+      connectTo(true);
+      mockWs.next
+        .mockResolvedValueOnce({ clipboard: { compress: false, content: new TextEncoder().encode("from-device") } })
+        .mockResolvedValueOnce({ misc: { close_reason: "done" } });
+      await conn.msgLoop();
+      await conn.offerClipboard();
       expect(sent("clipboard_offer")).toEqual([]);
     });
 
-    it("offers nothing while the host disables clipboard", () => {
+    it("offers nothing and shows the browser tip once when the local read fails", async () => {
+      vi.stubGlobal("navigator", { clipboard: { read: vi.fn().mockRejectedValue(new Error("denied")) } });
+      const msgbox = vi.spyOn(conn, "msgbox");
+      connectTo(true);
+      await conn.offerClipboard();
+      await conn.offerClipboard();
+      expect(sent("clipboard_offer")).toEqual([]);
+      expect(tips(msgbox, "clipboard_on_request_browser_tip")).toBe(1);
+    });
+
+    it("offers nothing to an older device", async () => {
+      browserClipboard("copied");
+      connectTo(false);
+      await conn.offerClipboard();
+      expect(sent("clipboard_offer")).toEqual([]);
+    });
+
+    it("offers nothing while the host disables clipboard", async () => {
+      browserClipboard("copied");
       connectTo(true);
       conn.handleMisc({ permission_info: { permission: 2, enabled: false } } as any);
-      conn.offerClipboard();
+      await conn.offerClipboard();
       expect(sent("clipboard_offer")).toEqual([]);
+    });
+
+    it("shows the old-device note once for a device without the flag", () => {
+      const msgbox = vi.spyOn(conn, "msgbox");
+      connectTo(false);
+      connectTo(false);
+      expect(tips(msgbox, "clipboard_on_request_old_device_tip")).toBe(1);
+      expect(msgbox).toHaveBeenCalledWith("custom-nook-nocancel-hasclose", "Clipboard", "clipboard_on_request_old_device_tip");
+    });
+
+    it("shows no old-device note for a device with the flag or with clipboard off", () => {
+      const msgbox = vi.spyOn(conn, "msgbox");
+      connectTo(true);
+      const other = new Connection();
+      (other as any)._options = { "disable-clipboard": true };
+      const otherBox = vi.spyOn(other, "msgbox");
+      other.handlePeerInfo({ displays: [{ x: 0, y: 0, width: 1, height: 1 }], platform_additions: "{}" } as any);
+      expect(tips(msgbox, "clipboard_on_request_old_device_tip")).toBe(0);
+      expect(tips(otherBox, "clipboard_on_request_old_device_tip")).toBe(0);
     });
 
     it("replies with the clipboard text when the device asks", async () => {
-      vi.stubGlobal("navigator", { clipboard: { readText: vi.fn().mockResolvedValue("copied") } });
+      browserClipboard("copied");
       connectTo(true);
-      conn.offerClipboard();
+      await conn.offerClipboard();
       await conn.handleClipboardRequest({ seq: 1, format: 0 } as any);
       const [reply] = sent("clipboard_reply");
       expect(reply.seq).toBe(1);
@@ -523,26 +593,26 @@ describe("Connection", () => {
     });
 
     it("replies empty to a request for an older offer", async () => {
-      const readText = vi.fn().mockResolvedValue("copied");
-      vi.stubGlobal("navigator", { clipboard: { readText } });
+      const clipboard = browserClipboard("one");
       connectTo(true);
-      conn.offerClipboard();
-      conn.offerClipboard();
+      await conn.offerClipboard();
+      clipboard.read.mockResolvedValue([{ types: ["text/plain"], getType: async () => ({ text: async () => "two" }) }]);
+      await conn.offerClipboard();
       await conn.handleClipboardRequest({ seq: 1, format: 0 } as any);
       expect(text(sent("clipboard_reply")[0].clipboard)).toBe("");
-      expect(readText).not.toHaveBeenCalled();
+      expect(clipboard.readText).not.toHaveBeenCalled();
     });
 
-    it("replies empty and shows the browser tip once when the read fails", async () => {
-      vi.stubGlobal("navigator", { clipboard: { readText: vi.fn().mockRejectedValue(new Error("denied")) } });
+    it("replies empty and shows the browser tip once when the read on request fails", async () => {
+      const clipboard = browserClipboard("copied");
       const msgbox = vi.spyOn(conn, "msgbox");
       connectTo(true);
-      conn.offerClipboard();
+      await conn.offerClipboard();
+      clipboard.readText.mockRejectedValue(new Error("denied"));
       await conn.handleClipboardRequest({ seq: 1, format: 0 } as any);
-      conn.offerClipboard();
-      await conn.handleClipboardRequest({ seq: 2, format: 0 } as any);
+      await conn.handleClipboardRequest({ seq: 1, format: 0 } as any);
       expect(sent("clipboard_reply").map((r: any) => text(r.clipboard))).toEqual(["", ""]);
-      expect(msgbox.mock.calls.filter((c) => c[2] === "clipboard_on_request_browser_tip")).toHaveLength(1);
+      expect(tips(msgbox, "clipboard_on_request_browser_tip")).toBe(1);
     });
   });
 

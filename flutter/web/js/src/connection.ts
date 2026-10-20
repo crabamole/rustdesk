@@ -9,6 +9,16 @@ import { loadConfig, getConfigKey, getDefaultUri, getHost, getApiServer, getRela
 
 // The device waits 5 s for a reply; give up before that.
 const CLIPBOARD_READ_TIMEOUT_MS = 4000;
+// The paste key waits for the read before an offer.
+const LOCAL_READ_TIMEOUT_MS = 300;
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("timed out")), ms);
+  });
+  return Promise.race([p, timeout]).finally(() => clearTimeout(timer));
+}
 
 async function readClipboard(format: message.ClipboardFormat): Promise<string> {
   const read =
@@ -18,10 +28,16 @@ async function readClipboard(format: message.ClipboardFormat): Promise<string> {
           return item ? (await item.getType("text/html")).text() : "";
         })
       : navigator.clipboard.readText();
-  const timeout = new Promise<string>((_, reject) =>
-    setTimeout(() => reject(new Error("timed out")), CLIPBOARD_READ_TIMEOUT_MS)
-  );
-  return Promise.race([read, timeout]);
+  return withTimeout(read, CLIPBOARD_READ_TIMEOUT_MS);
+}
+
+/** The browser clipboard's text, and whether it also holds HTML. */
+async function readLocalClipboard(): Promise<{ text: string; html: boolean }> {
+  if (!navigator.clipboard.read) return { text: await navigator.clipboard.readText(), html: false };
+  const items = await navigator.clipboard.read();
+  const plain = items.find((i) => i.types.includes("text/plain"));
+  const text = plain ? await (await plain.getType("text/plain")).text() : "";
+  return { text, html: items.some((i) => i.types.includes("text/html")) };
 }
 
 export { loadConfig, getConfigKey, getApiServer };
@@ -53,8 +69,10 @@ export default class Connection {
   _decodeFailureWarned: boolean | undefined;
   _unsupportedCodecWarned: boolean | undefined;
   _clipboardAllowed: boolean;
+  _lastClipboard: string | undefined;
   _offerSeq: number;
   _browserTipShown: boolean;
+  _oldDeviceTipShown: boolean;
   //_cursors: { [name: number]: any };
 
   constructor() {
@@ -67,6 +85,7 @@ export default class Connection {
     this._clipboardAllowed = true;
     this._offerSeq = 0;
     this._browserTipShown = false;
+    this._oldDeviceTipShown = false;
     //this._cursors = {};
   }
 
@@ -299,13 +318,14 @@ export default class Connection {
           cb.content = c;
         }
         try {
-          globals.copyToClipboard(new TextDecoder().decode(cb.content));
+          this._lastClipboard = new TextDecoder().decode(cb.content);
+          globals.copyToClipboard(this._lastClipboard);
         } catch (e) {
           console.error(e);
         }
         // globals.pushEvent("clipboard", cb);
       } else if (msg?.clipboard_request) {
-        this.handleClipboardRequest(msg.clipboard_request);
+        this.handleClipboardRequest(msg.clipboard_request).catch(console.error);
       } else if (msg?.cursor_data) {
         const cd = msg?.cursor_data;
         const c = await decompress(cd.colors);
@@ -530,6 +550,10 @@ export default class Connection {
     } else {
       this.setOption("password", undefined);
     }
+    if (!this.lazyTextClipboard() && this._clipboardAllowed && !this._options["disable-clipboard"] && !this._oldDeviceTipShown) {
+      this._oldDeviceTipShown = true;
+      this.msgbox("custom-nook-nocancel-hasclose", "Clipboard", "clipboard_on_request_old_device_tip");
+    }
   }
 
   shouldAutoLogin(): string {
@@ -654,15 +678,30 @@ export default class Connection {
     }
   }
 
-  /** Tells the device text may be pasted; the browser clipboard is read only on its request. */
-  offerClipboard() {
+  showBrowserTip() {
+    if (this._browserTipShown) return;
+    this._browserTipShown = true;
+    this.msgbox("custom-nook-nocancel-hasclose", "Clipboard", "clipboard_on_request_browser_tip");
+  }
+
+  /** Offers the browser clipboard's formats when its text is new; the content goes only on request. */
+  async offerClipboard() {
     if (!this.lazyTextClipboard()) return;
     if (!this._clipboardAllowed || this._options["disable-clipboard"]) return;
+    let local;
+    try {
+      local = await withTimeout(readLocalClipboard(), LOCAL_READ_TIMEOUT_MS);
+    } catch (e) {
+      console.debug("Reading the clipboard failed:", e);
+      this.showBrowserTip();
+      return;
+    }
+    if (!local.text || local.text == this._lastClipboard) return;
+    this._lastClipboard = local.text;
     this._offerSeq += 1;
-    const clipboard_offer = message.ClipboardOffer.fromPartial({
-      seq: this._offerSeq,
-      formats: [message.ClipboardFormat.Text, message.ClipboardFormat.Html],
-    });
+    const formats = [message.ClipboardFormat.Text];
+    if (local.html) formats.push(message.ClipboardFormat.Html);
+    const clipboard_offer = message.ClipboardOffer.fromPartial({ seq: this._offerSeq, formats });
     this._ws?.sendMessage({ clipboard_offer });
   }
 
@@ -673,10 +712,7 @@ export default class Connection {
         text = await readClipboard(req.format);
       } catch (e) {
         console.debug("Reading the clipboard failed:", e);
-        if (!this._browserTipShown) {
-          this._browserTipShown = true;
-          this.msgbox("custom-nook-nocancel-hasclose", "Clipboard", "clipboard_on_request_browser_tip");
-        }
+        this.showBrowserTip();
       }
     }
     const clipboard = message.Clipboard.fromPartial({
