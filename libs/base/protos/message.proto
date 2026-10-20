@@ -352,6 +352,25 @@ message Clipboard {
 
 message MultiClipboards { repeated Clipboard clipboards = 1; }
 
+// Viewer → device clipboard text on request (docs/design-clipboard-on-request.md).
+// Viewer → device: the formats on the viewer's clipboard, names only.
+message ClipboardOffer {
+  uint32 seq = 1;
+  repeated ClipboardFormat formats = 2;
+}
+
+// Device → viewer: an app on the device reads `format` of offer `seq`.
+message ClipboardRequest {
+  uint32 seq = 1;
+  ClipboardFormat format = 2;
+}
+
+// Viewer → device: the data; `clipboard.content` is empty for an older `seq` or a missing format.
+message ClipboardReply {
+  uint32 seq = 1;
+  Clipboard clipboard = 2;
+}
+
 enum FileType {
   Dir = 0;
   DirLink = 2;
@@ -1030,5 +1049,8 @@ message Message {
     TerminalAction terminal_action = 31;
     TerminalResponse terminal_response = 32;
     PortForwardChannel port_forward_channel = 33;
+    ClipboardOffer clipboard_offer = 34;
+    ClipboardRequest clipboard_request = 35;
+    ClipboardReply clipboard_reply = 36;
   }
 }
