@@ -108,6 +108,9 @@ the transfer eager again.
 - Wayland desktops whose portal has no clipboard interface get no text.
 - Images are no longer sent to the device.
 - A paste after the viewer disconnected gets nothing.
+- The note about a device without the flag shows on every connection to it, also on a reconnect.
+- Text that came into the viewer from another device (sync between sessions, or text on the
+  viewer's clipboard that RustDesk wrote) is not offered to a device with the flag.
 
 ## Open Risks (prototype first)
 
