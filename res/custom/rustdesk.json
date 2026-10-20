@@ -22,6 +22,7 @@
     "hide-remote-printer-settings": "Y",
     "allow-auto-update": "N",
     "enable-webrtc": "N",
-    "allow-sync-clipboard-between-sessions": "N"
+    "allow-sync-clipboard-between-sessions": "N",
+    "enable-lan-discovery": "N"
   }
 }
