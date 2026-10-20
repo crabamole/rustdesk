@@ -15,6 +15,8 @@ use std::{
 mod x11;
 #[cfg(target_os = "windows")]
 mod win;
+#[cfg(target_os = "macos")]
+mod mac;
 #[cfg(any(target_os = "windows", test))]
 mod win_text;
 
@@ -163,6 +165,14 @@ fn start_provider() -> Option<Box<dyn Provider>> {
         Ok(p) => Some(Box::new(p)),
         Err(e) => {
             log::error!("lazy clipboard: Windows provider did not start: {}", e);
+            None
+        }
+    };
+    #[cfg(target_os = "macos")]
+    return match mac::MacProvider::start() {
+        Ok(p) => Some(Box::new(p)),
+        Err(e) => {
+            log::error!("lazy clipboard: macOS provider did not start: {}", e);
             None
         }
     };

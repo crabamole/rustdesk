@@ -169,6 +169,9 @@ objc_id = "0.1"
 piet = "0.6"
 piet-coregraphics = "0.6"
 foreign-types = "0.3"
+objc2 = "0.5.1"
+objc2-foundation = { version = "0.2.0", features = ["NSArray", "NSData", "NSString"] }
+objc2-app-kit = { version = "0.2.0", features = ["NSPasteboard", "NSPasteboardItem"] }
 
 [target.'cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))'.dependencies]
 tray-icon = { git = "https://github.com/tauri-apps/tray-icon", version = "0.21.3" }
