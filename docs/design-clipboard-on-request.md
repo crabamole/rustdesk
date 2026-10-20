@@ -1,6 +1,6 @@
 # Design: Clipboard Text on Request
 
-**Status: Plan B implemented locally (protocol, X11 provider, viewers); Windows, macOS and Wayland providers pending (Plan C).**
+**Status: Plan B (protocol, X11 provider, viewers) and Plan C (Windows and macOS providers) implemented locally; Wayland not implemented.**
 
 ## Goal
 
@@ -39,8 +39,8 @@ New messages in `message.proto`, in the `Message` union:
   `Clipboard` handler, which writes at once, out of this flow.
 
 The device sets `lazy_text_clipboard: true` in PeerInfo `platform_additions` only when its
-provider started. Older devices, stock devices and Wayland desktops without the portal
-clipboard do not set it.
+provider started. Older devices, stock devices, Android devices and Wayland desktops do not
+set it.
 
 ### Rules
 
@@ -54,7 +54,7 @@ clipboard do not set it.
   included. Paste works only through offer and request.
 - The last offer wins. Requests go to the connection that sent it. When that connection closes,
   the device clears its entry.
-- A request waits up to 5 s for the reply; on a timeout the app on the device gets empty data.
+- A request waits up to 5 s (2 s on macOS) for the reply; on a timeout the app on the device gets empty data.
 - `seq` grows with each offer. The viewer answers a request for an older `seq` with an empty
   reply, so a paste never gets content copied after that offer.
 - The gates do not change: clipboard on, the connection's clipboard permission, Remote
@@ -70,10 +70,11 @@ today.
 
 | Platform | Place the entry | When an app reads it |
 |---|---|---|
-| Windows | A hidden window takes clipboard ownership and calls `SetClipboardData(fmt, NULL)` for CF_UNICODETEXT, "Rich Text Format" and "HTML Format" | `WM_RENDERFORMAT`: request, wait, `SetClipboardData`. `WM_RENDERALLFORMATS`: render nothing. `WM_DESTROYCLIPBOARD`: drop the state |
-| macOS | `NSPasteboardItem` with `setDataProvider_forTypes` for `public.utf8-plain-text`, `public.rtf`, `public.html` (as the file code does) | `provideDataForType`: request, wait, set the data |
+| Windows | A message-only window on its own thread owns the clipboard: SetClipboardData(fmt, NULL) for CF_UNICODETEXT, "Rich Text Format" and "HTML Format", plus the owner marker with data. place and clear only post a message to that thread. | WM_RENDERFORMAT: request, wait, SetClipboardData (UTF-16 text, CF_HTML header added to the fragment). WM_RENDERALLFORMATS: render nothing. |
+| macOS | A worker thread writes one NSPasteboardItem: a data provider for public.utf8-plain-text, public.rtf, public.html, and the owner marker with data. | provideDataForType (on the main thread): request, wait up to 2 s, set the data. |
 | Linux X11 | Our own `CLIPBOARD` selection owner (`x11rb`); `TARGETS` from the offer | `SelectionRequest` for `UTF8_STRING`, `text/plain;charset=utf-8`, `text/rtf`, `text/html`: request, wait, reply; INCR for large data |
-| Linux Wayland | `RequestClipboard` on our `RemoteDesktop` portal session before `Start`; `SetSelection(mime types)` on an offer | `SelectionTransfer(mime, serial)`: request, wait, `SelectionWrite(serial)`, write the fd, `SelectionWriteDone` |
+
+Wayland is not implemented: Wayland devices do not set the flag.
 
 The lazy entry also carries our owner marker (`dyn.com.rustdesk.owner`) at once. RustDesk's
 own clipboard readers, such as the device → viewer clipboard service, check the marker before
@@ -111,30 +112,29 @@ the transfer eager again.
   at once, so the transfer is eager there. The audit counts these reads.
 - Firefox and Safari web viewers cannot paste into the device.
 - Android and iOS viewers cannot paste into devices with the flag.
-- Desktop and web viewers cannot paste into Android devices (they do not set the flag) or into
-  Wayland desktops without the portal clipboard.
-- Wayland desktops whose portal has no clipboard interface get no text.
+- Desktop and web viewers cannot paste into Android devices or Wayland desktops (they do not
+  set the flag).
+- On a macOS device, remote input and the tray menu pause while an app waits for the viewer's
+  text: for the network round trip, up to 2 s when the viewer does not answer.
 - Images are no longer sent to the device.
 - A paste after the viewer disconnected gets nothing.
 - The note about a device without the flag shows on every connection to it, also on a reconnect.
 - Text that came into the viewer from another device (sync between sessions, or text on the
   viewer's clipboard that RustDesk wrote) is not offered or sent to any device.
 
-## Open Risks (prototype first)
+## Prototype Results
 
-1. Windows: `--server` runs as SYSTEM in the user's session. Eager writes work from it; delayed
-   rendering from a SYSTEM-owned window is not verified. If it fails, the Windows provider moves
-   to `--cm` (user) and takes requests over IPC, as file copy does.
-2. macOS: the provider callback runs on the main thread of `--server` and blocks up to 5 s. Check
-   what else runs on that thread; the file provider is the reference.
-3. Wayland: the portal clipboard on a GNOME Wayland VM.
+1. Windows: delayed rendering from the SYSTEM --server window works; the reader blocks until the
+   data is set.
+2. macOS: the data provider runs on the main thread of --server and blocks it; accepted with a
+   2 s limit.
+3. Wayland: not prototyped; out of scope.
 
 ## Regression Surface
 
 - `client.rs`: the viewer's text push and the text sync at session start.
 - `connection.rs`: the text handlers ignore eager text.
 - RustDesk's own clipboard readers: the owner-marker check comes first.
-- `libs/scrap/src/wayland/remote_desktop_portal.rs`: `RequestClipboard`.
 - Web client: the clipboard send.
 
 File copy, the device → viewer direction and one-way clipboard do not change.
@@ -154,7 +154,8 @@ client on either side, text paste does not work. The release notes and `UPGRADIN
 - e2e: web Chromium (clipboard permission) → Ubuntu VM (X11): after a copy the device log shows no
   request; `xclip -o` on the VM returns the text and the request appears only then; a later copy
   gives the new text. Firefox → VM: paste gives nothing, the note shows. Native matrix (macOS →
-  Linux, Windows → macOS, Linux → Windows): paste on each device gets the text; the one-way
+  Linux, Windows → macOS, Linux → Windows): after the viewer's copy the device logs no request
+  for 5 s; the device's read returns the text and only then logs a request; the one-way
   clipboard checks stay.
 
 ## Next

@@ -15,7 +15,11 @@ use std::{
 mod x11;
 
 /// How long an app on the device waits for the viewer's reply.
+#[cfg(not(target_os = "macos"))]
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
+/// macOS asks for the data on the main thread, which also runs the tray and remote input.
+#[cfg(target_os = "macos")]
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 const TEXT_FORMATS: [ClipboardFormat; 3] =
     [ClipboardFormat::Text, ClipboardFormat::Rtf, ClipboardFormat::Html];
 
