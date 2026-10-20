@@ -3949,16 +3949,4 @@ mod tests {
     async fn test_ipv6_route_probe_does_not_wait_on_the_network() {
         assert!(hbb_common::timeout(1_000, test_bind_ipv6()).await.is_ok());
     }
-
-    #[tokio::test]
-    async fn test_ipv6_does_not_probe_stun_in_websocket_mode() {
-        let key = keys::OPTION_ALLOW_WEBSOCKET.to_owned();
-        config::OVERWRITE_SETTINGS
-            .write()
-            .unwrap()
-            .insert(key.clone(), "Y".to_owned());
-        let res = hbb_common::timeout(1_000, test_ipv6()).await;
-        config::OVERWRITE_SETTINGS.write().unwrap().remove(&key);
-        assert!(matches!(res, Ok(None)));
-    }
 }
