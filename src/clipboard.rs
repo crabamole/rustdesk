@@ -403,18 +403,19 @@ impl ClipboardContext {
         force: bool,
     ) -> ResultType<Vec<ClipboardData>> {
         let _lock = ARBOARD_MTX.lock().unwrap();
+        // A lazy entry fetches its text from the viewer when read, so check the marker alone
+        // first (docs/design-clipboard-on-request.md).
+        if !force {
+            let marker = self.get_formats(&[ClipboardFormat::Special(RUSTDESK_CLIPBOARD_OWNER_FORMAT)])?;
+            if marker.iter().any(|c| {
+                matches!(c, ClipboardData::Special((s, d)) if s == RUSTDESK_CLIPBOARD_OWNER_FORMAT && side.is_owner(d))
+            }) {
+                return Ok(vec![]);
+            }
+        }
         let data = self.get_formats(formats)?;
         if data.is_empty() {
             return Ok(data);
-        }
-        if !force {
-            for c in data.iter() {
-                if let ClipboardData::Special((s, d)) = c {
-                    if s == RUSTDESK_CLIPBOARD_OWNER_FORMAT && side.is_owner(d) {
-                        return Ok(vec![]);
-                    }
-                }
-            }
         }
         Ok(data
             .into_iter()

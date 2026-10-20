@@ -7,7 +7,7 @@ use super::{input_service::*, *};
 #[cfg(feature = "unix-file-copy-paste")]
 use crate::clipboard::try_empty_clipboard_files;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
-use crate::clipboard::{update_clipboard, ClipboardSide};
+use crate::clipboard::ClipboardSide;
 #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
 use crate::clipboard_file::*;
 #[cfg(target_os = "android")]
@@ -2003,6 +2003,12 @@ impl Connection {
             platform_additions.insert("has_file_clipboard".into(), json!(has_file_clipboard));
         }
 
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        platform_additions.insert(
+            "lazy_text_clipboard".into(),
+            json!(super::lazy_clipboard::is_available()),
+        );
+
         #[cfg(any(target_os = "windows", target_os = "linux"))]
         {
             platform_additions.insert("support_view_camera".into(), json!(true));
@@ -3352,8 +3358,16 @@ impl Connection {
                 }
                 Some(message::Union::Clipboard(cb)) => {
                     if self.should_handle_text_clipboard_message() && self.clipboard_enabled() {
+                        // Viewer text arrives only on request (docs/design-clipboard-on-request.md).
                         #[cfg(not(any(target_os = "android", target_os = "ios")))]
-                        update_clipboard(vec![cb], ClipboardSide::Host);
+                        {
+                            let _ = cb;
+                            hbb_common::throttled_log!(
+                                std::time::Duration::from_secs(60),
+                                info,
+                                "Ignored clipboard text pushed by the viewer"
+                            );
+                        }
                         // ios as the controlled side is actually not supported for now.
                         // The following code is only used to preserve the logic of handling text clipboard on mobile.
                         #[cfg(target_os = "ios")]
@@ -3381,10 +3395,24 @@ impl Connection {
                 Some(message::Union::MultiClipboards(_mcb)) => {
                     if self.should_handle_text_clipboard_message() && self.clipboard_enabled() {
                         #[cfg(not(any(target_os = "android", target_os = "ios")))]
-                        update_clipboard(_mcb.clipboards, ClipboardSide::Host);
+                        hbb_common::throttled_log!(
+                            std::time::Duration::from_secs(60),
+                            info,
+                            "Ignored clipboard text pushed by the viewer"
+                        );
                         #[cfg(target_os = "android")]
                         crate::clipboard::handle_msg_multi_clipboards(_mcb);
                     }
+                }
+                #[cfg(not(any(target_os = "android", target_os = "ios")))]
+                Some(message::Union::ClipboardOffer(offer)) => {
+                    if self.should_handle_text_clipboard_message() && self.clipboard_enabled() {
+                        super::lazy_clipboard::on_offer(self.inner.id(), self.inner.tx.clone(), offer);
+                    }
+                }
+                #[cfg(not(any(target_os = "android", target_os = "ios")))]
+                Some(message::Union::ClipboardReply(reply)) => {
+                    super::lazy_clipboard::on_reply(self.inner.id(), reply);
                 }
                 #[cfg(any(target_os = "windows", feature = "unix-file-copy-paste"))]
                 Some(message::Union::Cliprdr(clip)) => {
@@ -5243,6 +5271,8 @@ impl Connection {
             return;
         }
         self.closed = true;
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        super::lazy_clipboard::on_close(self.inner.id());
         // If voice A,B -> C, and A,B has voice call
         // B disconnects, C will reset the voice call input.
         //
