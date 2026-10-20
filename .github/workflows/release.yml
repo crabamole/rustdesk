@@ -94,6 +94,16 @@ jobs:
           sha256sum * > SHA256SUMS
           cat SHA256SUMS
 
+      - name: Generate the SBOM
+        run: |
+          # CycloneDX inventory of the locked dependencies (Cargo, pub, yarn, vcpkg) of this commit.
+          docker run --rm -v "$PWD:/src:ro" \
+            anchore/syft:v1.55.0@sha256:4cc92b64ca74ffca4c94d4c8fcc01f217731375300be14d0b6eeb2e82eaa110a \
+            dir:/src --exclude ./dist --source-name cRustDesk --source-version "$VERSION" \
+            -o cyclonedx-json=/dev/stdout -q > "dist/cRustDesk-$VERSION.cdx.json"
+          (cd dist && sha256sum "cRustDesk-$VERSION.cdx.json" >> SHA256SUMS)
+          jq -e '.components | length > 1000' "dist/cRustDesk-$VERSION.cdx.json"
+
       - name: Wait for the web-client image
         if: env.PUBLISH == 'true'
         run: |
@@ -112,6 +122,7 @@ jobs:
             dist/*.msi
             dist/*.zip
             dist/*.deb
+            dist/*.cdx.json
 
       - name: Create the release
         if: env.PUBLISH == 'true'
@@ -125,6 +136,7 @@ jobs:
           Installers for the device (\`cRustDesk\`) and client-only (\`cRustDesk-client\`) variants.
           The Windows MSIs are not code-signed, so SmartScreen warns on first run.
           Verify a download: \`gh attestation verify <file> --repo $GITHUB_REPOSITORY\`
+          SBOM (CycloneDX): \`cRustDesk-$VERSION.cdx.json\`
           Deployment guide: [docs/crustdesk-deployment.md](https://github.com/$GITHUB_REPOSITORY/blob/$VERSION/docs/crustdesk-deployment.md)
           EOF
           awk -v v="## $VERSION" '$0 == v {f = 1; next} /^## / {f = 0} f' docs/release-notes.md > section.md

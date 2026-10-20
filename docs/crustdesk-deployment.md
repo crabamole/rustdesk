@@ -96,6 +96,9 @@ workflow from the tagged commit:
 gh attestation verify cRustDesk-<ver>-x86_64.msi --repo crabamole/rustdesk
 ```
 
+From 1.5.0-3 on, `cRustDesk-<ver>.cdx.json` next to the installers is the release's SBOM
+(CycloneDX JSON): the locked dependencies of the release commit.
+
 Pick a variant per machine:
 
 | Machine | Variant | Windows x64 (unsigned MSI) | Ubuntu x86_64, X11 | macOS arm64 (signed, notarized) |
