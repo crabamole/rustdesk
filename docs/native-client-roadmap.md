@@ -130,8 +130,8 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 
 ### Clipboard Audit
 - [ ] Hosts report clipboard arrivals to the api-server (formats and sizes, no content)
-- [ ] The native viewer sends its clipboard like our web client: on Ctrl/Cmd+V in a session and when entering the session view, instead of on every clipboard change
-- Why both: the native viewer pushes every clipboard change to all open sessions, pasted or not (RDP and TigerVNC transfer on paste); our web client already sends only on paste or on entering the view. With the DC's one-way clipboard only viewer → device traffic exists
+- [ ] Text on request: a copy on the viewer sends format names only; the device requests the content when an app on it reads the clipboard (native viewers and the web client; text, RTF, HTML). Design: [design-clipboard-on-request.md](design-clipboard-on-request.md)
+- Why first: the native viewer pushes every clipboard change to all open sessions, pasted or not (RDP transfers on paste); an audit of that push would not show what was pasted. With the DC's one-way clipboard only viewer → device traffic exists
 - **Today:** connection and file audit only; paused until the current features are tried out
 - Design: [design-clipboard-monitoring.md](design-clipboard-monitoring.md) (predates one-way clipboard)
 
