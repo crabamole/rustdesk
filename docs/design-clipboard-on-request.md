@@ -1,6 +1,6 @@
 # Design: Clipboard Text on Request
 
-**Status: designed, not implemented.**
+**Status: Plan B implemented locally (protocol, X11 provider, viewers); Windows, macOS and Wayland providers pending (Plan C).**
 
 ## Goal
 
