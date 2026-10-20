@@ -75,7 +75,12 @@ impl Hub {
         match self.provider.place(&formats) {
             Ok(()) => self.offer = Some(Offer { conn_id, seq: offer.seq, formats, tx }),
             Err(e) => {
-                log::error!("lazy clipboard: failed to place the entry: {}", e);
+                hbb_common::throttled_log!(
+                    Duration::from_secs(60),
+                    error,
+                    "lazy clipboard: failed to place the entry: {}",
+                    e
+                );
                 self.offer = None;
             }
         }
