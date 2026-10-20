@@ -35,7 +35,7 @@ fn local_text(ctx: &mut Option<ClipboardContext>) -> Vec<Clipboard> {
             .filter(|c| c.format.enum_value().map_or(false, |f| TEXT_FORMATS.contains(&f)))
             .collect(),
         Err(e) => {
-            log::debug!("clipboard offer: failed to read the clipboard: {}", e);
+            log::trace!("clipboard offer: failed to read the clipboard: {}", e);
             vec![]
         }
     }
@@ -49,11 +49,18 @@ pub fn offer_msg(ctx: &mut Option<ClipboardContext>) -> Message {
     msg
 }
 
+/// Whether `req` is for the offer this connection sent last (`sent`), and that offer is still
+/// the current one.
+fn answers(sent: Option<u32>, current: u32, req: &ClipboardRequest) -> bool {
+    sent == Some(req.seq) && req.seq == current
+}
+
 /// The reply to a device's request: the format as it is now; empty when not `allowed`, when the
-/// request is for an older offer, or when the format is gone.
-pub fn reply_msg(req: &ClipboardRequest, allowed: bool) -> Message {
+/// request is not for the last offer `sent` on this connection or that offer is old, or when the
+/// format is gone.
+pub fn reply_msg(req: &ClipboardRequest, sent: Option<u32>, allowed: bool) -> Message {
     let format = req.format.enum_value().unwrap_or(ClipboardFormat::Text);
-    let clipboard = (allowed && req.seq == seq())
+    let clipboard = (allowed && answers(sent, seq(), req))
         .then(|| local_text(&mut None).into_iter().find(|c| c.format.enum_value() == Ok(format)))
         .flatten()
         .unwrap_or_else(|| Clipboard { format: format.into(), ..Default::default() });
@@ -88,7 +95,7 @@ mod tests {
     #[test]
     fn a_refused_request_gets_an_empty_reply_in_its_format() {
         let req = ClipboardRequest { seq: seq(), format: ClipboardFormat::Html.into(), ..Default::default() };
-        let r = reply_of(reply_msg(&req, false));
+        let r = reply_of(reply_msg(&req, Some(req.seq), false));
         assert_eq!(r.seq, req.seq);
         assert_eq!(r.clipboard.format.enum_value(), Ok(ClipboardFormat::Html));
         assert!(r.clipboard.content.is_empty());
@@ -97,6 +104,21 @@ mod tests {
     #[test]
     fn a_request_for_an_older_offer_gets_an_empty_reply() {
         let req = ClipboardRequest { seq: seq().wrapping_add(1), format: ClipboardFormat::Text.into(), ..Default::default() };
-        assert!(reply_of(reply_msg(&req, true)).clipboard.content.is_empty());
+        assert!(reply_of(reply_msg(&req, Some(req.seq), true)).clipboard.content.is_empty());
+    }
+
+    #[test]
+    fn only_a_request_for_the_offer_sent_that_is_still_current_is_answered() {
+        let req = ClipboardRequest { seq: 7, ..Default::default() };
+        assert!(answers(Some(7), 7, &req));
+        assert!(!answers(None, 7, &req));
+        assert!(!answers(Some(6), 7, &req));
+        assert!(!answers(Some(7), 8, &req));
+    }
+
+    #[test]
+    fn a_request_without_an_offer_sent_gets_an_empty_reply() {
+        let req = ClipboardRequest { seq: seq(), format: ClipboardFormat::Text.into(), ..Default::default() };
+        assert!(reply_of(reply_msg(&req, None, true)).clipboard.content.is_empty());
     }
 }

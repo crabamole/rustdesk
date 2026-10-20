@@ -90,6 +90,9 @@ pub struct Remote<T: InvokeUiSession> {
     // The connection loop clears this when handling its result or a live clipboard update.
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     initial_clipboard_pending: bool,
+    // The seq of the last clipboard offer sent to the peer; only requests for it are answered.
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    last_offer_seq: Option<u32>,
     first_frame: bool,
     #[cfg(any(target_os = "windows", feature = "unix-file-copy-paste"))]
     client_conn_id: i32, // used for file clipboard
@@ -140,6 +143,8 @@ impl<T: InvokeUiSession> Remote<T> {
             is_connected: false,
             #[cfg(not(any(target_os = "android", target_os = "ios")))]
             initial_clipboard_pending: false,
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+            last_offer_seq: None,
             first_frame: false,
             #[cfg(any(target_os = "windows", feature = "unix-file-copy-paste"))]
             client_conn_id: 0,
@@ -646,6 +651,13 @@ impl<T: InvokeUiSession> Remote<T> {
     }
 
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    fn note_offer_sent(&mut self, msg: &Message) {
+        if let Some(message::Union::ClipboardOffer(offer)) = &msg.union {
+            self.last_offer_seq = Some(offer.seq);
+        }
+    }
+
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
     fn start_initial_clipboard_sync(&mut self) {
         let platform_additions = {
             let lc = self.handler.lc.read().unwrap();
@@ -746,6 +758,7 @@ impl<T: InvokeUiSession> Remote<T> {
                     return true;
                 }
                 if let Some(msg) = msg {
+                    self.note_offer_sent(&msg);
                     allow_err!(peer.send(&msg).await);
                 }
             }
@@ -796,6 +809,8 @@ impl<T: InvokeUiSession> Remote<T> {
                     },
                     _ => {}
                 }
+                #[cfg(not(any(target_os = "android", target_os = "ios")))]
+                self.note_offer_sent(&msg);
                 allow_err!(peer.send(&msg).await);
             }
             Data::SendFiles((id, r#type, path, to, file_num, include_hidden, is_remote)) => {
@@ -1778,8 +1793,9 @@ impl<T: InvokeUiSession> Remote<T> {
                         !lc.disable_clipboard.v && !lc.view_only.v
                     } && self.handler.is_text_clipboard_required();
                     let sender = self.sender.clone();
+                    let sent = self.last_offer_seq;
                     tokio::task::spawn_blocking(move || {
-                        let reply = crate::client::clipboard_offer::reply_msg(&req, allowed);
+                        let reply = crate::client::clipboard_offer::reply_msg(&req, sent, allowed);
                         sender.send(Data::Message(reply)).ok();
                     });
                 }
