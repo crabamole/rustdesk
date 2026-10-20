@@ -1,6 +1,6 @@
 # Design: Same-User Access Without a Password
 
-**Status: designed, not scheduled** (roadmap Phase 3).
+**Status: implemented** (clients 1.5.0-2; needs the next server release).
 
 ## Goal
 
