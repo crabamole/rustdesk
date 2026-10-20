@@ -118,7 +118,6 @@ Every machine needs the server settings in `cRustDesk2.toml`:
 custom-rendezvous-server = '<host>'
 api-server = 'https://<host>'
 key = '<server-public-key>'
-enable-lan-discovery = 'N'
 ```
 
 `custom-rendezvous-server` carries no port unless the server is on a port other than 443; then all
@@ -133,7 +132,7 @@ Compared with a stock RustDesk pre-seed:
 | `allow-websocket = 'Y'` | Required | Not needed: always on in our builds |
 | `direct-server` | Set by you | Locked off on the DC variant |
 | `disable-udp`, `enable-udp-punch = 'N'` | Recommended for zero UDP | Not needed: with WebSocket the device registers over TCP, and hole punching is off for any server but rustdesk.com |
-| `enable-lan-discovery = 'N'` | Recommended | Recommended: otherwise a device answers LAN discovery broadcasts with its ID and host name |
+| `enable-lan-discovery = 'N'` | Recommended | Not needed: locked off on the DC variant (from 1.5.0-3; set it by hand on older releases); the client variant does not answer LAN discovery |
 | `relay-server` | Leave empty | Ignored: hbbs names the relay for every session |
 | Server settings in the app | Visible and editable | Hidden and locked; this file or `--config` is the only way |
 | Without server settings | Falls back to RustDesk's public servers | Waits ("Server not configured"); never contacts rustdesk.com |
@@ -173,8 +172,7 @@ printf '%s' '{"host":"<host>","api":"https://<host>","key":"<server-public-key>"
 ```
 
 `--config` splits its argument at `--`: if the result contains `--`, add a space after a comma in the
-JSON and encode again. `--config` does not set `enable-lan-discovery`; use the file for that. It does not
-reach the client variant, which runs no service.
+JSON and encode again. `--config` does not reach the client variant, which runs no service.
 
 ### 2.5 Install
 

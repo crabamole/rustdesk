@@ -2,6 +2,11 @@
 
 Newest first. The release workflow copies a version's section into its GitHub Release.
 
+## 1.5.0-3 (unreleased)
+
+- With WebSocket on (always in our builds), clients no longer look up or contact public STUN servers at service or app start to find a public IPv6 address. IPv6 hole punching does not run over WebSocket, so nothing used that address.
+- The DC variant's `custom.txt` locks LAN discovery off: the device no longer answers LAN discovery broadcasts. The client variant never answered them.
+
 ## 1.5.0-2
 
 - Devices sign their calls to the api-server (heartbeat, system info, connection, file and alarm records) with the key they registered with hbbs. An api-server that checks the signature accepts these calls only from the device itself.
