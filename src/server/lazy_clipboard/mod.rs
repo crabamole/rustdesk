@@ -13,6 +13,10 @@ use std::{
 
 #[cfg(target_os = "linux")]
 mod x11;
+#[cfg(target_os = "windows")]
+mod win;
+#[cfg(any(target_os = "windows", test))]
+mod win_text;
 
 /// How long an app on the device waits for the viewer's reply.
 #[cfg(not(target_os = "macos"))]
@@ -142,6 +146,7 @@ fn hub() -> &'static Mutex<Option<Hub>> {
     HUB.get_or_init(|| Mutex::new(start_provider().map(Hub::new)))
 }
 
+#[allow(unreachable_code)]
 fn start_provider() -> Option<Box<dyn Provider>> {
     #[cfg(target_os = "linux")]
     if crate::platform::linux::is_x11() {
@@ -153,6 +158,14 @@ fn start_provider() -> Option<Box<dyn Provider>> {
             }
         };
     }
+    #[cfg(target_os = "windows")]
+    return match win::WindowsProvider::start() {
+        Ok(p) => Some(Box::new(p)),
+        Err(e) => {
+            log::error!("lazy clipboard: Windows provider did not start: {}", e);
+            None
+        }
+    };
     log::info!("lazy clipboard: no provider on this platform");
     None
 }
