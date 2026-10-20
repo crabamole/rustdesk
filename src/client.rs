@@ -36,7 +36,10 @@ use crate::{
     ui_session_interface::{InvokeUiSession, Session},
 };
 #[cfg(feature = "unix-file-copy-paste")]
-use crate::{clipboard::check_clipboard_files, clipboard_file::unix_file_clip};
+use crate::{
+    clipboard::{check_clipboard_files, ClipboardSide},
+    clipboard_file::unix_file_clip,
+};
 pub use file_trait::FileManager;
 #[cfg(not(feature = "flutter"))]
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
@@ -84,8 +87,6 @@ use scrap::{
 
 #[cfg(not(target_os = "ios"))]
 use crate::clipboard::CLIPBOARD_INTERVAL;
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-use crate::clipboard::{check_clipboard, ClipboardSide};
 #[cfg(not(feature = "flutter"))]
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 use crate::ui_session_interface::SessionPermissionConfig;
@@ -103,6 +104,8 @@ pub mod file_trait;
 pub mod helper;
 pub mod io_loop;
 pub mod screenshot;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+pub mod clipboard_offer;
 
 pub const MILLI1: Duration = Duration::from_millis(1);
 pub const SEC30: Duration = Duration::from_secs(30);
@@ -2080,9 +2083,8 @@ impl ClientClipboardHandler {
             }
 
             if check_text && self.is_text_required() {
-                if let Some(msg) = check_clipboard(&mut self.ctx, ClipboardSide::Client, false) {
-                    self.send_msg(msg, false);
-                }
+                let msg = clipboard_offer::offer_msg(&mut self.ctx);
+                self.send_msg(msg, false);
             }
         }
     }

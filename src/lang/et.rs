@@ -789,5 +789,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Not logged in", ""),
         ("key_change_refused_tip", ""),
         ("Log in to keep this ID", ""),
+        ("clipboard_on_request_old_device_tip", ""),
+        ("clipboard_on_request_browser_tip", ""),
     ].iter().cloned().collect();
 }

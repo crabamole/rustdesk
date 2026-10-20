@@ -1462,6 +1462,20 @@ fn send_clipboard_msg_impl(msg: Message, _is_file: bool, except_session_id: Opti
             }
             continue;
         }
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        if let Some(message::Union::ClipboardOffer(_)) = &msg.union {
+            let supported = s
+                .lc
+                .read()
+                .unwrap()
+                .peer_info
+                .as_ref()
+                .map_or(false, |pi| crate::client::clipboard_offer::device_supports(&pi.platform_additions));
+            if supported && s.is_text_clipboard_required() {
+                s.send(Data::Message(msg.clone()));
+            }
+            continue;
+        }
         if s.is_text_clipboard_required() {
             // Check if the client supports multi clipboards
             if let Some(message::Union::MultiClipboards(multi_clipboards)) = &msg.union {

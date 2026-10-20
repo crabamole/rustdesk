@@ -647,13 +647,11 @@ impl<T: InvokeUiSession> Remote<T> {
 
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     fn start_initial_clipboard_sync(&mut self) {
-        let peer_info = {
+        let platform_additions = {
             let lc = self.handler.lc.read().unwrap();
-            lc.peer_info
-                .as_ref()
-                .map(|pi| (pi.version.clone(), pi.platform.clone()))
+            lc.peer_info.as_ref().map(|pi| pi.platform_additions.clone())
         };
-        let Some((peer_version, peer_platform)) = peer_info else {
+        let Some(platform_additions) = platform_additions else {
             log::error!("Cannot start initial clipboard sync without peer information");
             return;
         };
@@ -665,15 +663,9 @@ impl<T: InvokeUiSession> Remote<T> {
         let read_clipboard = move || {
             // Capture after readiness, before reading; later changes invalidate this snapshot.
             let generation = clipboard_listener::current_generation();
-            let msg_out = if permission_config.is_text_clipboard_required() {
-                crate::clipboard::get_current_clipboard_msg(
-                    &peer_version,
-                    &peer_platform,
-                    crate::clipboard::ClipboardSide::Client,
-                )
-            } else {
-                None
-            };
+            let msg_out = (permission_config.is_text_clipboard_required()
+                && crate::client::clipboard_offer::device_supports(&platform_additions))
+            .then(|| crate::client::clipboard_offer::offer_msg(&mut None));
             let msg_out = msg_out.filter(|_| permission_config.is_text_clipboard_required());
             // Empty or failed reads must also finish the pending initial-sync attempt.
             if let Err(err) = sender.send(Data::InitialClipboard(generation, msg_out)) {
@@ -767,6 +759,7 @@ impl<T: InvokeUiSession> Remote<T> {
                         msg.union.as_ref(),
                         Some(message::Union::Clipboard(_))
                             | Some(message::Union::MultiClipboards(_))
+                            | Some(message::Union::ClipboardOffer(_))
                     )
                 {
                     return true;
@@ -777,7 +770,9 @@ impl<T: InvokeUiSession> Remote<T> {
                         return true;
                     }
                     #[cfg(not(any(target_os = "android", target_os = "ios")))]
-                    Some(message::Union::Clipboard(_)) | Some(message::Union::MultiClipboards(_)) => {
+                    Some(message::Union::Clipboard(_))
+                    | Some(message::Union::MultiClipboards(_))
+                    | Some(message::Union::ClipboardOffer(_)) => {
                         self.initial_clipboard_pending = false;
                     }
                     #[cfg(not(any(target_os = "android", target_os = "ios")))]
@@ -1637,6 +1632,20 @@ impl<T: InvokeUiSession> Remote<T> {
                             {
                                 self.start_initial_clipboard_sync();
                             }
+                            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+                            if !self.is_connected
+                                && self.handler.is_text_clipboard_required()
+                                && !self.handler.lc.read().unwrap().peer_info.as_ref().map_or(false, |pi| {
+                                    crate::client::clipboard_offer::device_supports(&pi.platform_additions)
+                                })
+                            {
+                                self.handler.msgbox(
+                                    "custom-nook-nocancel-hasclose",
+                                    "Clipboard",
+                                    "clipboard_on_request_old_device_tip",
+                                    "",
+                                );
+                            }
                             // to-do: Android, is `sync_init_clipboard` really needed?
                             // https://github.com/rustdesk/rustdesk/discussions/9010
                         }
@@ -1761,6 +1770,18 @@ impl<T: InvokeUiSession> Remote<T> {
                         #[cfg(target_os = "android")]
                         crate::clipboard::handle_msg_multi_clipboards(_mcb);
                     }
+                }
+                #[cfg(not(any(target_os = "android", target_os = "ios")))]
+                Some(message::Union::ClipboardRequest(req)) => {
+                    let allowed = {
+                        let lc = self.handler.lc.read().unwrap();
+                        !lc.disable_clipboard.v && !lc.view_only.v
+                    } && self.handler.is_text_clipboard_required();
+                    let sender = self.sender.clone();
+                    tokio::task::spawn_blocking(move || {
+                        let reply = crate::client::clipboard_offer::reply_msg(&req, allowed);
+                        sender.send(Data::Message(reply)).ok();
+                    });
                 }
                 #[cfg(any(target_os = "windows", feature = "unix-file-copy-paste"))]
                 Some(message::Union::Cliprdr(clip)) => {

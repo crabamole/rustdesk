@@ -71,7 +71,7 @@ const SUPPORTED_FORMATS: &[ClipboardFormat] = &[
     ClipboardFormat::Special(RUSTDESK_CLIPBOARD_OWNER_FORMAT),
 ];
 
-#[cfg(not(target_os = "android"))]
+#[cfg(not(any(target_os = "android", target_os = "linux")))]
 pub fn check_clipboard(
     ctx: &mut Option<ClipboardContext>,
     side: ClipboardSide,
@@ -556,46 +556,6 @@ pub fn is_support_multi_clipboard(peer_version: &str, peer_platform: &str) -> bo
     true
 }
 
-#[cfg(not(target_os = "android"))]
-pub fn get_current_clipboard_msg(
-    peer_version: &str,
-    peer_platform: &str,
-    side: ClipboardSide,
-) -> Option<Message> {
-    // Clipboard changes can be skipped while synchronization is disabled.
-    #[cfg(target_os = "linux")]
-    if !clipboard_listener::is_ready() {
-        log::error!("Cannot read initial clipboard before the listener is ready");
-        return None;
-    }
-    let ctx = match ClipboardContext::new() {
-        Ok(ctx) => ctx,
-        Err(err) => {
-            log::error!("Failed to create clipboard context for initial sync: {}", err);
-            return None;
-        }
-    };
-    let (msg, multi_clipboards) = read_clipboard_message(&mut Some(ctx), side, true)?;
-    if multi_clipboards.clipboards.is_empty() {
-        return None;
-    }
-
-    if is_support_multi_clipboard(peer_version, peer_platform) {
-        Some(msg)
-    } else {
-        // Find the first text clipboard and send it.
-        multi_clipboards
-            .clipboards
-            .iter()
-            .find(|c| c.format.enum_value() == Ok(base::message_proto::ClipboardFormat::Text))
-            .map(|c| {
-                let mut msg = Message::new();
-                msg.set_clipboard(c.clone());
-                msg
-            })
-    }
-}
-
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum ClipboardSide {
     Host,
@@ -630,7 +590,7 @@ impl std::fmt::Display for ClipboardSide {
 }
 
 pub use proto::get_msg_if_not_support_multi_clip;
-mod proto {
+pub(crate) mod proto {
     #[cfg(not(target_os = "android"))]
     use arboard::ClipboardData;
     use hbb_common::{
@@ -921,22 +881,6 @@ pub mod clipboard_listener {
 
     pub fn current_generation() -> usize {
         CLIPBOARD_GENERATION.load(Ordering::SeqCst)
-    }
-
-    #[cfg(target_os = "linux")]
-    pub fn is_ready() -> bool {
-        let listener = CLIPBOARD_LISTENER.lock().unwrap();
-        let ready = listener
-            .ready
-            .as_ref()
-            .map(|ready| *ready.borrow())
-            .unwrap_or(false);
-        ready
-            && listener
-                .handle
-                .as_ref()
-                .map(|(_, h)| !h.is_finished())
-                .unwrap_or(false)
     }
 
     #[cfg(target_os = "linux")]
