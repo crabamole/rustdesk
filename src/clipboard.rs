@@ -407,10 +407,16 @@ impl ClipboardContext {
         // first (docs/design-clipboard-on-request.md).
         if !force {
             // Some owners (xclip on X11) refuse an unknown target; that means no marker.
-            let marker = self
+            let marker = match self
                 .inner
                 .get_formats(&[ClipboardFormat::Special(RUSTDESK_CLIPBOARD_OWNER_FORMAT)])
-                .unwrap_or_default();
+            {
+                Ok(marker) => marker,
+                Err(arboard::Error::ClipboardOccupied) => {
+                    bail!("Failed to get clipboard formats, clipboard is occupied")
+                }
+                Err(_) => Vec::new(),
+            };
             if marker.iter().any(|c| {
                 matches!(c, ClipboardData::Special((s, d)) if s == RUSTDESK_CLIPBOARD_OWNER_FORMAT && side.is_owner(d))
             }) {
