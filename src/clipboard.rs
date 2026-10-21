@@ -406,7 +406,11 @@ impl ClipboardContext {
         // A lazy entry fetches its text from the viewer when read, so check the marker alone
         // first (docs/design-clipboard-on-request.md).
         if !force {
-            let marker = self.get_formats(&[ClipboardFormat::Special(RUSTDESK_CLIPBOARD_OWNER_FORMAT)])?;
+            // Some owners (xclip on X11) refuse an unknown target; that means no marker.
+            let marker = self
+                .inner
+                .get_formats(&[ClipboardFormat::Special(RUSTDESK_CLIPBOARD_OWNER_FORMAT)])
+                .unwrap_or_default();
             if marker.iter().any(|c| {
                 matches!(c, ClipboardData::Special((s, d)) if s == RUSTDESK_CLIPBOARD_OWNER_FORMAT && side.is_owner(d))
             }) {
