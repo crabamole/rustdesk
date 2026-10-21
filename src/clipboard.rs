@@ -383,6 +383,28 @@ impl ClipboardContext {
         bail!("Failed to get clipboard formats, clipboard is occupied, {CLIPBOARD_GET_MAX_RETRY} retries failed");
     }
 
+    fn has_owner_marker(&mut self, side: ClipboardSide) -> ResultType<bool> {
+        for i in 0..CLIPBOARD_GET_MAX_RETRY {
+            match self
+                .inner
+                .get_formats(&[ClipboardFormat::Special(RUSTDESK_CLIPBOARD_OWNER_FORMAT)])
+            {
+                Ok(data) => {
+                    return Ok(data.iter().any(|c| {
+                        matches!(c, ClipboardData::Special((s, d)) if s == RUSTDESK_CLIPBOARD_OWNER_FORMAT && side.is_owner(d))
+                    }))
+                }
+                Err(arboard::Error::ClipboardOccupied) => {
+                    log::debug!("Failed to get clipboard formats, clipboard is occupied, retrying... {}", i + 1);
+                    std::thread::sleep(CLIPBOARD_GET_RETRY_INTERVAL_DUR);
+                }
+                // Owners such as xclip on X11 refuse an unknown target.
+                Err(_) => return Ok(false),
+            }
+        }
+        bail!("Failed to get clipboard formats, clipboard is occupied, {CLIPBOARD_GET_MAX_RETRY} retries failed");
+    }
+
     pub fn get(&mut self, side: ClipboardSide, force: bool) -> ResultType<Vec<ClipboardData>> {
         let data = self.get_formats_filter(SUPPORTED_FORMATS, side, force)?;
         // We have a separate service named `file-clipboard` to handle file copy-paste.
@@ -406,20 +428,7 @@ impl ClipboardContext {
         // A lazy entry fetches its text from the viewer when read, so check the marker alone
         // first (docs/design-clipboard-on-request.md).
         if !force {
-            // Some owners (xclip on X11) refuse an unknown target; that means no marker.
-            let marker = match self
-                .inner
-                .get_formats(&[ClipboardFormat::Special(RUSTDESK_CLIPBOARD_OWNER_FORMAT)])
-            {
-                Ok(marker) => marker,
-                Err(arboard::Error::ClipboardOccupied) => {
-                    bail!("Failed to get clipboard formats, clipboard is occupied")
-                }
-                Err(_) => Vec::new(),
-            };
-            if marker.iter().any(|c| {
-                matches!(c, ClipboardData::Special((s, d)) if s == RUSTDESK_CLIPBOARD_OWNER_FORMAT && side.is_owner(d))
-            }) {
+            if self.has_owner_marker(side)? {
                 return Ok(vec![]);
             }
         }
