@@ -2,7 +2,7 @@
 //! format names of the local clipboard, send its content only when the device asks.
 use crate::clipboard::{clipboard_listener, proto, ClipboardContext, ClipboardSide};
 use base::message_proto::{
-    message, Clipboard, ClipboardFormat, ClipboardOffer, ClipboardReply, ClipboardRequest, Message,
+    Clipboard, ClipboardFormat, ClipboardOffer, ClipboardReply, ClipboardRequest, Message,
 };
 use hbb_common::log;
 
@@ -76,6 +76,7 @@ pub fn reply_msg(req: &ClipboardRequest, sent: Option<u32>, allowed: bool) -> Me
 #[cfg(test)]
 mod tests {
     use super::*;
+    use base::message_proto::message;
 
     #[test]
     fn the_device_flag_is_read_from_platform_additions() {

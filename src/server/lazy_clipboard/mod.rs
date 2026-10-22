@@ -3,7 +3,7 @@
 //! the viewer only when an app on the device reads it.
 use super::connection::Sender;
 use base::message_proto::{
-    message, Clipboard, ClipboardFormat, ClipboardOffer, ClipboardReply, ClipboardRequest, Message,
+    Clipboard, ClipboardFormat, ClipboardOffer, ClipboardReply, ClipboardRequest, Message,
 };
 use hbb_common::{compress::decompress, log, tokio::time::Instant, ResultType};
 use std::{
@@ -260,6 +260,7 @@ fn content(clipboard: Clipboard) -> Option<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use base::message_proto::message;
     use hbb_common::{protobuf::MessageField, tokio::sync::mpsc::unbounded_channel};
 
     #[derive(Default)]

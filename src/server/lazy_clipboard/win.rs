@@ -16,7 +16,7 @@ use winapi::{
     um::{
         errhandlingapi::GetLastError,
         libloaderapi::GetModuleHandleW,
-        winbase::{GlobalAlloc, GlobalFree, GlobalLock, GlobalUnlock, GMEM_MOVEABLE},
+        winbase::{GlobalAlloc, GlobalFree, GlobalLock, GlobalUnlock, GMEM_MOVEABLE, GMEM_ZEROINIT},
         winuser::{
             CloseClipboard, CreateWindowExW, DefWindowProcW, DispatchMessageW, EmptyClipboard,
             GetClipboardOwner, GetMessageW, OpenClipboard, PostMessageW, RegisterClassW,
@@ -238,7 +238,7 @@ unsafe fn render(shared: &Shared, id: UINT) {
 
 /// Hands `data` to the clipboard, which then owns the memory.
 unsafe fn set_data(id: UINT, data: &[u8]) {
-    let h: HGLOBAL = GlobalAlloc(GMEM_MOVEABLE, data.len().max(1) as _);
+    let h: HGLOBAL = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, data.len() + 1);
     if h.is_null() {
         return;
     }
@@ -250,7 +250,7 @@ unsafe fn set_data(id: UINT, data: &[u8]) {
     std::ptr::copy_nonoverlapping(data.as_ptr(), p, data.len());
     GlobalUnlock(h);
     if SetClipboardData(id, h).is_null() {
-        log::debug!("lazy clipboard: SetClipboardData({}) failed: {}", id, GetLastError());
+        log::trace!("lazy clipboard: SetClipboardData({}) failed: {}", id, GetLastError());
         GlobalFree(h);
     }
 }
