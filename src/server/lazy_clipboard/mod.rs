@@ -19,6 +19,8 @@ mod win;
 mod mac;
 #[cfg(any(target_os = "windows", test))]
 mod win_text;
+#[cfg(any(target_os = "windows", test))]
+pub mod cm;
 
 /// How long an app on the device waits for the viewer's reply.
 #[cfg(not(target_os = "macos"))]
@@ -160,8 +162,19 @@ fn start_provider() -> Option<Box<dyn Provider>> {
             }
         };
     }
+    // The installed service runs as SYSTEM; the user's `--cm` owns the clipboard entry instead.
     #[cfg(target_os = "windows")]
-    return match win::WindowsProvider::start() {
+    if crate::platform::is_root() {
+        return match cm::CmProvider::start() {
+            Ok(p) => Some(Box::new(p)),
+            Err(e) => {
+                log::error!("lazy clipboard: --cm provider did not start: {}", e);
+                None
+            }
+        };
+    }
+    #[cfg(target_os = "windows")]
+    return match win::WindowsProvider::start(Arc::new(fetch)) {
         Ok(p) => Some(Box::new(p)),
         Err(e) => {
             log::error!("lazy clipboard: Windows provider did not start: {}", e);

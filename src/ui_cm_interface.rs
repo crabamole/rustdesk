@@ -712,6 +712,10 @@ impl<T: InvokeUiCM> IpcTaskRunner<T> {
                                         }
                                     }
                                 }
+                                #[cfg(target_os = "windows")]
+                                Data::LazyClipboard(msg) => {
+                                    crate::server::lazy_clipboard::cm::on_ipc(msg, &self.tx);
+                                }
                                 _ => {
 
                                 }

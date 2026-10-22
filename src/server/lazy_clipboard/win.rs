@@ -1,11 +1,11 @@
 //! Windows: a message-only window owns the clipboard with delayed rendering; `WM_RENDERFORMAT`
 //! fetches the viewer's data only when an app reads a format.
-use super::{fetch, win_text, Provider};
+use super::{win_text, Provider};
 use base::message_proto::ClipboardFormat;
 use hbb_common::{anyhow::anyhow, bail, log, ResultType};
 use std::{
     ptr::{null, null_mut},
-    sync::{mpsc, Mutex, OnceLock},
+    sync::{mpsc, Arc, Mutex, OnceLock},
     time::Duration,
 };
 use winapi::{
@@ -32,11 +32,15 @@ const WM_CLEAR: UINT = WM_APP + 2;
 const OWNER_FORMAT: &str = "dyn.com.rustdesk.owner";
 const HOST_OWNER_DATA: [u8; 1] = [0b01];
 
+/// Gets the viewer's data for a format an app reads; blocks until it arrives or times out.
+pub type Fetch = Arc<dyn Fn(ClipboardFormat) -> Option<Vec<u8>> + Send + Sync>;
+
 struct Shared {
     rtf: UINT,
     html: UINT,
     owner: UINT,
     offered: Mutex<Vec<ClipboardFormat>>,
+    fetch: Fetch,
 }
 
 impl Shared {
@@ -76,12 +80,13 @@ fn register(name: &str) -> ResultType<UINT> {
 }
 
 impl WindowsProvider {
-    pub fn start() -> ResultType<Self> {
+    pub fn start(fetch: Fetch) -> ResultType<Self> {
         let shared = Shared {
             rtf: register("Rich Text Format")?,
             html: register("HTML Format")?,
             owner: register(OWNER_FORMAT)?,
             offered: Mutex::new(Vec::new()),
+            fetch,
         };
         if SHARED.set(shared).is_err() {
             bail!("the Windows provider started twice");
@@ -222,7 +227,7 @@ unsafe fn render(shared: &Shared, id: UINT) {
     if !shared.offered.lock().unwrap().contains(&format) {
         return;
     }
-    let Some(data) = fetch(format) else { return };
+    let Some(data) = (shared.fetch)(format) else { return };
     let data = match format {
         ClipboardFormat::Text => win_text::utf16_text(&data),
         ClipboardFormat::Html => win_text::cf_html(&data),

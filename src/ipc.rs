@@ -310,6 +310,17 @@ pub enum DataPortableService {
     CmShowElevation(bool),
 }
 
+/// `--server` <-> `--cm`: the Windows clipboard entry of clipboard text on request. The `i32`s are
+/// `ClipboardFormat` values.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(tag = "t", content = "c")]
+pub enum LazyClipboardIpc {
+    Place(Vec<i32>),
+    Clear,
+    Request { id: u32, format: i32 },
+    Reply { id: u32, data: Option<Vec<u8>> },
+}
+
 #[cfg(feature = "flutter")]
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -502,6 +513,7 @@ pub enum Data {
     ControlPermissionsRemoteModify(Option<bool>),
     #[cfg(target_os = "windows")]
     FileTransferEnabledState(Option<bool>),
+    LazyClipboard(LazyClipboardIpc),
     /// CM -> server: the connection manager's WINDOW went away, which is not the same event
     /// as the operator disconnecting a peer. Linux only, and deliberately: there a session
     /// logout closes every window, and the close arrives at the CM indistinguishable from a
