@@ -56,7 +56,8 @@ set it.
   included. Paste works only through offer and request.
 - The last offer wins. Requests go to the connection that sent it. When that connection closes,
   the device clears its entry.
-- A request waits up to 5 s (2 s on macOS) for the reply; on a timeout the program on the device gets empty data.
+- A request waits up to 5 s (2 s on macOS) for the reply; on a timeout the program on the device
+  gets empty data.
 - `seq` grows with each offer. The viewer answers a request for an older `seq` with an empty
   reply, so a paste never gets content copied after that offer.
 - The gates do not change: clipboard on, the connection's clipboard permission, Remote
@@ -72,8 +73,8 @@ run today. The providers run there too, except on an installed Windows device (s
 
 | Platform | Place the entry | When a program reads it |
 |---|---|---|
-| Windows | A message-only window on its own thread owns the clipboard: SetClipboardData(fmt, NULL) for CF_UNICODETEXT, "Rich Text Format" and "HTML Format", plus the owner marker with data. place and clear only post a message to that thread. On an installed device `--server` runs as SYSTEM, and Microsoft Defender reads a delayed text entry owned by a SYSTEM process at once, so the user's `--cm` process owns the window: `--server` sends it the offered formats over the existing `_cm` IPC (`LazyClipboard` messages), and the entry goes when that IPC connection ends. A portable copy runs as the user and keeps the window in `--server`. | WM_RENDERFORMAT: request, wait, SetClipboardData (UTF-16 text, CF_HTML header added to the fragment). With `--cm` as the owner, the request goes to `--server` over `_cm`, which asks the viewer and sends the data back. WM_RENDERALLFORMATS: render nothing. |
-| macOS | A worker thread writes one NSPasteboardItem: a data provider for public.utf8-plain-text, public.rtf, public.html, and the owner marker with data. | provideDataForType (on the main thread): request, wait up to 2 s, set the data. |
+| Windows | A message-only window on its own thread owns the clipboard: `SetClipboardData(fmt, NULL)` for `CF_UNICODETEXT`, `"Rich Text Format"` and `"HTML Format"`, plus the owner marker with data. place and clear only post a message to that thread. On an installed device `--server` runs as SYSTEM, and Microsoft Defender reads a delayed text entry owned by a SYSTEM process at once, so the user's `--cm` process owns the window: `--server` sends it the offered formats over the existing `_cm` IPC (`LazyClipboard` messages), and the entry goes when that IPC connection ends. A portable copy runs as the user and keeps the window in `--server`. | `WM_RENDERFORMAT`: request, wait, `SetClipboardData` (UTF-16 text, `CF_HTML` header added to the fragment). With `--cm` as the owner, the request goes to `--server` over `_cm`, which asks the viewer and sends the data back. `WM_RENDERALLFORMATS`: render nothing. |
+| macOS | A worker thread writes one `NSPasteboardItem`: a data provider for `public.utf8-plain-text`, `public.rtf`, `public.html`, and the owner marker with data. | `provideDataForType` (on the main thread): request, wait up to 2 s, set the data. |
 | Linux X11 | Our own `CLIPBOARD` selection owner (`x11rb`); `TARGETS` from the offer | `SelectionRequest` for `UTF8_STRING`, `text/plain;charset=utf-8`, `text/rtf`, `text/html`: request, wait, reply; INCR for large data |
 
 Wayland is not implemented: Wayland devices do not set the flag.
@@ -106,7 +107,10 @@ the transfer eager again.
 - Timeout, or the connection closes during a request: the program gets empty data; the device logs a
   throttled warning.
 - Stale `seq`: empty reply.
-- The provider does not start: no flag, no text to that device; the device logs why once.
+- The provider does not start: no flag, no text to that device; the device logs why once. On an
+  installed Windows device the flag is set even when the user's session process is missing or its
+  provider fails; then a paste gets nothing, and the failure is logged once a minute in that
+  process's log.
 
 ## Limits
 
@@ -121,6 +125,8 @@ the transfer eager again.
   text: for the network round trip, up to 2 s when the viewer does not answer.
 - Images are no longer sent to the device.
 - A paste after the viewer disconnected gets nothing.
+- On an installed Windows device, paste at the logon screen gets no text until a user signs in (the
+  clipboard entry lives in the user's session process).
 - The note about a device without the flag shows on every connection to it, also on a reconnect.
 - Text that came into the viewer from another device (sync between sessions, or text on the
   viewer's clipboard that RustDesk wrote) is not offered or sent to any device.
