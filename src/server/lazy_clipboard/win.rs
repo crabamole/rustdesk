@@ -16,7 +16,9 @@ use winapi::{
     um::{
         errhandlingapi::GetLastError,
         libloaderapi::GetModuleHandleW,
-        winbase::{GlobalAlloc, GlobalFree, GlobalLock, GlobalUnlock, GMEM_MOVEABLE, GMEM_ZEROINIT},
+        winbase::{
+            GlobalAlloc, GlobalFree, GlobalLock, GlobalUnlock, GMEM_MOVEABLE, GMEM_ZEROINIT,
+        },
         winuser::{
             CloseClipboard, CreateWindowExW, DefWindowProcW, DispatchMessageW, EmptyClipboard,
             GetClipboardOwner, GetMessageW, OpenClipboard, PostMessageW, RegisterClassW,
