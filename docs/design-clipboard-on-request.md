@@ -4,10 +4,12 @@
 
 ## Goal
 
-Viewer → device clipboard text moves only when an app on the device reads the clipboard, as
-RDP does (delayed rendering). A copy on the viewer sends the format names only, never the
-content. The clipboard audit ([design-clipboard-monitoring.md](design-clipboard-monitoring.md))
-builds on this: a transfer then means a paste on the device.
+The viewer sends clipboard text to the device only when a program on the device reads the
+clipboard, as RDP does (delayed rendering). A copy on the viewer sends the format names only,
+never the content. Usually that read is a paste, but programs that read the clipboard in the
+background (security tools, clipboard managers) can cause it before a paste. The clipboard audit
+([design-clipboard-monitoring.md](design-clipboard-monitoring.md)) builds on this: a transfer
+then means a program on the device read the clipboard.
 
 Scope: plain text, RTF and HTML, viewer → device. File copy and the device → viewer direction do
 not change.
@@ -32,8 +34,8 @@ New messages in `message.proto`, in the `Message` union:
 
 - `ClipboardOffer { uint32 seq; repeated ClipboardFormat formats; }`, viewer → device. Format
   names only: `Text`, `Rtf`, `Html`.
-- `ClipboardRequest { uint32 seq; ClipboardFormat format; }`, device → viewer, when an app on the
-  device reads the clipboard.
+- `ClipboardRequest { uint32 seq; ClipboardFormat format; }`, device → viewer, when a program on
+  the device reads the clipboard.
 - `ClipboardReply { uint32 seq; Clipboard clipboard; }`, viewer → device. The `clipboard` is
   empty when `seq` is stale or the format is gone. A new reply message keeps the existing
   `Clipboard` handler, which writes at once, out of this flow.
@@ -54,7 +56,7 @@ set it.
   included. Paste works only through offer and request.
 - The last offer wins. Requests go to the connection that sent it. When that connection closes,
   the device clears its entry.
-- A request waits up to 5 s (2 s on macOS) for the reply; on a timeout the app on the device gets empty data.
+- A request waits up to 5 s (2 s on macOS) for the reply; on a timeout the program on the device gets empty data.
 - `seq` grows with each offer. The viewer answers a request for an older `seq` with an empty
   reply, so a paste never gets content copied after that offer.
 - The gates do not change: clipboard on, the connection's clipboard permission, Remote
@@ -64,13 +66,13 @@ set it.
 
 New module `src/server/lazy_clipboard/`: `mod.rs` holds the owner connection, `seq`, the pending
 requests with their timeout, and the capability flag; one file per platform places the lazy entry
-and calls `mod.rs` when an app reads it. `connection.rs` gets thin hooks: offer, reply,
-connection closed, ignore eager text. All providers run in `--server`, where text writes run
-today.
+and calls `mod.rs` when a program reads it. `connection.rs` gets thin hooks: offer, reply,
+connection closed, ignore eager text. The hub in `mod.rs` runs in `--server`, where text writes
+run today. The providers run there too, except on an installed Windows device (see the table).
 
-| Platform | Place the entry | When an app reads it |
+| Platform | Place the entry | When a program reads it |
 |---|---|---|
-| Windows | A message-only window on its own thread owns the clipboard: SetClipboardData(fmt, NULL) for CF_UNICODETEXT, "Rich Text Format" and "HTML Format", plus the owner marker with data. place and clear only post a message to that thread. | WM_RENDERFORMAT: request, wait, SetClipboardData (UTF-16 text, CF_HTML header added to the fragment). WM_RENDERALLFORMATS: render nothing. |
+| Windows | A message-only window on its own thread owns the clipboard: SetClipboardData(fmt, NULL) for CF_UNICODETEXT, "Rich Text Format" and "HTML Format", plus the owner marker with data. place and clear only post a message to that thread. On an installed device `--server` runs as SYSTEM, and Microsoft Defender reads a delayed text entry owned by a SYSTEM process at once, so the user's `--cm` process owns the window: `--server` sends it the offered formats over the existing `_cm` IPC (`LazyClipboard` messages), and the entry goes when that IPC connection ends. A portable copy runs as the user and keeps the window in `--server`. | WM_RENDERFORMAT: request, wait, SetClipboardData (UTF-16 text, CF_HTML header added to the fragment). With `--cm` as the owner, the request goes to `--server` over `_cm`, which asks the viewer and sends the data back. WM_RENDERALLFORMATS: render nothing. |
 | macOS | A worker thread writes one NSPasteboardItem: a data provider for public.utf8-plain-text, public.rtf, public.html, and the owner marker with data. | provideDataForType (on the main thread): request, wait up to 2 s, set the data. |
 | Linux X11 | Our own `CLIPBOARD` selection owner (`x11rb`); `TARGETS` from the offer | `SelectionRequest` for `UTF8_STRING`, `text/plain;charset=utf-8`, `text/rtf`, `text/html`: request, wait, reply; INCR for large data |
 
@@ -101,20 +103,21 @@ the transfer eager again.
 
 ## Errors
 
-- Timeout, or the connection closes during a request: the app gets empty data; the device logs a
+- Timeout, or the connection closes during a request: the program gets empty data; the device logs a
   throttled warning.
 - Stale `seq`: empty reply.
 - The provider does not start: no flag, no text to that device; the device logs why once.
 
 ## Limits
 
-- A clipboard manager on the device (GNOME, possibly Windows clipboard history) reads the entry
-  at once, so the transfer is eager there. The audit counts these reads.
+- A program on the device that reads the clipboard in the background (a security tool, a
+  clipboard manager such as GNOME's or possibly Windows clipboard history) reads the entry at
+  once, so the transfer is eager there. The audit counts these reads.
 - Firefox and Safari web viewers cannot paste into the device.
 - Android and iOS viewers cannot paste into devices with the flag.
 - Desktop and web viewers cannot paste into Android devices or Wayland desktops (they do not
   set the flag).
-- On a macOS device, remote input and the tray menu pause while an app waits for the viewer's
+- On a macOS device, remote input and the tray menu pause while a program waits for the viewer's
   text: for the network round trip, up to 2 s when the viewer does not answer.
 - Images are no longer sent to the device.
 - A paste after the viewer disconnected gets nothing.
@@ -125,7 +128,9 @@ the transfer eager again.
 ## Prototype Results
 
 1. Windows: delayed rendering from the SYSTEM --server window works; the reader blocks until the
-   data is set.
+   data is set. But Microsoft Defender reads a SYSTEM-owned delayed text entry at once, and does
+   not read the same entry owned by a user process, so the installed device places it from
+   `--cm`.
 2. macOS: the data provider runs on the main thread of --server and blocks it; accepted with a
    2 s limit.
 3. Wayland: not prototyped; out of scope.
@@ -147,7 +152,8 @@ client on either side, text paste does not work. The release notes and `UPGRADIN
 ## Testing
 
 - Rust unit: offer state, `seq` and the owner connection; timeout and empty reply; stale `seq`;
-  the entry cleared when the connection closes; eager text ignored; the owner-marker check.
+  the entry cleared when the connection closes; eager text ignored; the owner-marker check; the
+  `--server` → `--cm` messages and their replies matched by id.
 - Web unit: offer on pointer enter and on Ctrl/Cmd+V only for new text, `Html` only when present,
   the key after the offer; reply on request; no offer, empty reply and the note when the read
   fails; the note for a device without the flag.
