@@ -112,16 +112,25 @@ fn serve(mut rx: UnboundedReceiver<LazyClipboardIpc>, replies: UnboundedSender<L
 
 #[cfg(target_os = "windows")]
 async fn connect(place: LazyClipboardIpc) -> Option<Link> {
-    let mut conn = match crate::ipc::connect(1000, "_cm").await {
-        Ok(conn) => conn,
-        Err(e) => {
-            hbb_common::throttled_log!(
-                Duration::from_secs(60),
-                warn,
-                "lazy clipboard: no --cm to own the entry: {}",
-                e
-            );
-            return None;
+    // The first offer comes at session start, while `--cm` may still be starting; retry as
+    // `connection.rs` `start_ipc` does.
+    let mut tries = 0;
+    let mut conn = loop {
+        match crate::ipc::connect(1000, "_cm").await {
+            Ok(conn) => break conn,
+            Err(_) if tries < 20 => {
+                tries += 1;
+                tokio::time::sleep(Duration::from_millis(300)).await;
+            }
+            Err(e) => {
+                hbb_common::throttled_log!(
+                    Duration::from_secs(60),
+                    warn,
+                    "lazy clipboard: no --cm to own the entry: {}",
+                    e
+                );
+                return None;
+            }
         }
     };
     if let Err(e) = conn.send(&Data::LazyClipboard(place)).await {
@@ -244,6 +253,11 @@ fn watch(link: UnboundedSender<Data>) {
     });
 }
 
+/// `--server` waits `REQUEST_TIMEOUT` for the viewer; the extra second leaves room for the IPC hops,
+/// so a reply that arrives near that limit is not dropped here.
+#[cfg(target_os = "windows")]
+const CM_WAIT: Duration = REQUEST_TIMEOUT.saturating_add(Duration::from_secs(1));
+
 /// Runs on the provider's window thread when an app reads a format.
 #[cfg(target_os = "windows")]
 fn fetch_from_server(format: ClipboardFormat) -> Option<Vec<u8>> {
@@ -258,7 +272,7 @@ fn fetch_from_server(format: ClipboardFormat) -> Option<Vec<u8>> {
         }
         (id, rx)
     };
-    let data = wait(&rx, REQUEST_TIMEOUT);
+    let data = wait(&rx, CM_WAIT);
     cm_side().lock().unwrap().waiters.forget(id);
     data
 }
@@ -284,6 +298,7 @@ impl Waiters {
         }
     }
 
+    #[cfg(target_os = "windows")]
     fn forget(&mut self, id: u32) {
         self.waiting.remove(&id);
     }
