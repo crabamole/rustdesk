@@ -1,6 +1,6 @@
 # Design: Windows Code Signing
 
-**Status: design; signing machine set up and tested by hand, workflow not changed yet.**
+**Status: implemented in windows-build.yml; first signed run pending.**
 
 ## Goal
 
@@ -8,8 +8,8 @@ Every Windows release file we build carries an Authenticode signature from our c
 certificate, with a timestamp. A person approves each release by entering a one-time code from
 a phone; no stored secret can sign on its own.
 
-Scope: the release run (`release.yml` on master after a version bump). Manual runs of
-`windows-build.yml` stay unsigned. macOS signing does not change.
+Scope: the release run (`release.yml` on master after a version bump). A manual run of
+`windows-build.yml` signs only with `sign: true` on a branch the `codesign` environments allow (master). macOS signing does not change.
 
 ## Today
 
@@ -63,7 +63,7 @@ into the SimplySign Desktop login window and waits until the certificate appears
 
 `release.yml` passes `sign: true` to `windows-build.yml` only for a push to master that
 releases a new version. With `sign: false` the jobs below marked *sign only* are skipped and
-the MSIs are built from unsigned files, as today.
+the MSIs are built from unsigned files, as today. A manual dispatch can set `sign` too; the environments limit it to master.
 
 | Job | Runs on | Does |
 |---|---|---|
@@ -105,6 +105,7 @@ have a signature (the RustDesk display driver) keep it.
 ## Not done
 
 - No signing for manual or pull-request runs.
+- `flutter_windows.dll` still comes prebuilt from RustDesk's engine release (a mutable release asset, not pinned). Building the engine ourselves is future work.
 - No portable single-file Windows build; it waits for this design.
 - macOS signing and notarization are unchanged.
 

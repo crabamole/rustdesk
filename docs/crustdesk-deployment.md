@@ -101,7 +101,7 @@ From 1.5.0-3 on, `cRustDesk-<ver>.cdx.json` next to the installers is the releas
 
 Pick a variant per machine:
 
-| Machine | Variant | Windows x64 (unsigned MSI) | Ubuntu x86_64, X11 | macOS arm64 (signed, notarized) |
+| Machine | Variant | Windows x64 (signed MSI) | Ubuntu x86_64, X11 | macOS arm64 (signed, notarized) |
 |---|---|---|---|---|
 | Controlled (and may control others) | DC | `cRustDesk-<ver>-x86_64.msi` | `crustdesk-<ver>-x86_64.deb` | `cRustDesk-<ver>-aarch64.zip` |
 | Only connects to others | Client | `cRustDesk-client-<ver>-x86_64.msi` | `crustdesk-client-<ver>-x86_64.deb` | `cRustDesk-client-<ver>-aarch64.zip` |
@@ -190,8 +190,7 @@ Get-Service cRustDesk
 ```
 
 It installs `C:\Program Files\cRustDesk\cRustDesk.exe` and, for the DC variant, the service `cRustDesk`;
-the client MSI installs no service. The MSIs are not code-signed: allow-list them by hash, or sign them
-with your own certificate.
+the client MSI installs no service. The MSIs and their programs are signed by Open Source Developer Rophy Tsai (Certum), so allow-lists can trust that publisher.
 
 **Linux** (as root; DC variant):
 
