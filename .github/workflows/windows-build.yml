@@ -4,7 +4,16 @@ name: Windows build
 
 on:
   workflow_dispatch:
+    inputs:
+      sign:
+        description: Sign on the code-signing runner (branches allowed by the codesign environments only)
+        type: boolean
+        default: false
   workflow_call:
+    inputs:
+      sign:
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-windows-${{ github.ref }}
@@ -18,8 +27,6 @@ env:
   VCPKG_COMMIT_ID: "9e593bb18ea69cc5095e012465dcd675a822ed0d"
   VERSION: "1.5.0"
   RUSTDESK_CUSTOM_CLIENT_PK: ${{ vars.RUSTDESK_CUSTOM_CLIENT_PK }}
-  # Off until a code-signing certificate exists.
-  HAS_SIGNING_CERT: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 != '' }}
 
 jobs:
   check-signing-key:
@@ -169,27 +176,185 @@ jobs:
           pwsh res/windows/package-variant.ps1 -Src ./rustdesk -CustomTxt res/custom/rustdesk.txt -AppName cRustDesk -Out ./dist/dc
           pwsh res/windows/package-variant.ps1 -Src ./rustdesk -CustomTxt res/custom/client.txt -AppName cRustDesk -Out ./dist/client
 
-      - name: Import the signing certificate
-        if: env.HAS_SIGNING_CERT == 'true'
-        run: |
-          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\codesign.pfx", [Convert]::FromBase64String($env:PFX_BASE64))
-          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Sort-Object FullName | Select-Object -Last 1
-          "SIGNTOOL=$($signtool.FullName)" >> $env:GITHUB_ENV
-        env:
-          PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
+      - name: Upload the files to sign
+        if: inputs.sign
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-dist
+          path: dist
+          retention-days: 1
 
-      - name: Sign the app files
-        if: env.HAS_SIGNING_CERT == 'true'
+      - name: Add MSBuild to PATH
+        if: ${{ !inputs.sign }}
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+
+      - name: Build the MSIs
+        if: ${{ !inputs.sign }}
         run: |
-          $files = Get-ChildItem dist/*/cRustDesk.exe, dist/*/*.dll
-          & $env:SIGNTOOL sign /fd sha256 /tr http://timestamp.digicert.com /td sha256 /f "$env:RUNNER_TEMP\codesign.pfx" /p $env:PFX_PASSWORD $files.FullName
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          mkdir SignOutput
+          $variants = @(
+            @{ Dist = 'dc'; Prefix = 'cRustDesk'; Extra = @() },
+            @{ Dist = 'client'; Prefix = 'cRustDesk-client'; Extra = @('--conn-type', 'outgoing') }
+          )
+          foreach ($v in $variants) {
+            pushd ./res/msi
+            git checkout -- .   # preprocess.py edits the WiX sources in place; start each variant clean
+            python preprocess.py --arp --custom --app-name cRustDesk -m crabamole @($v.Extra) -d ../../dist/$($v.Dist)
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            # MSBuild hard-links obj to bin, so a reused obj would rewrite the earlier variant's MSI.
+            Remove-Item -Recurse -Force ./Package/bin, ./Package/obj -ErrorAction SilentlyContinue
+            nuget restore msi.sln
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            msbuild msi.sln -p:Configuration=Release -p:Platform=x64 /p:TargetVersion=Windows10
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $msi = Get-ChildItem ./Package/bin/*/Release/en-us/Package.msi | Select-Object -First 1
+            Copy-Item $msi.FullName ../../SignOutput/$($v.Prefix)-${{ env.VERSION }}-x86_64.msi
+            popd
+          }
+          sha256sum ./SignOutput/*.msi
+          $hashes = Get-ChildItem SignOutput/*.msi | ForEach-Object { (Get-FileHash $_).Hash }
+          if (($hashes | Select-Object -Unique).Count -ne $hashes.Count) { throw "the variant MSIs are identical" }
+
+      - name: Verify the MSIs
+        if: ${{ !inputs.sign }}
+        run: |
+          function Check($msi, $custom) {
+            $target = Join-Path $env:RUNNER_TEMP ([IO.Path]::GetRandomFileName())
+            $p = Start-Process msiexec -ArgumentList '/a', "`"$msi`"", '/qn', "TARGETDIR=`"$target`"" -Wait -PassThru
+            if ($p.ExitCode -ne 0) { throw "msiexec failed for ${msi}: $($p.ExitCode)" }
+            $exe = Get-ChildItem $target -Recurse -Filter cRustDesk.exe | Select-Object -First 1
+            if (-not $exe) { throw "cRustDesk.exe missing in $msi" }
+            $dir = $exe.Directory
+            if ($dir.Name -ne 'cRustDesk') { throw "unexpected install folder $($dir.FullName)" }
+            if ((Get-FileHash (Join-Path $dir 'custom.txt')).Hash -ne (Get-FileHash $custom).Hash) { throw "custom.txt differs in $msi" }
+            $vi = $exe.VersionInfo
+            if ($vi.CompanyName -ne 'crabamole' -or $vi.ProductName -ne 'cRustDesk' -or $vi.OriginalFilename -ne 'rustdesk.exe') {
+              throw "unexpected version info: $($vi.CompanyName) / $($vi.ProductName) / $($vi.OriginalFilename)"
+            }
+            if ((Get-ChildItem $target -Recurse -Filter printer_driver_adapter.dll) -or (Get-ChildItem $target -Recurse -Directory -Filter RustDeskPrinterDriver)) { throw "printer files shipped in $msi" }
+            Write-Output "OK $msi"
+          }
+          Check (Resolve-Path SignOutput/cRustDesk-${{ env.VERSION }}-x86_64.msi).Path (Resolve-Path res/custom/rustdesk.txt).Path
+          Check (Resolve-Path SignOutput/cRustDesk-client-${{ env.VERSION }}-x86_64.msi).Path (Resolve-Path res/custom/client.txt).Path
+
+      - name: Upload cRustDesk msi
+        if: ${{ !inputs.sign }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cRustDesk-windows-x86_64-msi
+          path: SignOutput/cRustDesk-${{ env.VERSION }}-x86_64.msi
+          retention-days: 30
+
+      - name: Upload cRustDesk client msi
+        if: ${{ !inputs.sign }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cRustDesk-client-windows-x86_64-msi
+          path: SignOutput/cRustDesk-client-${{ env.VERSION }}-x86_64.msi
+          retention-days: 30
+
+  start-signer:
+    if: inputs.sign
+    needs: [check-signing-key]
+    runs-on: ubuntu-24.04
+    environment: codesign-approve
+    permissions:
+      id-token: write
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.CODESIGN_AWS_ROLE }}
+          aws-region: ${{ vars.CODESIGN_AWS_REGION }}
+
+      - name: Start the signing machine
         env:
-          PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PFX_PASSWORD }}
+          INSTANCE: ${{ vars.CODESIGN_INSTANCE_ID }}
+        run: |
+          aws ec2 start-instances --instance-ids "$INSTANCE" > /dev/null
+          aws ec2 wait instance-running --instance-ids "$INSTANCE"
+          echo "::notice::The signing machine is up. Unlock SimplySign with sign-unlock."
+
+  sign-files:
+    if: inputs.sign
+    needs: [build, start-signer]
+    runs-on: [self-hosted, codesign]
+    environment: codesign
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: powershell
+    env:
+      THUMBPRINT: 6C7C687E56E18B5FDB47EF52BCAEE74751CFBA79
+      SIGNTOOL: C:\codesign\bin\signtool.exe
+    steps:
+      - name: Clean the workspace
+        run: Get-ChildItem -Force | Remove-Item -Recurse -Force
+
+      - name: Download the files to sign
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: windows-dist
+          path: dist
+
+      - name: Wait for the SimplySign session
+        run: |
+          for ($i = 0; $i -lt 360; $i++) {
+            if (Get-ChildItem Cert:\CurrentUser\My | Where-Object Thumbprint -eq $env:THUMBPRINT) { exit 0 }
+            if ($i % 30 -eq 0) { "waiting for sign-unlock ($($i / 6) min)" }
+            Start-Sleep 10
+          }
+          throw 'no SimplySign session within 60 minutes'
+
+      - name: Sign the unsigned programs
+        run: |
+          $files = Get-ChildItem dist -Recurse -Include *.exe, *.dll |
+            Where-Object { (Get-AuthenticodeSignature $_.FullName).Status -eq 'NotSigned' }
+          if (-not $files) { throw 'nothing to sign' }
+          "signing $(@($files).Count) files"
+          & $env:SIGNTOOL sign /sha1 $env:THUMBPRINT /fd sha256 /tr http://time.certum.pl /td sha256 $files.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Verify the programs
+        # Every program is signed; all but the prebuilt display driver by us.
+        run: |
+          $files = Get-ChildItem dist -Recurse -Include *.exe, *.dll
+          & $env:SIGNTOOL verify /pa /q $files.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($f in $files) {
+            $s = Get-AuthenticodeSignature $f.FullName
+            if ($s.Status -ne 'Valid') { throw "$($f.FullName): $($s.Status)" }
+            if ($f.FullName -notmatch '\\usbmmidd_v2\\' -and $s.SignerCertificate.Thumbprint -ne $env:THUMBPRINT) {
+              throw "$($f.FullName): signed by $($s.SignerCertificate.Subject)"
+            }
+          }
+          "verified $(@($files).Count) files"
+
+      - name: Upload the signed files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-dist-signed
+          path: dist
+          retention-days: 1
+
+  msi-signed:
+    if: inputs.sign
+    needs: [sign-files]
+    runs-on: windows-2022
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Download the signed files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: windows-dist-signed
+          path: dist
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
+      # Same as "Build the MSIs" and "Verify the MSIs" in job build.
       - name: Build the MSIs
         run: |
           mkdir SignOutput
@@ -216,15 +381,6 @@ jobs:
           $hashes = Get-ChildItem SignOutput/*.msi | ForEach-Object { (Get-FileHash $_).Hash }
           if (($hashes | Select-Object -Unique).Count -ne $hashes.Count) { throw "the variant MSIs are identical" }
 
-      - name: Sign the MSIs
-        if: env.HAS_SIGNING_CERT == 'true'
-        run: |
-          $files = Get-ChildItem SignOutput/*.msi
-          & $env:SIGNTOOL sign /fd sha256 /tr http://timestamp.digicert.com /td sha256 /f "$env:RUNNER_TEMP\codesign.pfx" /p $env:PFX_PASSWORD $files.FullName
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-        env:
-          PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PFX_PASSWORD }}
-
       - name: Verify the MSIs
         run: |
           function Check($msi, $custom) {
@@ -246,6 +402,48 @@ jobs:
           Check (Resolve-Path SignOutput/cRustDesk-${{ env.VERSION }}-x86_64.msi).Path (Resolve-Path res/custom/rustdesk.txt).Path
           Check (Resolve-Path SignOutput/cRustDesk-client-${{ env.VERSION }}-x86_64.msi).Path (Resolve-Path res/custom/client.txt).Path
 
+      - name: Upload the MSIs to sign
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-msi-unsigned
+          path: SignOutput/*.msi
+          retention-days: 1
+
+  sign-msi:
+    if: inputs.sign
+    needs: [msi-signed]
+    runs-on: [self-hosted, codesign]
+    environment: codesign
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: powershell
+    env:
+      THUMBPRINT: 6C7C687E56E18B5FDB47EF52BCAEE74751CFBA79
+      SIGNTOOL: C:\codesign\bin\signtool.exe
+    steps:
+      - name: Clean the workspace
+        run: Get-ChildItem -Force | Remove-Item -Recurse -Force
+
+      - name: Download the MSIs
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: windows-msi-unsigned
+          path: SignOutput
+
+      - name: Sign and verify the MSIs
+        run: |
+          $files = Get-ChildItem SignOutput/*.msi
+          if (@($files).Count -ne 2) { throw "expected 2 MSIs, found $(@($files).Count)" }
+          & $env:SIGNTOOL sign /sha1 $env:THUMBPRINT /fd sha256 /tr http://time.certum.pl /td sha256 $files.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $env:SIGNTOOL verify /pa /q $files.FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          foreach ($f in $files) {
+            $s = Get-AuthenticodeSignature $f.FullName
+            if ($s.Status -ne 'Valid' -or $s.SignerCertificate.Thumbprint -ne $env:THUMBPRINT) { throw "$($f.Name): $($s.Status)" }
+          }
+
       - name: Upload cRustDesk msi
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -259,3 +457,22 @@ jobs:
           name: cRustDesk-client-windows-x86_64-msi
           path: SignOutput/cRustDesk-client-${{ env.VERSION }}-x86_64.msi
           retention-days: 30
+
+  stop-signer:
+    if: always() && needs.start-signer.result == 'success'
+    needs: [start-signer, sign-files, sign-msi]
+    runs-on: ubuntu-24.04
+    environment: codesign
+    permissions:
+      id-token: write
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.CODESIGN_AWS_ROLE }}
+          aws-region: ${{ vars.CODESIGN_AWS_REGION }}
+
+      - name: Stop the signing machine
+        env:
+          INSTANCE: ${{ vars.CODESIGN_INSTANCE_ID }}
+        run: aws ec2 stop-instances --instance-ids "$INSTANCE" > /dev/null

@@ -45,7 +45,12 @@ jobs:
   windows:
     needs: version
     if: needs.version.outputs.release == 'true' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      id-token: write
     uses: ./.github/workflows/windows-build.yml
+    with:
+      sign: ${{ needs.version.outputs.release == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
     secrets: inherit
 
   linux:
@@ -134,7 +139,7 @@ jobs:
           Installers image: \`ghcr.io/crabamole/rustdesk/installers:$VERSION\`
 
           Installers for the device (\`cRustDesk\`) and client-only (\`cRustDesk-client\`) variants.
-          The Windows MSIs are not code-signed, so SmartScreen warns on first run.
+          The Windows MSIs and their programs are code-signed by "Open Source Developer Rophy Tsai" (Certum).
           Verify a download: \`gh attestation verify <file> --repo $GITHUB_REPOSITORY\`
           SBOM (CycloneDX): \`cRustDesk-$VERSION.cdx.json\`
           Deployment guide: [docs/crustdesk-deployment.md](https://github.com/$GITHUB_REPOSITORY/blob/$VERSION/docs/crustdesk-deployment.md)
