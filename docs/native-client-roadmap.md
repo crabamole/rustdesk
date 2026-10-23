@@ -15,7 +15,7 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 
 `.github/workflows/windows-build.yml` builds Windows x64, `.github/workflows/linux-build.yml` Linux x86_64 and `.github/workflows/macos-build.yml` macOS arm64, on manual dispatch and from `.github/workflows/release.yml`.
 
-- [x] Windows x64: two unsigned MSIs per release (`cRustDesk-<ver>-x86_64.msi`, `cRustDesk-client-<ver>-x86_64.msi`). Installs `C:\Program Files\cRustDesk\cRustDesk.exe` with service `cRustDesk`; version info CompanyName `crabamole`, ProductName `cRustDesk`, OriginalFilename `rustdesk.exe`, InternalName `rustdesk`
+- [x] Windows x64: two signed MSIs per release (`cRustDesk-<ver>-x86_64.msi`, `cRustDesk-client-<ver>-x86_64.msi`). Installs `C:\Program Files\cRustDesk\cRustDesk.exe` with service `cRustDesk`; version info CompanyName `crabamole`, ProductName `cRustDesk`, OriginalFilename `rustdesk.exe`, InternalName `rustdesk`
 - [x] Linux x86_64: one `.deb` per variant (`crustdesk-<ver>-x86_64.deb`, `crustdesk-client-<ver>-x86_64.deb`), Ubuntu, X11 only. Package `crustdesk`, `Conflicts: rustdesk, rustdesk-unattended-wayland`; upstream's stock-layout package is renamed by a post-build step
 - [x] macOS arm64: signed, notarized, stapled `cRustDesk` app (DC and client variants) shipped as a zip
 - macOS x86_64 (Intel): not supported; arm64 only

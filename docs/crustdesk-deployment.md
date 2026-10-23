@@ -190,7 +190,8 @@ Get-Service cRustDesk
 ```
 
 It installs `C:\Program Files\cRustDesk\cRustDesk.exe` and, for the DC variant, the service `cRustDesk`;
-the client MSI installs no service. The MSIs and their programs are signed by Open Source Developer Rophy Tsai (Certum), so allow-lists can trust that publisher.
+the client MSI installs no service. The MSIs and their programs are signed by Open Source
+Developer Rophy Tsai (Certum), so allow-lists can trust that publisher.
 
 **Linux** (as root; DC variant):
 

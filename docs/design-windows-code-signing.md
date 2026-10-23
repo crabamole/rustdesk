@@ -9,7 +9,8 @@ certificate, with a timestamp. A person approves each release by entering a one-
 a phone; no stored secret can sign on its own.
 
 Scope: the release run (`release.yml` on master after a version bump). A manual run of
-`windows-build.yml` signs only with `sign: true` on a branch the `codesign` environments allow (master). macOS signing does not change.
+`windows-build.yml` signs only with `sign: true` on a branch the `codesign` environments
+allow (master). macOS signing does not change.
 
 ## Today
 
@@ -104,7 +105,7 @@ have a signature (the RustDesk display driver) keep it.
 
 ## Not done
 
-- No signing for manual or pull-request runs.
+- No signing for pull-request runs, or for manual runs outside the branches the `codesign` environments allow.
 - `flutter_windows.dll` still comes prebuilt from RustDesk's engine release (a mutable release asset, not pinned). Building the engine ourselves is future work.
 - No portable single-file Windows build; it waits for this design.
 - macOS signing and notarization are unchanged.
