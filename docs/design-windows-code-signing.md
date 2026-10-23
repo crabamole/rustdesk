@@ -53,7 +53,9 @@ A Windows Server instance that only signs. It never builds and never runs other 
 The person who releases reads a code from the SimplySign mobile app and runs
 `sign-unlock <code>` on their own machine. The command sends the code to the signing machine
 through the cloud provider's management channel; a task in the signing user's session writes it
-into the SimplySign Desktop login window and waits until the certificate appears.
+into the SimplySign Desktop login window and makes a test signature. When it works, the task
+marks the session ready; `sign-files` waits for that mark. The certificate shows in the store also
+before the login, so its presence is not a check.
 
 - The code never passes through GitHub, so it is not in any public log.
 - No TOTP seed is stored anywhere. Without a new code from the phone, the signing machine

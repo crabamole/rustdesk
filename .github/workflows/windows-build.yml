@@ -298,9 +298,13 @@ jobs:
           path: dist
 
       - name: Wait for the SimplySign session
+        # The certificate is in the store also before the login. The unlock writes the ready
+        # file after a test signature works.
         run: |
+          $boot = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
           for ($i = 0; $i -lt 360; $i++) {
-            if (Get-ChildItem Cert:\CurrentUser\My | Where-Object Thumbprint -eq $env:THUMBPRINT) { exit 0 }
+            $ready = Get-Item C:\codesign\unlock\ready -ErrorAction SilentlyContinue
+            if ($ready -and $ready.LastWriteTime -gt $boot) { exit 0 }
             if ($i % 30 -eq 0) { "waiting for sign-unlock ($($i / 6) min)" }
             Start-Sleep 10
           }
