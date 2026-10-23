@@ -1,6 +1,6 @@
 # Design: Windows Code Signing
 
-**Status: implemented in windows-build.yml; first signed run pending.**
+**Status: implemented in windows-build.yml; first signed test run passed (2026-10-24).**
 
 ## Goal
 
@@ -39,7 +39,8 @@ allow (master). macOS signing does not change.
 
 ### Signing machine
 
-A Windows Server instance that only signs. It never builds and never runs other workflows.
+A Windows Server instance that only signs. It never builds and is meant to run only the signing
+jobs.
 
 - A local user without admin rights logs on automatically at boot. SimplySign Desktop and the
   GitHub Actions runner run in that user's desktop session, because SimplySign exposes the
@@ -74,7 +75,7 @@ the MSIs are built from unsigned files, as today. A manual dispatch can set `sig
 | `start-signer` (sign only) | GitHub-hosted | Waits for the release owner's approval (environment `codesign-approve`; GitHub e-mails the reviewer). Then starts the signing machine (cloud role limited to start and stop that one machine, no stored cloud key). |
 | `build` | GitHub-hosted | Builds and packages both variants as today; uploads `dist/` unsigned. |
 | `sign-files` (sign only) | `codesign` runner | Waits up to 60 minutes for the unlock. Signs every unsigned `.exe` and `.dll` in `dist/`; keeps files that are already signed. Verifies each. Uploads `dist/` signed. |
-| `msi` | GitHub-hosted | Builds and checks the MSIs from `dist/` (signed when signing). |
+| `msi-signed` (sign only) | GitHub-hosted | Builds and checks the MSIs from the signed `dist/`. Without signing, `build` builds the MSIs. |
 | `sign-msi` (sign only) | `codesign` runner | Signs and verifies both MSIs. |
 | `stop-signer` (sign only, always runs) | GitHub-hosted | Stops the signing machine, which also ends the SimplySign session. |
 
@@ -103,8 +104,10 @@ have a signature (the display driver) keep it; the verify step skips the driver.
 - No unlock within 60 minutes: `sign-files` fails, nothing is published, the machine stops.
 - The SimplySign login fails (wrong or expired code): `sign-unlock` reports it; run it again with
   a new code while `sign-files` still waits.
-- The machine does not start: `sign-files` waits for a runner and the run fails at its timeout.
-  The machine stops itself 3 hours after any boot, so a missed stop costs at most 3 hours.
+- The machine does not start: `start-signer` fails and the signing jobs are skipped. If the
+  machine starts but its runner does not come online, `sign-files` waits in the queue until GitHub
+  cancels it (24 hours). The machine stops itself 3 hours after any boot, so a missed stop costs at
+  most 3 hours.
 
 ## Not done
 
