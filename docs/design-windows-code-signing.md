@@ -18,8 +18,9 @@ allow (master). macOS signing does not change.
   (`dist/dc`, `dist/client`), then builds one MSI per variant.
 - Signing steps exist but never ran: they expect a PFX file in a repository secret.
 - The release notes say the MSIs are not signed. SmartScreen warns on first run.
-- Of the 17 PE files in an MSI, only the virtual display driver (`usbmmidd_v2`, prebuilt and
-  signed by RustDesk) has a signature.
+- Of the 17 PE files in an MSI, only the virtual display driver (`usbmmidd_v2`, prebuilt) has a
+  signature, and only a test signature. Windows trusts the driver through its catalog
+  (`usbmmidd.cat`), which Microsoft signs.
 
 ## The certificate
 
@@ -95,7 +96,7 @@ All PE files in the MSIs that are not signed yet: `cRustDesk.exe`, `librustdesk.
 `flutter_windows.dll`, then the two MSIs. All of them come out of our build, except
 `flutter_windows.dll`, which the build downloads from RustDesk's engine release. We sign it too,
 because Windows application control policies need every loaded binary signed. Files that already
-have a signature (the RustDesk display driver) keep it.
+have a signature (the display driver) keep it; the verify step skips the driver.
 
 ### Fail cases
 

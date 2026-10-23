@@ -321,15 +321,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Verify the programs
-        # Every program is signed; all but the prebuilt display driver by us.
+        # Every program but the prebuilt display driver carries our signature. Windows trusts the
+        # driver through its catalog, which Microsoft signs; its DLL has only a test signature.
         run: |
-          $files = Get-ChildItem dist -Recurse -Include *.exe, *.dll
+          $files = Get-ChildItem dist -Recurse -Include *.exe, *.dll |
+            Where-Object FullName -notmatch '\\usbmmidd_v2\\'
           & $env:SIGNTOOL verify /pa /q $files.FullName
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           foreach ($f in $files) {
             $s = Get-AuthenticodeSignature $f.FullName
             if ($s.Status -ne 'Valid') { throw "$($f.FullName): $($s.Status)" }
-            if ($f.FullName -notmatch '\\usbmmidd_v2\\' -and $s.SignerCertificate.Thumbprint -ne $env:THUMBPRINT) {
+            if ($s.SignerCertificate.Thumbprint -ne $env:THUMBPRINT) {
               throw "$($f.FullName): signed by $($s.SignerCertificate.Subject)"
             }
           }
