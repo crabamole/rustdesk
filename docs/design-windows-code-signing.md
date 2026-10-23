@@ -67,14 +67,16 @@ the MSIs are built from unsigned files, as today.
 
 | Job | Runs on | Does |
 |---|---|---|
-| `start-signer` (sign only) | GitHub-hosted | Starts the signing machine (cloud role limited to start and stop that one machine, no stored cloud key). Sends a notification: unlock needed. |
+| `start-signer` (sign only) | GitHub-hosted | Waits for the release owner's approval (environment `codesign-approve`; GitHub e-mails the reviewer). Then starts the signing machine (cloud role limited to start and stop that one machine, no stored cloud key). |
 | `build` | GitHub-hosted | Builds and packages both variants as today; uploads `dist/` unsigned. |
 | `sign-files` (sign only) | `codesign` runner | Waits up to 60 minutes for the unlock. Signs every unsigned `.exe` and `.dll` in `dist/`; keeps files that are already signed. Verifies each. Uploads `dist/` signed. |
 | `msi` | GitHub-hosted | Builds and checks the MSIs from `dist/` (signed when signing). |
 | `sign-msi` (sign only) | `codesign` runner | Signs and verifies both MSIs. |
 | `stop-signer` (sign only, always runs) | GitHub-hosted | Stops the signing machine, which also ends the SimplySign session. |
 
-The signing jobs run in the GitHub environment `codesign`, which only master may use. They do
+The approval is the notification: the release owner gets GitHub's "review pending" e-mail,
+approves, then runs `sign-unlock` once the machine is up. The signing jobs run in the GitHub
+environment `codesign`, which only master may use and which needs no further approval. They do
 not check out code: they work only on the downloaded artifacts with the `signtool` installed on
 the machine.
 
