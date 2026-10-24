@@ -1,6 +1,6 @@
 # Design: Clipboard Text Audit
 
-**Status: approved; not implemented.** Client side here; server side in
+**Status: implemented (clients 1.5.0-4, rustdesk-api 3.8.0).** Client side here; server side in
 [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api).
 
 ## Goal
@@ -67,7 +67,7 @@ The transport contract is the file audit's: `nonce` deduplication, an empty body
 - `lazy_clipboard::on_reply` tells the connection when a reply matched an open request and held
   text: the format and the size.
 - The connection then calls `post_clipboard_audit`, beside `post_file_audit`, which has the audit
-  URL, `conn_id` and the viewer's details. The hook in `connection.rs` stays one line.
+  URL, `conn_id` and the viewer's details. The hook in `connection.rs` is a thin call.
 
 ### api-server
 
@@ -82,7 +82,7 @@ The transport contract is the file audit's: `nonce` deduplication, an empty body
 ## Version Pairing
 
 Clients 1.5.0-4 and rustdesk-api 3.8.0 (chart 0.13.0). A 1.5.0-4 device with an older api-server
-gets 404, retries for 2 minutes and drops the record; nothing else changes. Older devices write no
+gets 404 and drops the record (one error line in its log); nothing else changes. Older devices write no
 clipboard records.
 
 ## Testing
