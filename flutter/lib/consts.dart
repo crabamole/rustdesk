@@ -719,3 +719,7 @@ extension WindowsTargetExt on int {
 }
 
 const kCheckSoftwareUpdateFinish = 'check_software_update_finish';
+
+const kSourceUrl = 'https://github.com/crabamole/rustdesk';
+const kUpstreamUrl = 'https://github.com/rustdesk/rustdesk';
+const kLicenseUrl = 'https://github.com/crabamole/rustdesk/blob/master/LICENCE';
