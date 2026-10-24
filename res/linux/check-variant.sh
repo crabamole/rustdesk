@@ -12,7 +12,7 @@ has() { grep -qE -- "$2" "$1" 2>/dev/null || fail "$1: missing $2"; }
 has DEBIAN/control '^Package: crustdesk$'
 has DEBIAN/control '^Description: .*RustDesk fork'
 has DEBIAN/control '^Conflicts: rustdesk, rustdesk-unattended-wayland$'
-has DEBIAN/control '^Maintainer: crabamole <https://github.com/crabamole>$'
+has DEBIAN/control '^Maintainer: crabamole <592046\+rophy@users.noreply.github.com>$'
 ! grep -qE '^(Replaces|Provides):' DEBIAN/control || fail "DEBIAN/control: Replaces/Provides present"
 
 [ -f usr/share/crustdesk/crustdesk ] && [ -x usr/share/crustdesk/crustdesk ] || fail "usr/share/crustdesk/crustdesk is not an executable file"

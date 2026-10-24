@@ -16,7 +16,7 @@ install -m 644 "$custom" usr/share/crustdesk/custom.txt
 # Every reference becomes crustdesk, except the link scheme, which stays rustdesk://.
 grep -rlI 'rustdesk' DEBIAN usr/share/crustdesk/files usr/share/applications \
   | xargs sed -i -e 's/x-scheme-handler\/rustdesk/x-scheme-handler\/@@SCHEME@@/' -e 's/\brustdesk\b/crustdesk/g' -e 's/@@SCHEME@@/rustdesk/'
-sed -i -e 's/^Package: .*/Package: crustdesk/' -e 's/^Maintainer: .*/Maintainer: crabamole <https:\/\/github.com\/crabamole>/' \
+sed -i -e 's/^Package: .*/Package: crustdesk/' -e 's/^Maintainer: .*/Maintainer: crabamole <592046+rophy@users.noreply.github.com>/' \
   -e 's/^Homepage: .*/Homepage: https:\/\/github.com\/crabamole\/rustdesk/' -e '/^Replaces:/d' -e '/^Provides:/d' -e '/^Conflicts:/d' DEBIAN/control
 sed -i '0,/^Description:/s/^Description: .*/Description: cRustDesk, a RustDesk fork by crabamole/' DEBIAN/control
 sed -i '/^Package:/a Conflicts: rustdesk, rustdesk-unattended-wayland' DEBIAN/control
