@@ -39,6 +39,13 @@ pub trait Provider: Send {
     fn clear(&mut self);
 }
 
+/// Viewer text that arrived for an open request (docs/design-clipboard-monitoring.md).
+#[derive(Debug, PartialEq)]
+pub struct Arrival {
+    pub format: ClipboardFormat,
+    pub size: usize,
+}
+
 struct Offer {
     conn_id: i32,
     seq: u32,
@@ -125,14 +132,17 @@ impl Hub {
         Some(Pending { id: self.next_id, rx, tx: offer.tx.clone(), msg })
     }
 
-    fn reply(&mut self, conn_id: i32, reply: ClipboardReply) {
+    fn reply(&mut self, conn_id: i32, reply: ClipboardReply) -> Option<Arrival> {
         let format = reply.clipboard.format.enum_value().ok();
         if let Some(i) = self.waiters.iter().position(|w| {
             w.conn_id == conn_id && w.seq == reply.seq && Some(w.format) == format
         }) {
             let waiter = self.waiters.remove(i);
+            let size = content(reply.clipboard.clone().unwrap_or_default()).map_or(0, |d| d.len());
             waiter.tx.send(reply.clipboard.unwrap_or_default()).ok();
+            return (size > 0).then_some(Arrival { format: waiter.format, size });
         }
+        None
     }
 
     fn forget(&mut self, id: u64) {
@@ -205,10 +215,8 @@ pub fn on_offer(conn_id: i32, tx: Option<Sender>, offer: ClipboardOffer) {
     }
 }
 
-pub fn on_reply(conn_id: i32, reply: ClipboardReply) {
-    if let Some(hub) = hub().lock().unwrap().as_mut() {
-        hub.reply(conn_id, reply);
-    }
+pub fn on_reply(conn_id: i32, reply: ClipboardReply) -> Option<Arrival> {
+    hub().lock().unwrap().as_mut()?.reply(conn_id, reply)
 }
 
 pub fn on_close(conn_id: i32) {
@@ -372,5 +380,44 @@ mod tests {
         hub.offer(7, tx, offer(4, &[]));
         assert_eq!(calls.lock().unwrap().cleared, 1);
         assert!(hub.request(ClipboardFormat::Text).is_none());
+    }
+
+    fn arrival_hub() -> Hub {
+        let (mut hub, _) = fake_hub();
+        let (tx, _rx) = unbounded_channel();
+        hub.offer(1, tx, offer(1, &[ClipboardFormat::Text]));
+        hub.request(ClipboardFormat::Text).unwrap();
+        hub
+    }
+
+    #[test]
+    fn a_reply_to_an_open_request_is_an_arrival() {
+        let mut hub = arrival_hub();
+        assert_eq!(
+            hub.reply(1, reply(1, ClipboardFormat::Text, "hello")),
+            Some(Arrival { format: ClipboardFormat::Text, size: 5 })
+        );
+        assert_eq!(hub.reply(1, reply(1, ClipboardFormat::Text, "hello")), None);
+    }
+
+    #[test]
+    fn a_stale_foreign_or_empty_reply_is_no_arrival() {
+        let mut hub = arrival_hub();
+        assert_eq!(hub.reply(1, reply(2, ClipboardFormat::Text, "hello")), None);
+        assert_eq!(hub.reply(2, reply(1, ClipboardFormat::Text, "hello")), None);
+        assert_eq!(hub.reply(1, reply(1, ClipboardFormat::Text, "")), None);
+    }
+
+    #[test]
+    fn the_size_of_an_arrival_is_the_decompressed_size() {
+        let mut hub = arrival_hub();
+        let mut r = reply(1, ClipboardFormat::Text, "");
+        r.clipboard = MessageField::some(Clipboard {
+            format: ClipboardFormat::Text.into(),
+            compress: true,
+            content: hbb_common::compress::compress(b"hello").into(),
+            ..Default::default()
+        });
+        assert_eq!(hub.reply(1, r), Some(Arrival { format: ClipboardFormat::Text, size: 5 }));
     }
 }

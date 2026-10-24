@@ -1616,6 +1616,38 @@ impl Connection {
         });
     }
 
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    fn post_clipboard_audit(&self, arrival: super::lazy_clipboard::Arrival) {
+        use base::message_proto::ClipboardFormat;
+        let url = crate::get_audit_server(
+            Config::get_option("api-server"),
+            Config::get_option("custom-rendezvous-server"),
+            "clipboard".to_owned(),
+        );
+        if url.is_empty() {
+            return;
+        }
+        let format = match arrival.format {
+            ClipboardFormat::Rtf => "rtf",
+            ClipboardFormat::Html => "html",
+            _ => "text",
+        };
+        let v = json!({
+            "id": Config::get_id(),
+            "uuid": crate::encode64(hbb_common::get_uuid()),
+            "peer_id": self.lr.my_id,
+            "conn_id": self.inner.id(),
+            "type": FileAuditType::RemoteReceive as i8,
+            "format": format,
+            "size": arrival.size,
+            "info": json!({ "ip": self.ip, "name": self.lr.my_name }).to_string(),
+            "nonce": uuid::Uuid::new_v4().to_string(),
+        });
+        tokio::spawn(async move {
+            allow_err!(Self::post_audit_async(url, v).await);
+        });
+    }
+
     fn post_alarm_audit(&self, typ: AlarmAuditType, info: Value) {
         let url = crate::get_audit_server(
             Config::get_option("api-server"),
@@ -3412,7 +3444,9 @@ impl Connection {
                 }
                 #[cfg(not(any(target_os = "android", target_os = "ios")))]
                 Some(message::Union::ClipboardReply(reply)) => {
-                    super::lazy_clipboard::on_reply(self.inner.id(), reply);
+                    if let Some(arrival) = super::lazy_clipboard::on_reply(self.inner.id(), reply) {
+                        self.post_clipboard_audit(arrival);
+                    }
                 }
                 #[cfg(any(target_os = "windows", feature = "unix-file-copy-paste"))]
                 Some(message::Union::Cliprdr(clip)) => {
