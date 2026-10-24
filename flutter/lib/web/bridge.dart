@@ -1816,7 +1816,7 @@ class RustdeskImpl {
   }
 
   String mainGetBuildinOption({required String key, dynamic hint}) {
-    return mainGetLocalOption(key: key, hint: hint);
+    return js.context.callMethod('getByName', ['option:buildin', key]);
   }
 
   String installInstallOptions({dynamic hint}) {

@@ -235,6 +235,15 @@ describe("setByName / getByName", () => {
     expect((window as any).getByName("version")).toBe("1.0.0-test");
   });
 
+  it("names the app cRustDesk", () => {
+    expect((window as any).getByName("app-name")).toBe("cRustDesk");
+  });
+
+  it("hides the powered-by link like the native builds", () => {
+    expect((window as any).getByName("option:buildin", "hide-powered-by-me")).toBe("Y");
+    expect((window as any).getByName("option:buildin", "hide-help-cards")).toBe("");
+  });
+
   it("reports login progress with the native client's state text", () => {
     vi.spyOn(window, "open").mockReturnValue(null);
     vi.spyOn(globalThis, "fetch").mockReturnValue(new Promise(() => {}));

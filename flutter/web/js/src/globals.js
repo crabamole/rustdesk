@@ -513,6 +513,9 @@ function getPeersForDart() {
   return peers.sort().reverse().map(x => x.slice(1));
 }
 
+// Mirrors res/custom/*.json; the web client reads no custom.txt.
+const buildinOptions = { 'hide-powered-by-me': 'Y' };
+
 function _getByName(name, arg) {
   switch (name) {
     case 'peers':
@@ -559,6 +562,10 @@ function _getByName(name, arg) {
       break;
     case 'version':
       return version;
+    case 'app-name':
+      return 'cRustDesk';
+    case 'option:buildin':
+      return buildinOptions[arg] || '';
     case 'get_conn_status':
       return JSON.stringify({"status_num": 1});
     case 'is_using_public_server':
