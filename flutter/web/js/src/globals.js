@@ -432,7 +432,7 @@ window.setByName = (name, value) => {
       const k = JSON.parse(value);
       const conn = curConn;
       const paste = k.name == 'VK_V' && (k.down == 'true' || k.press == 'true') && (k.ctrl == 'true' || k.command == 'true');
-      queueKey(paste ? () => conn.offerClipboard() : undefined, () => conn.inputKey(k.name, k.down == 'true', k.press == 'true', k.alt == 'true', k.ctrl == 'true', k.shift == 'true', k.command == 'true'));
+      queueKey(paste ? () => conn.offerClipboard(true) : undefined, () => conn.inputKey(k.name, k.down == 'true', k.press == 'true', k.alt == 'true', k.ctrl == 'true', k.shift == 'true', k.command == 'true'));
       break;
     }
     case 'enter_or_leave':

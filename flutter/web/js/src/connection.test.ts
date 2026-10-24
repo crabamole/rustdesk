@@ -529,6 +529,7 @@ describe("Connection", () => {
 
     it("offers nothing for text the device just sent", async () => {
       browserClipboard("from-device");
+      vi.mocked(globals.copyToClipboard).mockReturnValueOnce(true);
       connectTo(true);
       mockWs.next
         .mockResolvedValueOnce({ clipboard: { compress: false, content: new TextEncoder().encode("from-device") } })
@@ -538,12 +539,27 @@ describe("Connection", () => {
       expect(sent("clipboard_offer")).toEqual([]);
     });
 
-    it("offers nothing and shows the browser tip once when the local read fails", async () => {
+    it("does not offer the old browser text again after the copy of the device text failed", async () => {
+      browserClipboard("old-browser-text");
+      vi.mocked(globals.copyToClipboard).mockReturnValueOnce(false);
+      connectTo(true);
+      await conn.offerClipboard();
+      mockWs.next
+        .mockResolvedValueOnce({ clipboard: { compress: false, content: new TextEncoder().encode("from-device") } })
+        .mockResolvedValueOnce({ misc: { close_reason: "done" } });
+      await conn.msgLoop();
+      await conn.offerClipboard();
+      expect(sent("clipboard_offer")).toEqual([{ seq: 1, formats: [0] }]);
+    });
+
+    it("shows the browser tip only for an interactive offer whose local read fails", async () => {
       vi.stubGlobal("navigator", { clipboard: { read: vi.fn().mockRejectedValue(new Error("denied")) } });
       const msgbox = vi.spyOn(conn, "msgbox");
       connectTo(true);
       await conn.offerClipboard();
-      await conn.offerClipboard();
+      expect(tips(msgbox, "clipboard_on_request_browser_tip")).toBe(0);
+      await conn.offerClipboard(true);
+      await conn.offerClipboard(true);
       expect(sent("clipboard_offer")).toEqual([]);
       expect(tips(msgbox, "clipboard_on_request_browser_tip")).toBe(1);
     });

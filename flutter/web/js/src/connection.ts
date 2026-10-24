@@ -318,8 +318,8 @@ export default class Connection {
           cb.content = c;
         }
         try {
-          this._lastClipboard = new TextDecoder().decode(cb.content);
-          globals.copyToClipboard(this._lastClipboard);
+          const text = new TextDecoder().decode(cb.content);
+          if (globals.copyToClipboard(text)) this._lastClipboard = text;
         } catch (e) {
           console.error(e);
         }
@@ -685,7 +685,7 @@ export default class Connection {
   }
 
   /** Offers the browser clipboard's formats when its text is new; the content goes only on request. */
-  async offerClipboard() {
+  async offerClipboard(interactive = false) {
     if (!this.lazyTextClipboard()) return;
     if (!this._clipboardAllowed || this._options["disable-clipboard"]) return;
     let local;
@@ -693,7 +693,7 @@ export default class Connection {
       local = await withTimeout(readLocalClipboard(), LOCAL_READ_TIMEOUT_MS);
     } catch (e) {
       console.debug("Reading the clipboard failed:", e);
-      this.showBrowserTip();
+      if (interactive) this.showBrowserTip();
       return;
     }
     if (!local.text || local.text == this._lastClipboard) return;

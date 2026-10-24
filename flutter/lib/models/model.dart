@@ -908,6 +908,13 @@ class FfiModel with ChangeNotifier {
       parent.target?.inputModel.setRelativeMouseMode(false);
     }
 
+    if (text == 'clipboard_on_request_old_device_tip' &&
+        waitForFirstImage.value) {
+      parent.target?.imageModel.addCallbackOnFirstImage(
+          (_) => handleMsgBox(evt, sessionId, peerId));
+      return;
+    }
+
     if (type == 're-input-password') {
       wrongPasswordDialog(sessionId, dialogManager, type, title, text);
     } else if (type == 'input-2fa') {
