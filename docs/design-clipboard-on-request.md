@@ -116,7 +116,7 @@ the transfer eager again.
 
 - A program on the device that reads the clipboard in the background (a security tool, a
   clipboard manager such as GNOME's or possibly Windows clipboard history) reads the entry at
-  once, so the transfer is eager there. The audit counts these reads.
+  once, so the transfer is eager there. The clipboard audit records these reads as arrivals.
 - Firefox and Safari web viewers cannot paste into the device.
 - Android and iOS viewers cannot paste into devices with the flag.
 - Desktop and web viewers cannot paste into Android devices or Wayland desktops (they do not
@@ -172,5 +172,4 @@ client on either side, text paste does not work. The release notes and `UPGRADIN
 
 ## Next
 
-Clipboard audit: the device writes one record per answered request (format, size, viewer
-connection, time; never the content), from the reply handler in `lazy_clipboard/mod.rs`.
+Clipboard audit: [design-clipboard-monitoring.md](design-clipboard-monitoring.md).

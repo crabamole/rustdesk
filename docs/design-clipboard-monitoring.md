@@ -1,186 +1,100 @@
-# Design: Clipboard Activity Monitoring
+# Design: Clipboard Text Audit
 
-**Status: not implemented.** The clipboard audit endpoint and client calls below are
-still to be built, on [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api).
-
-## Problem
-
-RustDesk has file transfer auditing (`post_file_audit()` → `{api-server}/api/audit/file`)
-but no text clipboard auditing. The OSS server (hbbs/hbbr) has no API server — the
-api-server is a separate HTTP service, provided commercially by RustDesk Pro.
+**Status: approved; not implemented.** Client side here; server side in
+[crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api).
 
 ## Goal
 
-Log all clipboard transfers (text and file, both directions) for compliance and security
-monitoring, independent of clipboard direction policy.
+The audit log shows each time clipboard text from a viewer arrives on a device: when, on which
+device, from which viewer and user, which format and how many bytes. It never holds the text.
 
-## Background: The API Server
+This builds on [design-clipboard-on-request.md](design-clipboard-on-request.md): the device gets
+viewer text only when a program on it reads the clipboard, so one arrival is one record.
 
-The `api-server` is a separate HTTP service, distinct from hbbs/hbbr. It provides
-the management plane for RustDesk deployments:
+## Today
 
-| Category | Endpoints | Features |
-|----------|-----------|----------|
-| **Audit** | `/api/audit/conn`, `/api/audit/file`, `/api/audit/alarm` | Connection, file transfer, and security event logging |
-| **Heartbeat** | `/api/heartbeat`, `/api/sysinfo` | Device inventory, online status, remote config push |
-| **Auth** | `/api/login-options`, `/api/oidc/auth` | OIDC/SSO login |
-| **Device** | `/api/devices/cli`, `/api/devices/deploy` | Device provisioning |
-| **Recording** | `/api/record` | Session recording upload |
-| **Address Book** | (various) | Shared device lists, groups, tags |
+- Upstream RustDesk audits connections (`/api/audit/conn`), files (`/api/audit/file`, clipboard
+  files included, with an empty `path`) and alarms (`/api/audit/alarm`). It has no clipboard-text
+  event, and RustDesk Pro has no such endpoint.
+- Our devices sign their audit calls with their device key; the api-server refuses unsigned
+  device calls ([design-signed-device-calls.md](design-signed-device-calls.md)).
 
-The heartbeat response can **push config** to devices (`strategy.config_options`),
-providing an alternative to `RustDesk2.toml` preseed for remote configuration management.
+## Design
 
-Configured via `api-server` option in `RustDesk2.toml`, or auto-derived from hbbs
-address (port - 2, e.g. 21116 → 21114).
+### When the device writes a record
 
-## Community API Server Implementations
+One record per arrival: a program on the device read the clipboard entry, the device requested
+the text, and the viewer's reply with non-empty text arrived for that open request. This covers
+native and web viewers, because the device writes the record.
 
-Several open-source projects implement the RustDesk api-server contract:
+No record for:
 
-| Project | Stars | Forks | Language | Last Updated | Features |
-|---------|-------|-------|----------|-------------|----------|
-| [lejianwen/rustdesk-api](https://github.com/lejianwen/rustdesk-api) | 3,104 | 732 | Go | 2025-09 | Most complete: web admin UI, OIDC, audit, address book |
-| [lantongxue/rustdesk-api-server-pro](https://github.com/lantongxue/rustdesk-api-server-pro) | 351 | 89 | Go | 2026-04 | All client APIs, web UI |
-| [sctg-development/sctgdesk-api-server](https://github.com/sctg-development/sctgdesk-api-server) | 141 | 38 | TypeScript | 2025-12 | Swagger docs at `/api/doc`, OAuth2 |
+- a request that times out, an empty reply, or a reply after the connection closed;
+- clipboard files: they stay in the file audit, as upstream;
+- the device → viewer direction: the device build locks it (one-way clipboard).
 
-**None implement `/api/audit/clipboard`** — that is our custom addition.
+A program that reads the clipboard in the background (a security tool, a clipboard manager)
+causes an arrival too, so it is recorded: text did enter the device.
 
-## Decision: build on crabamole/rustdesk-api
+### Record
 
-Implement the endpoint in [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api),
-our fork of sctgdesk-api-server, which is already deployed by the chart and has the
-connection, file and alarm audit endpoints to extend.
-
-**Do not use lejianwen/rustdesk-api**, as a base or as a source of code: its licensing
-does not fit this AGPL-3.0 project (it distributes RustDesk-derived code under another
-license). Its documentation may be read for ideas; its code must not be copied.
-
-## Scope
-
-### 1. API Server (crabamole/rustdesk-api)
-
-Add `/api/audit/clipboard` endpoint next to the existing audit endpoints. Store alongside
-connection and file audit events in the same PostgreSQL database.
-
-### 2. Client-Side: Text Clipboard Audit Calls (crabamole/rustdesk)
-
-Add `post_clipboard_audit()` mirroring the existing `post_file_audit()` pattern.
-
-#### Existing File Audit (for reference)
-
-`src/server/connection.rs:1530-1565` — `post_file_audit()`:
-- POST to `{api-server}/api/audit/file`
-- Payload: device ID, peer ID, connection ID, file path, type, nonce
-- Retries with backoff (10s, 30s) up to 120s deadline
-- Nonce for server-side deduplication
-
-#### Insertion Points for Text Clipboard
-
-**Inbound (client→server):**
-- `src/server/connection.rs:3237` — `Clipboard(cb)` message received
-- `src/server/connection.rs:3265` — `MultiClipboards(_mcb)` message received
-
-**Outbound (server→client):**
-- `src/server/clipboard_service.rs:89` — clipboard message sent to subscribers
-
-#### Proposed `post_clipboard_audit()`
-
-```rust
-fn post_clipboard_audit(peer_id: &str, conn_id: i32, direction: &str, content_length: usize) {
-    // mirrors post_file_audit() pattern
-    // POST to {api-server}/api/audit/clipboard
-}
-```
-
-Payload:
+`POST {api-server}/api/audit/clipboard`, signed like the other device calls:
 
 ```json
 {
-  "id": "<device_id>",
-  "uuid": "<device_uuid>",
-  "peer_id": "<remote_peer_id>",
-  "conn_id": 123,
-  "direction": "inbound",
-  "content_length": 1024,
-  "blocked": false,
-  "nonce": "<uuid-v4>",
-  "timestamp": "2026-09-10T12:00:00Z"
+  "id": "<device id>", "uuid": "<b64 device uuid>",
+  "peer_id": "<viewer id>", "conn_id": 17,
+  "type": 1,
+  "format": "text",
+  "size": 123,
+  "info": "{\"ip\":\"203.0.113.5\",\"name\":\"alice-laptop\"}",
+  "nonce": "<uuidv4>"
 }
 ```
 
-**Content is NOT sent** — only metadata. Data is e2e encrypted and the audit server
-should not see plaintext clipboard content.
+| Field | Meaning |
+|---|---|
+| `type` | 1: viewer → device, as `RemoteReceive` in the file audit. Kept so the other direction can be added without a schema change. |
+| `format` | `text`, `rtf` or `html`: the format the program asked for |
+| `size` | bytes of the text after decompression |
+| `info` | JSON string: viewer `ip` and `name`, as in the file audit |
 
-~30 lines in `src/server/connection.rs` + `src/server/clipboard_service.rs`.
+The transport contract is the file audit's: `nonce` deduplication, an empty body when stored,
+`{"error": ...}` otherwise, retries with backoff up to 2 minutes.
 
-## Architecture
+### Client
 
-```
-RustDesk Client (controlled device)
-  │
-  │ POST /api/audit/clipboard  (text clipboard events)
-  │ POST /api/audit/file       (file transfer events)
-  │ POST /api/audit/conn       (connection events)
-  │ POST /api/heartbeat        (device status, every 15s)
-  │ POST /api/sysinfo          (device inventory)
-  │
-  ▼
-web client nginx (rustdesk.example.com:443)
-  │
-  ├── /ws/id       → hbbs:21118
-  ├── /ws/relay/<n> → hbbr pod <n>:21119
-  ├── /api/, /ui   → rustdesk-api:21114
-  └── /            → web client
-  │
-  ▼
-rustdesk-api (crabamole/rustdesk-api)
-  │
-  ├── Audit: connections, files, alarms, + clipboard (to add)
-  ├── Device management: heartbeat, sysinfo, address book
-  ├── Auth: OIDC login
-  └── Web console (/ui)
-```
+- `lazy_clipboard::on_reply` tells the connection when a reply matched an open request and held
+  text: the format and the size.
+- The connection then calls `post_clipboard_audit`, beside `post_file_audit`, which has the audit
+  URL, `conn_id` and the viewer's details. The hook in `connection.rs` stays one line.
 
-## Deployment
+### api-server
 
-No new component: the chart already deploys rustdesk-api and routes `/api/` to it.
+- Table `audit_clipboard` (new migration): device id and uuid, viewer id, `conn_id`, `type`,
+  `format`, `size`, viewer ip and name, the attributed user, unique `nonce`, time.
+- `POST /api/audit/clipboard`: signed device call; the viewer's user is attributed through the
+  connection, as for file records.
+- `GET /api/audits/clipboard`: the console list, same filters and paging as `file`.
+- Console: a **Clipboard** tab with Time, Device, Viewer, User, Direction, Format, Size, Address.
+- `docs/audit-api-spec.md`: a section for the endpoint, marked as not upstream.
 
-Client configuration in `RustDesk2.toml`:
+## Version Pairing
 
-```toml
-[options]
-api-server = 'https://rustdesk.example.com'
-```
+Clients 1.5.0-4 and rustdesk-api 3.8.0 (chart 0.13.0). A 1.5.0-4 device with an older api-server
+gets 404, retries for 2 minutes and drops the record; nothing else changes. Older devices write no
+clipboard records.
 
-Same domain as hbbs/hbbr/web client — the web client's nginx routes `/api/` to the api-server.
+## Testing
 
-## Repos
+- api-server: a signed record is stored and listed; the same `nonce` is stored once; an unsigned
+  call is refused.
+- Client: unit test that a matched reply with text yields format and size, and that an empty,
+  stale or late reply yields nothing.
+- End to end: a paste of viewer text on the device adds one record with the right format and size;
+  a paste of text copied on the device adds none.
 
-| Repo | Purpose |
-|------|---------|
-| `crabamole/rustdesk` | Add `post_clipboard_audit()` calls (~30 lines) |
-| `crabamole/rustdesk-api` | Add `/api/audit/clipboard` endpoint |
+## Limits
 
-## Additional Value from API Server
-
-Beyond clipboard monitoring, deploying the api-server enables:
-
-- **Remote config push** — heartbeat response can set normal device options such as
-  `enable-clipboard`; built-in settings like `one-way-clipboard-redirection` still need
-  `custom.txt` (see design-config-enforcement.md)
-- **Device inventory** — sysinfo gives visibility into all deployed devices
-- **Connection audit** — already built-in, no client patch needed
-- **Address book** — shared device lists for users
-- **OIDC login** — SSO integration with corporate identity provider
-
-## Open Questions
-
-- Retention policy for audit logs?
-- Do we need the web admin UI exposed externally, or internal only?
-
-## Related
-
-- [design-clipboard-direction.md](design-clipboard-direction.md) — clipboard direction control
-- [design-config-enforcement.md](design-config-enforcement.md) — protecting settings
-- [design-trusted-builds.md](design-trusted-builds.md) — custom builds and attestation
+- The record says that text arrived, not that a person pasted it (background readers).
+- The api-server stores what the device reports; the size is the device's figure.
