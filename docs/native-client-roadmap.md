@@ -129,10 +129,10 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 - Design: [design-multi-replica.md](design-multi-replica.md)
 
 ### Clipboard Audit
-- [ ] Hosts report clipboard arrivals to the api-server (formats and sizes, no content)
-- [ ] Text on request: a copy on the viewer sends format names only; the device requests the content when an app on it reads the clipboard (native viewers and the web client; text, RTF, HTML). Design: [design-clipboard-on-request.md](design-clipboard-on-request.md). X11 devices and all viewers done on `feat/clipboard-on-request`.
+- [x] Hosts report clipboard arrivals to the api-server (formats and sizes, no content), clients 1.5.0-4 with rustdesk-api 3.8.0
+- [x] Text on request: a copy on the viewer sends format names only; the device requests the content when an app on it reads the clipboard (native viewers and the web client; text, RTF, HTML). Design: [design-clipboard-on-request.md](design-clipboard-on-request.md). X11, Windows and macOS devices; no Wayland provider.
 - Why first: the native viewer pushes every clipboard change to all open sessions, pasted or not (RDP transfers on paste); an audit of that push would not show what was pasted. With the DC's one-way clipboard only viewer → device traffic exists
-- **Today:** connection and file audit only; paused until the current features are tried out
+- **Today:** connection, file and clipboard text audit
 - Design: [design-clipboard-monitoring.md](design-clipboard-monitoring.md) (text arrivals, on top of clipboard on request)
 
 ### OIDC-Only Login Form

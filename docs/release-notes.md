@@ -2,6 +2,16 @@
 
 Newest first. The release workflow copies a version's section into its GitHub Release.
 
+## 1.5.0-4
+
+- Clipboard text on request: a copy on the viewer sends only the format names to the device. The device fetches the text when a program on it reads the clipboard, usually a paste. Text, RTF and HTML; file copy does not change.
+- **Upgrade viewers and devices together.** With an older client on either side, pasting text into the device does not work.
+- Limits: Firefox and Safari web viewers cannot paste into a device; Android and iOS viewers cannot paste into devices with this release; desktop and web viewers cannot paste into Android devices or Wayland desktops; images are no longer sent to the device; on a macOS device, input can pause for up to 2 s while a program waits for the viewer's text. A program on the device that reads the clipboard in the background (a security tool, a clipboard manager) fetches the text at once.
+- Clipboard audit: the device records each arrival of viewer text at the api-server (format, size, viewer and user; never the text). The console shows it under Audit log, Clipboard. Needs rustdesk-api 3.8.0; with an older api-server the record is dropped and nothing else changes.
+- Web client: the "old device" clipboard note now stays visible after the first image; a failed copy into the browser no longer marks that text as offered; the browser clipboard tip shows only after Ctrl/Cmd+V, not when the pointer enters the session.
+- Windows: the MSIs and their programs are code-signed by "Open Source Developer Rophy Tsai" (Certum), with a timestamp. The prebuilt display driver keeps its own trust through Microsoft's catalog.
+- Works with rustdesk-server 1.1.16-6, rustdesk-api 3.8.0 and Helm chart 0.13.0.
+
 ## 1.5.0-3
 
 - With WebSocket on (always in our builds), clients no longer look up or contact public STUN servers at service or app start to find a public IPv6 address. IPv6 hole punching does not run over WebSocket, so nothing used that address.
