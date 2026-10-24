@@ -119,4 +119,4 @@ have a signature (the display driver) keep it; the verify step skips the driver.
 ## Operations
 
 The signing machine's setup (infrastructure code, unlock scripts, secrets and hardening) is
-kept in the private e2e repository.
+not kept in this repository.

@@ -74,7 +74,7 @@ IdP's error redirect matches no route.
 
 - Integration (rustdesk-api): one test per outcome, the `client` mapping, the read API's
   filters and admin check, deleted user keeps `user_name`.
-- e2e (rustdesk-e2e): a mock-OIDC login from the web client and the console each add an
+- e2e: a mock-OIDC login from the web client and the console each add an
   `ok` row; a wrong verifier adds `refused`; the Logins tab shows them.
 
 ## Open Questions

@@ -58,7 +58,7 @@ Nothing is stored for the check: no nonce table, no new column.
 |---|---|
 | rustdesk | `src/device_call.rs`: message and header; one-line hooks in `hbbs_http/sync.rs` and `post_audit_async` |
 | rustdesk-api | `SignedDevice<T>` data guard on the five endpoints; `device_call` verify function |
-| rustdesk-e2e | test signer for direct device calls; registered test keys |
+| end-to-end tests | test signer for direct device calls; registered test keys |
 
 ## Regression Surface
 

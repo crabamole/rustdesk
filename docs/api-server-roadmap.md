@@ -180,7 +180,7 @@ Follow the RustDesk Pro API paging (`current`, `pageSize`, `{ total, data }`) on
 - [x] **Istio Gateway ingress** — the chart renders a VirtualService that routes `/ws/id`, each `/ws/relay/<n>`, `/api/` and `/ui` straight to hbbs, hbbr pod n and the api-server; the web client serves static files only (after chart 0.9.0; the test-only OIDC mock is routed too from chart 0.11.0; design: [design-istio-gateway.md](design-istio-gateway.md))
 - [x] **Web Client** — Flutter web client restored from OSS, served as static files by nginx; loads nothing from the internet
 - [x] **Helm Chart & K8s** — separate deployments for hbbs, hbbr, webclient, api-server, plus bundled PostgreSQL StatefulSet; published to `oci://ghcr.io/crabamole/charts/rustdesk`
-- [x] **E2E Regression Suite** — rustdesk-e2e (Vitest + Playwright): API, OIDC, web client to Linux/Mac peers, extraCACerts, shared database and database-restart resilience, with server coverage collection
+- [x] **E2E Regression Suite** — end-to-end tests (Vitest + Playwright): API, OIDC, web client to Linux/Mac peers, extraCACerts, shared database and database-restart resilience, with server coverage collection
 - [x] **OIDC Authentication** — generic OIDC (`Oauth2` provider: Entra ID, Okta, Keycloak, Google, ...), plus Dex and GitHub; auto-create users on first login
 - [x] **Extra CA Certs** — `extraCACerts` Helm value mounts corporate CA bundle, apiserver uses `rustls-tls-native-roots` + `SSL_CERT_FILE` for OIDC token exchange
 - [x] **Chart Hardening** — non-root pods, ingress-only NetworkPolicies, no ServiceAccount token, required keypair and public host checked at install, Istio sidecars off

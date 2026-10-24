@@ -44,7 +44,7 @@ Establish test coverage as a foundation for opinionated development.
   - `loadConfig()` — config.json parsing and fallback behavior
 - [ ] **Flutter widget tests**: Extend existing `server_settings_dialog_test.dart` for `readOnly` parameter. Add tests for web-specific UI behavior (read-only server settings, close-only dialog).
 - [x] **CI gating**: `web-docker.yml` runs `yarn test` (vitest) before building the web image; Flutter tests do not run in CI
-- [x] **E2E smoke test**: rustdesk-e2e `webclient-linux` / `webclient-mac` log in via OIDC, connect to real Linux and macOS peers through hbbs/hbbr, and verify the remote desktop screenshot
+- [x] **E2E smoke test**: end-to-end tests `webclient-linux` / `webclient-mac` log in via OIDC, connect to real Linux and macOS peers through hbbs/hbbr, and verify the remote desktop screenshot
 
 ### Phase 2: Connection Reliability
 
