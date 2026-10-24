@@ -98,3 +98,5 @@ clipboard records.
 
 - The record says that text arrived, not that a person pasted it (background readers).
 - The api-server stores what the device reports; the size is the device's figure.
+- A reply that arrives in the moment between a request's timeout and its removal is recorded,
+  although the program got nothing.
