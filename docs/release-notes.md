@@ -2,6 +2,16 @@
 
 Newest first. The release workflow copies a version's section into its GitHub Release.
 
+## 1.5.0-5
+
+- The About page shows "cRustDesk v<version> · source · based on RustDesk · AGPL-3.0", with links to this project, to upstream RustDesk and to the licence. The RustDesk website and privacy links, the vendor copyright line and the slogan are removed. Report problems at github.com/crabamole/rustdesk/issues, not to RustDesk.
+- "Powered by RustDesk" is hidden (both `custom.txt` files, and the web client).
+- The Windows install page links its licence to our `LICENCE`. "Set up your own server" (shown only when no server is set) opens crabamole.github.io.
+- Web client: the app name is cRustDesk (the tab title and the top bar showed only "(Preview)").
+- File metadata names crabamole: copyright "crabamole contributors, based on RustDesk" in the Windows programs and the macOS app; the MSI support links go to this project; the `.deb` maintainer is crabamole.
+- Unchanged: the Linux and macOS help links to RustDesk's documentation.
+- Works with rustdesk-server 1.1.16-6, rustdesk-api 3.8.1 and Helm chart 0.13.1.
+
 ## 1.5.0-4
 
 - Clipboard text on request: a copy on the viewer sends only the format names to the device. The device fetches the text when a program on it reads the clipboard, usually a paste. Text, RTF and HTML; file copy does not change.
