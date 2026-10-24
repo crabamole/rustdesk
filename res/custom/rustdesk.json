@@ -20,6 +20,7 @@
     "hide-proxy-settings": "Y",
     "hide-stop-service": "Y",
     "hide-remote-printer-settings": "Y",
+    "hide-powered-by-me": "Y",
     "allow-auto-update": "N",
     "enable-webrtc": "N",
     "allow-sync-clipboard-between-sessions": "N",
