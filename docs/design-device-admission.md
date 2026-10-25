@@ -75,11 +75,9 @@ hbbr needs no change: it relays only sessions that hbbs allowed.
 
 ### 4. Administration (api-server)
 
-- Console: a "Pending devices" list with ID, hostname, OS, user, owner, source IP of the last
-  system info upload and first-seen time; admit, reject and reset to pending. The device list
-  shows the state of every device.
-- CLI: `rustdesk-api device admit|reject|pending <id>` and `device list --state pending`.
-- API: the same actions for administrators only.
+- Console: the Devices page gets an Admission column, a filter for pending devices and Admit / Reject / Pending buttons; the list shows ID, hostname, OS, user, IP and last online. The device list shows the state of every device.
+- CLI: `rustdesk-api peer admit|reject|pending <id>`.
+- API: the same actions for administrators only. (`POST /api/peers/<id>/admission`, body `{"admission": "admitted"}`)
 - Each decision is written to the console log with the administrator and the device ID.
 
 ### 5. Automatic admission rules (phase 2)
@@ -117,6 +115,8 @@ desktop builds show the state on the device.
   |---|---|---|
   | pending | "Waiting for remote control approval" | `admission_pending_tip`: "Other devices cannot connect to this device until an administrator allows it. You can still connect to other devices." |
   | rejected | "Remote control not allowed" | `admission_rejected_tip`: "An administrator does not allow other devices to connect to this device. You can still connect to other devices." |
+
+  The UI gets the state as `OnlineStatus` values -5 (pending) and -6 (rejected), like -4 for a refused key change; they apply only while the device is registered (online state 1).
 
   The ID stays visible, so the user can give it to the administrator. Outgoing connections work as
   before.
