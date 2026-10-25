@@ -66,8 +66,9 @@ when the switch is on and to admitted when it is off. Key changes leave `admissi
 In `admit_viewer`, when the switch is on and the target is not admitted, hbbs refuses with `PunchHoleResponse.other_failure`:
 "The connection is not allowed. This device is not admitted for remote control."
 
-This also applies when the viewer is not logged in, where hbbs does not call the api-server
-today. hbbs reads the admission state from Postgres and caches it per device for a few seconds,
+A viewer that is not logged in first gets the login check, as today; a logged-in viewer gets the
+admission check before hbbs asks the api-server, so a refused connection opens no audit record.
+hbbs reads the admission state from Postgres and caches it per device for a few seconds,
 so a decision takes effect within that time on every hbbs pod. A database error refuses the
 connection (fail closed) when the switch is on.
 
@@ -140,7 +141,6 @@ desktop builds show the state on the device.
 
 ## Known Limits
 
-- With `LOGGED_IN_ONLY`, a viewer that is not logged in gets the "not admitted" text for a known pending or rejected ID. So it can learn that the ID exists. The check runs before the login check by design, so that no audit record opens for a refused connection.
 - Direct IP access (the device's own direct-server option) does not go through hbbs, so admission does not apply to it. Our DC builds lock direct access off.
 - An admit or reject takes effect within about 5 s. hbbs caches the state per device.
 - If hbbs keeps a device in memory but could not write its row (database up, insert failed), the check finds no row and does not refuse. A database outage still refuses.
