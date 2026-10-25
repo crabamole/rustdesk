@@ -14,7 +14,7 @@ most, without customizing the native client further.
 - On: a new device is **pending** until an administrator admits it. Only **admitted** devices can
   be controlled. Pending and rejected devices can still connect to other devices as viewers.
 - Phase 2: administrators define rules that admit matching pending devices automatically.
-- Stock clients need no change.
+- Stock clients keep working. Our builds also show the device's state on the device.
 
 ## Device States
 
@@ -97,6 +97,32 @@ The api-server checks the rules at these events, so hbbs keeps only the enforcem
 shows that hostnames are reported by the device itself and are trustworthy only on managed
 machines or with client attestation ([design-trusted-builds.md](design-trusted-builds.md)).
 
+### 6. Client support (our builds)
+
+Without it, a pending device shows "Ready" and its user cannot tell why nobody can connect. Our
+desktop builds show the state on the device.
+
+- **Source:** the device heartbeat (`/api/heartbeat`, every 15 s, sent with or without a login).
+  When the switch is on, the api-server adds `"admission": "pending" | "admitted" | "rejected"` to
+  the response. When the switch is off the field is absent and the client shows what it shows
+  today. Stock clients ignore the field: they read only the keys they know
+  (`disconnect`, `modified_at`, `strategy`).
+- **Client state:** `hbbs_http/sync.rs` keeps the last value in memory, next to the existing
+  key-change flag (`rendezvous_mediator.rs`), and the status that the UI reads over IPC carries it.
+  A missing heartbeat answer keeps the last value; a restart starts with none.
+- **Desktop UI:** the status line on the home page (`OnlineStatusWidget`) uses the existing
+  `SvcStatus` pattern of `keyChangeRefused`:
+
+  | State | Status text | Tip |
+  |---|---|---|
+  | pending | "Waiting for remote control approval" | `admission_pending_tip`: "Other devices cannot connect to this device until an administrator allows it. You can still connect to other devices." |
+  | rejected | "Remote control not allowed" | `admission_rejected_tip`: "An administrator does not allow other devices to connect to this device. You can still connect to other devices." |
+
+  The ID stays visible, so the user can give it to the administrator. Outgoing connections work as
+  before.
+- **Viewer:** the refusal text from hbbs gets a lang entry, so our builds show it translated.
+- Stock clients: the viewer sees the English refusal text; the device shows "Ready".
+
 ## Interplay
 
 - **Login enforcement:** `LOGGED_IN_ONLY` decides who may connect; admission decides to what.
@@ -109,7 +135,7 @@ machines or with client attestation ([design-trusted-builds.md](design-trusted-b
 
 ## Out of Scope
 
-- Telling the device that it is pending. Stock clients cannot show it; our builds may add it later.
+- The device state on mobile builds.
 - Alarm records for refused connections.
 
 ## Testing
@@ -120,5 +146,7 @@ machines or with client attestation ([design-trusted-builds.md](design-trusted-b
 - api-server: migration marks existing devices admitted; admit, reject and pending through CLI and
   API; non-administrators are refused; phase 2 rules admit on the right events and never admit
   a rejected device.
+- client: the heartbeat field sets the status line for pending, rejected and admitted, and a
+  missing field shows "Ready".
 - e2e: with the switch on, a new device is refused until it is admitted in the console, then a
   session opens.

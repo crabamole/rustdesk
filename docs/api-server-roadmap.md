@@ -150,6 +150,7 @@ Data loss prevention controls for regulated environments.
 - [ ] Switch `DEVICE_ADMISSION`, off by default: when on, new devices are pending and only admitted devices can be controlled; others act as viewers at most
 - [ ] Admission stays with the device across accepted key changes (reinstall)
 - [ ] Console and CLI: pending list, admit, reject, reset to pending
+- [ ] Our desktop builds show pending or rejected on the device (heartbeat field `admission`)
 - [ ] Phase 2: automatic admission rules (subnet, hostname, owner group)
 - Design: [design-device-admission.md](design-device-admission.md); works with stock clients
 
