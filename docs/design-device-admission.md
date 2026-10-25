@@ -1,112 +1,125 @@
-# Design: Device Admission by Hostname
+# Design: Device Admission
+
+**Status: design.**
 
 ## Problem
 
-Any device that registers with hbbs can be controlled. A corporate deployment wants only its
-managed machines to accept remote sessions, and everything else to act as a viewer at most,
-without customizing the native client further.
+Any device that registers with hbbs can be controlled. A corporate deployment wants only the
+machines it approved to accept remote sessions, and every other device to act as a viewer at
+most, without customizing the native client further.
 
 ## Goal
 
-An administrator keeps a list of hostnames (exact names or wildcards such as `CORP-WS-*`).
-hbbs lets a viewer connect to a device only when the device's hostname is on the list.
-Stock clients need no change.
+- A server switch `DEVICE_ADMISSION`, off by default. Off: every device can be controlled, as today.
+- On: a new device is **pending** until an administrator approves it. Only **approved** devices can
+  be controlled. Pending and rejected devices can still connect to other devices as viewers.
+- Phase 2: administrators define rules that approve matching pending devices automatically.
+- Stock clients need no change.
 
-## Trust Model
+## Device States
 
-Admission decides *which* devices may be controlled. It relies on the hostname the device
-reports about itself, so it is only as trustworthy as the client reporting it:
+| State | Can be controlled | Set by |
+|---|---|---|
+| pending | no | new device while the switch is on; key change of an approved device; administrator reset |
+| approved | yes | administrator; a rule (phase 2); every device registered while the switch is off |
+| rejected | no | administrator |
 
-| Setting | Hostname can be believed because |
-|---|---|
-| Managed devices, users without admin rights, network that only reaches our hbbs | users cannot rename machines or run other RustDesk servers |
-| Unmanaged clients present | only with client attestation ([design-trusted-builds.md](design-trusted-builds.md)), which proves the report comes from our build |
+Approval is bound to the device's ID and its key at that time (`admitted_pk`). When hbbs records
+a different key for the ID ([design-device-key-change.md](design-device-key-change.md)), the device
+is pending again. A rejected device stays rejected until an administrator changes it; rules never
+approve it.
 
-Admission is a layer on top of attestation, not a replacement. It is useful on managed networks
-before attestation exists. Binding on first admission (below) keeps a second device from taking
-over an admitted hostname, but does not prove the first report was true.
+Devices that register while the switch is off are approved. The migration marks every existing
+device approved. Turning the switch on therefore affects only devices that register after it.
 
-## Where the Hostname Comes From
+## Why Enforcement Is at Connect Time
 
-hbbs never sees hostnames. Devices send system info (`cpu`, `memory`, `os`, `hostname`,
-`username`) to the api-server, which stores it in `peer.info` of the row hbbs created when the
-device registered (`update_systeminfo`). A device that never registered has no row, and its
-system info is dropped (`ID_NOT_FOUND`).
+Registration stays open. The administrator needs the device's hostname, OS, user and owner to
+decide, and the api-server receives these only from a registered device: system info for an
+unknown ID is dropped (`ID_NOT_FOUND`). A registered device that is not approved does no harm,
+because hbbs refuses every connection to it.
 
-Registration therefore stays open: refusing it would also prevent the hostname from ever being
-recorded. Enforcement happens when a viewer asks to connect.
+Both requests that set up a connection to a device go through `admit_viewer(token, target)` in
+hbbs: `PunchHoleRequest` and `RequestRelay` forwarding. It checks the viewer's login and the
+target ID only, not whether the viewer is registered, so pending devices keep working as viewers.
 
 ## Design
 
-### 1. Admission list (api-server)
+### 1. Data (api-server owns the schema)
 
-- New table `device_admission`: `pattern` (exact hostname or glob with `*`), `note`, `created_at`.
-- Matching is case-insensitive; `*` matches any run of characters.
-- Managed with the `rustdesk-api` CLI (`device admit|revoke|list`) and a web console page.
-- An empty list means admission is off and every device can be controlled, as today.
+New columns on `peer`:
 
-### 2. Binding on first admission
+- `admission` smallint: 0 pending, 1 approved, 2 rejected. Migration default for existing rows: 1.
+- `admitted_pk` bytea: the key the approval applies to. Migration: copy `pk`.
+- `admitted_at`, `admitted_by` (user, or `rule:<name>` in phase 2).
 
-- New table `device_binding`: `hostname` (normalized), `peer_id`, `pk`, `bound_at`.
-- The first time an admitted hostname is used in a connection, it is bound to that device's
-  RustDesk ID and public key.
-- Later, a different device reporting the same hostname is refused.
-- An administrator can release a binding (CLI and console), e.g. after reinstalling a machine,
-  which gives it a new ID.
+The key-change column `approved_pk` is a separate feature and is not reused.
+
+### 2. Registration (hbbs)
+
+hbbs reads `DEVICE_ADMISSION` (Y/N). When it creates a `peer` row, it sets `admission` to pending
+when the switch is on and to approved (with `admitted_pk = pk`) when it is off. When it records a
+new key for an existing ID, it sets the device to pending if it was approved.
 
 ### 3. Enforcement (hbbs)
 
-hbbs checks the target device in both places that set up a connection to it:
+In `admit_viewer`, when the switch is on and the target is not approved with its current key,
+hbbs refuses with `PunchHoleResponse.other_failure`:
+"The connection is not allowed. This device is not approved for remote control."
 
-- `handle_punch_hole_request` (`PunchHoleRequest`), next to the existing `LOGGED_IN_ONLY` checks;
-- `RequestRelay` forwarding.
+This also applies when the viewer is not logged in, where hbbs does not call the api-server
+today. hbbs reads the admission state from Postgres and caches it per device for a few seconds,
+so an approval takes effect within that time on every hbbs pod. A database error refuses the
+connection (fail closed) when the switch is on.
 
-Check, when the admission list is not empty:
+hbbr needs no change: it relays only sessions that hbbs allowed.
 
-1. Look up the target's hostname in `peer.info`. Unknown hostname (no system info yet): refuse.
-2. Match it against the list. No match: refuse.
-3. Check the binding: unbound, bind it to this device; bound to another device, refuse.
+### 4. Administration (api-server)
 
-A refusal answers the viewer like the login checks do (`PunchHoleResponse.other_failure`), e.g.
-"The connection is not allowed. This device is not admitted for remote control."
+- Console: a "Pending devices" list with ID, hostname, OS, user, owner, source IP of the last
+  system info upload and first-seen time; approve, reject and reset to pending. The device list
+  shows the state of every device.
+- CLI: `rustdesk-api device approve|reject|reset <id>` and `device list --state pending`.
+- API: the same actions for administrators only.
+- Each decision is written to the console log with the administrator and the device ID.
 
-### 4. hbbs data access
+### 5. Automatic approval rules (phase 2)
 
-hbbs already shares Postgres with the api-server and reads and writes the `peer` table. It reads
-`device_admission` and writes `device_binding` directly, caching the list for a few seconds.
-The api-server owns the schema (migrations), as for every other table.
+Rules are kept in a new table `admission_rule` (`name`, `kind`, `pattern`, `enabled`). A pending
+device that matches an enabled rule is approved, with `admitted_by = rule:<name>`.
 
-### 5. System info per device
+| Kind | Matches | Checked when |
+|---|---|---|
+| `subnet` | source IP of the device's system info upload (trusted client IP) in a CIDR | system info upload |
+| `hostname` | reported hostname, exact or `*` glob, case-insensitive | system info upload |
+| `owner-group` | the device owner (OIDC login on the device) is in a group | owner login |
 
-`update_systeminfo` updates every `peer` row with the reporting machine's UUID. A machine with a
-stale second ID therefore keeps refreshing that row too. It must update only the row of the
-reporting device's ID, so a hostname belongs to exactly one device.
-
-### 6. hbbr
-
-No change: hbbr relays only sessions that hbbs has already allowed.
+The api-server checks the rules at these events, so hbbs keeps only the enforcement. The console
+shows that hostnames are reported by the device itself and are trustworthy only on managed
+machines or with client attestation ([design-trusted-builds.md](design-trusted-builds.md)).
 
 ## Interplay
 
-- **Client-only devices:** every device not on the list can still register and act as a viewer,
-  but cannot be controlled. No `conn-type: outgoing` build is needed for that.
 - **Login enforcement:** `LOGGED_IN_ONLY` decides who may connect; admission decides to what.
   Both apply.
+- **Same-user access:** applies only to approved devices.
 - **Control roles:** per-user permissions (`ControlPermissions`) are decided after admission.
-- **Audit:** refused connections are worth recording as alarms (later).
+- **Client attestation:** a later layer that limits registration to our builds; admission does
+  not depend on it.
+- **Charts:** one value sets `DEVICE_ADMISSION` on hbbs and the api-server.
 
-## Open Questions
+## Out of Scope
 
-1. Should a refused connection also be visible to administrators (alarm record, console list of
-   "registered but not admitted" devices)?
-2. Do bindings expire when a device has been offline for a long time?
-3. Should the list also accept RustDesk IDs, for devices whose hostname cannot be managed?
+- Telling the device that it is pending. Stock clients cannot show it; our builds may add it later.
+- Alarm records for refused connections.
 
 ## Testing
 
-- hbbs: unit tests for matching (exact, wildcard, case), refusal with an unknown hostname,
-  binding and refusal of a second device; integration test against Postgres.
-- api-server: CLI and API tests for the list and bindings; `update_systeminfo` updates only the
-  reporting device's row.
-- e2e: with the list set to the Linux VM's hostname only, the web client connects to the Linux
-  VM and is refused for the Mac and Windows machines.
+- hbbs: switch off keeps today's behaviour; a pending, rejected or key-changed device is refused
+  for logged-in and anonymous viewers; an approved device is allowed; a pending device can still
+  connect out as a viewer.
+- api-server: migration marks existing devices approved; approve, reject and reset through CLI and
+  API; non-administrators are refused; phase 2 rules approve on the right events and never approve
+  a rejected device.
+- e2e: with the switch on, a new device is refused until it is approved in the console, then a
+  session opens.
