@@ -147,10 +147,10 @@ Data loss prevention controls for regulated environments.
 - **Depends on:** our own native client builds ([native-client-roadmap.md](native-client-roadmap.md))
 
 ### Device Admission
-- [ ] Switch `DEVICE_ADMISSION`, off by default: when on, new devices are pending and only approved devices can be controlled; others act as viewers at most
-- [ ] Approval bound to the device ID and key; a key change makes the device pending again
-- [ ] Console and CLI: pending list, approve, reject, reset
-- [ ] Phase 2: automatic approval rules (subnet, hostname, owner group)
+- [ ] Switch `DEVICE_ADMISSION`, off by default: when on, new devices are pending and only admitted devices can be controlled; others act as viewers at most
+- [ ] Admission stays with the device across accepted key changes (reinstall)
+- [ ] Console and CLI: pending list, admit, reject, reset to pending
+- [ ] Phase 2: automatic admission rules (subnet, hostname, owner group)
 - Design: [design-device-admission.md](design-device-admission.md); works with stock clients
 
 ## Pagination
