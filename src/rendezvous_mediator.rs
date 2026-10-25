@@ -233,8 +233,8 @@ pub fn set_admission(word: Option<&str>) {
 /// `online` as the UI should show it: the admission state replaces "ready" only.
 pub fn admission_status(online: i64) -> i64 {
     match (online, ADMISSION.load(Ordering::SeqCst)) {
-        (1, 1) => ADMISSION_PENDING_STATUS,
-        (1, 2) => ADMISSION_REJECTED_STATUS,
+        (o, 1) if o > 0 => ADMISSION_PENDING_STATUS,
+        (o, 2) if o > 0 => ADMISSION_REJECTED_STATUS,
         _ => online,
     }
 }
@@ -2208,13 +2208,14 @@ mod admission_tests {
     #[test]
     fn admission_overrides_only_a_registered_status() {
         set_admission(Some("pending"));
-        assert_eq!(admission_status(1), ADMISSION_PENDING_STATUS);
+        assert_eq!(admission_status(15_000), ADMISSION_PENDING_STATUS);
         assert_eq!(admission_status(0), 0, "connecting stays connecting");
+        assert_eq!(admission_status(-1), -1, "errors stay as they are");
         set_admission(Some("rejected"));
-        assert_eq!(admission_status(1), ADMISSION_REJECTED_STATUS);
+        assert_eq!(admission_status(15_000), ADMISSION_REJECTED_STATUS);
         set_admission(Some("admitted"));
-        assert_eq!(admission_status(1), 1);
+        assert_eq!(admission_status(15_000), 15_000);
         set_admission(None);
-        assert_eq!(admission_status(1), 1);
+        assert_eq!(admission_status(15_000), 15_000);
     }
 }
