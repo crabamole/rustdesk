@@ -138,6 +138,13 @@ desktop builds show the state on the device.
 - The device state on mobile builds.
 - Alarm records for refused connections.
 
+## Known Limits
+
+- With `LOGGED_IN_ONLY`, a viewer that is not logged in gets the "not admitted" text for a known pending or rejected ID. So it can learn that the ID exists. The check runs before the login check by design, so that no audit record opens for a refused connection.
+- Direct IP access (the device's own direct-server option) does not go through hbbs, so admission does not apply to it. Our DC builds lock direct access off.
+- An admit or reject takes effect within about 5 s. hbbs caches the state per device.
+- If hbbs keeps a device in memory but could not write its row (database up, insert failed), the check finds no row and does not refuse. A database outage still refuses.
+
 ## Testing
 
 - hbbs: switch off keeps today's behaviour; a pending or rejected device is refused for logged-in
