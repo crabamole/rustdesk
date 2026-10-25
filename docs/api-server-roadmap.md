@@ -151,7 +151,7 @@ Data loss prevention controls for regulated environments.
 - [ ] Admission stays with the device across accepted key changes (reinstall)
 - [ ] Console and CLI: pending list, admit, reject, reset to pending
 - [ ] Our desktop builds show pending or rejected on the device (heartbeat field `admission`)
-- [ ] Phase 2: automatic admission rules (subnet, hostname, owner group)
+- [ ] Phase 2: admission webhook — the api-server asks a deployment-owned service (e.g. an asset inventory) to admit or reject pending devices; signed with a dedicated Ed25519 key
 - Design: [design-device-admission.md](design-device-admission.md); works with stock clients
 
 ## Pagination
