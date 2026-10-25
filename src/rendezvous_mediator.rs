@@ -3,7 +3,7 @@ use std::{
     hash::BuildHasher,
     net::SocketAddr,
     sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering},
         Arc, RwLock,
     },
     time::{Duration, Instant},
@@ -214,6 +214,30 @@ pub(crate) static NEEDS_DEPLOY: AtomicBool = AtomicBool::new(false);
 static KEY_CHANGE_REFUSED: AtomicBool = AtomicBool::new(false);
 /// `OnlineStatus` value the UI shows as "key change refused".
 pub const KEY_CHANGE_REFUSED_STATUS: i64 = -4;
+// The device's admission state from the api-server heartbeat (design-device-admission.md): 0 none or admitted, 1 pending, 2 rejected.
+static ADMISSION: AtomicU8 = AtomicU8::new(0);
+/// `OnlineStatus` values the UI shows as "waiting for remote control approval" / "remote control not allowed".
+pub const ADMISSION_PENDING_STATUS: i64 = -5;
+pub const ADMISSION_REJECTED_STATUS: i64 = -6;
+
+/// Takes the heartbeat's `admission`; None (switch off, older api-server) clears it.
+pub fn set_admission(word: Option<&str>) {
+    let v = match word {
+        Some("pending") => 1,
+        Some("rejected") => 2,
+        _ => 0,
+    };
+    ADMISSION.store(v, Ordering::SeqCst);
+}
+
+/// `online` as the UI should show it: the admission state replaces "ready" only.
+pub fn admission_status(online: i64) -> i64 {
+    match (online, ADMISSION.load(Ordering::SeqCst)) {
+        (1, 1) => ADMISSION_PENDING_STATUS,
+        (1, 2) => ADMISSION_REJECTED_STATUS,
+        _ => online,
+    }
+}
 #[cfg(target_os = "android")]
 static NOTIFIED_NEEDS_DEPLOY: AtomicBool = AtomicBool::new(false);
 // register_pk retry interval (ms) when device is awaiting deployment
@@ -2174,5 +2198,23 @@ mod tests {
         assert!(AnswererSlot::take().is_none());
         drop(held);
         assert!(AnswererSlot::take().is_some());
+    }
+}
+
+#[cfg(test)]
+mod admission_tests {
+    use super::*;
+
+    #[test]
+    fn admission_overrides_only_a_registered_status() {
+        set_admission(Some("pending"));
+        assert_eq!(admission_status(1), ADMISSION_PENDING_STATUS);
+        assert_eq!(admission_status(0), 0, "connecting stays connecting");
+        set_admission(Some("rejected"));
+        assert_eq!(admission_status(1), ADMISSION_REJECTED_STATUS);
+        set_admission(Some("admitted"));
+        assert_eq!(admission_status(1), 1);
+        set_admission(None);
+        assert_eq!(admission_status(1), 1);
     }
 }

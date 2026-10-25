@@ -133,7 +133,11 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
                 color: _svcStopped.value ||
                         stateGlobal.svcStatus.value == SvcStatus.connecting
                     ? kColorWarn
-                    : (stateGlobal.svcStatus.value == SvcStatus.ready
+                    : (stateGlobal.svcStatus.value == SvcStatus.ready ||
+                            stateGlobal.svcStatus.value ==
+                                SvcStatus.admissionPending ||
+                            stateGlobal.svcStatus.value ==
+                                SvcStatus.admissionRejected
                         ? Color.fromARGB(255, 50, 190, 166)
                         : Color.fromARGB(255, 224, 79, 95)),
               ),
@@ -175,7 +179,7 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
 
   _buildConnStatusMsg() {
     widget.onSvcStatusChanged?.call();
-    return Text(
+    final text = Text(
       _svcStopped.value
           ? translate("Service is not running")
           : stateGlobal.svcStatus.value == SvcStatus.notConfigured
@@ -184,6 +188,10 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
               ? translate('stock_rustdesk_installed_tip')
               : stateGlobal.svcStatus.value == SvcStatus.keyChangeRefused
               ? translate('key_change_refused_tip')
+              : stateGlobal.svcStatus.value == SvcStatus.admissionPending
+              ? translate('Waiting for remote control approval')
+              : stateGlobal.svcStatus.value == SvcStatus.admissionRejected
+              ? translate('Remote control not allowed')
               : stateGlobal.svcStatus.value == SvcStatus.connecting
               ? translate("connecting_status")
               : stateGlobal.svcStatus.value == SvcStatus.notReady
@@ -191,6 +199,12 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
                   : translate('Ready'),
       style: TextStyle(fontSize: em),
     );
+    final tip = stateGlobal.svcStatus.value == SvcStatus.admissionPending
+        ? translate('admission_pending_tip')
+        : stateGlobal.svcStatus.value == SvcStatus.admissionRejected
+            ? translate('admission_rejected_tip')
+            : null;
+    return tip == null ? text : Tooltip(message: tip, child: text);
   }
 
   updateStatus() async {
@@ -209,6 +223,10 @@ class _OnlineStatusWidgetState extends State<OnlineStatusWidget> {
       stateGlobal.svcStatus.value = SvcStatus.stockInstalled;
     } else if (statusNum == -4) {
       stateGlobal.svcStatus.value = SvcStatus.keyChangeRefused;
+    } else if (statusNum == -5) {
+      stateGlobal.svcStatus.value = SvcStatus.admissionPending;
+    } else if (statusNum == -6) {
+      stateGlobal.svcStatus.value = SvcStatus.admissionRejected;
     } else {
       stateGlobal.svcStatus.value = SvcStatus.notReady;
     }

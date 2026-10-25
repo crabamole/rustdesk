@@ -278,6 +278,7 @@ async fn start_hbbs_sync_async() {
                                 handle_config_options(strategy.config_options);
                             }
                         }
+                        crate::rendezvous_mediator::set_admission(rsp.remove("admission").as_ref().and_then(|v| v.as_str()));
                     }
                 }
             }

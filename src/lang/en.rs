@@ -284,5 +284,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("key_change_refused_tip", "This device's key changed. Log in as its owner, or ask your administrator to reset it."),
         ("clipboard_on_request_old_device_tip", "Paste into this device is not available with its version or platform."),
         ("clipboard_on_request_browser_tip", "This browser does not allow paste into the remote device."),
+        ("admission_pending_tip", "Other devices cannot connect to this device until an administrator allows it. You can still connect to other devices."),
+        ("admission_rejected_tip", "An administrator does not allow other devices to connect to this device. You can still connect to other devices."),
     ].iter().cloned().collect();
 }

@@ -793,6 +793,11 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Log in to keep this ID", ""),
         ("clipboard_on_request_old_device_tip", ""),
         ("clipboard_on_request_browser_tip", ""),
+        ("Waiting for remote control approval", ""),
+        ("Remote control not allowed", ""),
+        ("admission_pending_tip", ""),
+        ("admission_rejected_tip", ""),
+        ("The connection is not allowed. This device is not admitted for remote control.", ""),
     ].iter().cloned().collect();
 }
 

@@ -894,7 +894,7 @@ async fn handle(data: Data, stream: &mut Connection) {
         }
         Data::OnlineStatus(_) => {
             let x = config::get_online_state();
-            let x = if crate::rendezvous_mediator::key_change_refused() { crate::rendezvous_mediator::KEY_CHANGE_REFUSED_STATUS } else { x };
+            let x = if crate::rendezvous_mediator::key_change_refused() { crate::rendezvous_mediator::KEY_CHANGE_REFUSED_STATUS } else { crate::rendezvous_mediator::admission_status(x) };
             let confirmed = Config::get_key_confirmed();
             allow_err!(stream.send(&Data::OnlineStatus(Some((x, confirmed)))).await);
         }
