@@ -63,11 +63,10 @@ when the switch is on and to admitted when it is off. Key changes leave `admissi
 
 ### 3. Enforcement (hbbs)
 
-In `admit_viewer`, when the switch is on and the target is not admitted, hbbs refuses with `PunchHoleResponse.other_failure`:
+Right after `admit_viewer`, in both connect paths, when the switch is on and the target is not admitted, hbbs refuses with `PunchHoleResponse.other_failure`:
 "The connection is not allowed. This device is not admitted for remote control."
 
-A viewer that is not logged in first gets the login check, as today; a logged-in viewer gets the
-admission check before hbbs asks the api-server, so a refused connection opens no audit record.
+hbbs runs the login check first, as today, and then the admission check.
 hbbs reads the admission state from Postgres and caches it per device for a few seconds,
 so a decision takes effect within that time on every hbbs pod. A database error refuses the
 connection (fail closed) when the switch is on.
