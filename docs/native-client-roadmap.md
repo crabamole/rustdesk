@@ -1,15 +1,14 @@
 # Native Client Build Roadmap
 
-**Updated:** 2026-10-17
+**Updated:** 2026-10-25
 
 Stock RustDesk clients work with our server stack, but some features need a client built from this fork. This roadmap tracks what shipping our own Windows, macOS and Linux builds requires, and the features waiting on it.
 
 ## Next
 
-1. Windows code signing: Certum Open Source Code Signing (cloud, SimplySign) applied for; waiting for Certum's review ([Build Pipeline](#build-pipeline))
-2. Same-user access: test on Windows and macOS, then release ([Same-User Access](#same-user-access))
-3. CI speed
-4. Tracking upstream releases: 1.5.1 is on upstream master, not released yet ([Build Pipeline](#build-pipeline))
+1. Same-user access: test on Windows and macOS ([Same-User Access](#same-user-access))
+2. CI speed
+3. Tracking upstream releases: 1.5.1 is on upstream master, not released yet ([Build Pipeline](#build-pipeline))
 
 ## Build Pipeline
 
@@ -144,7 +143,7 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 - [x] Our builds sign the device login with the device key (the request goes to the server process over IPC, so the private key stays there) and accept the flag only on a verified `wss` rendezvous link with a `wss` relay, when the owner key is their own key
 - [x] Audit: such sessions have `primary_auth` 5 (same user)
 - Stock clients never get same-user access; they keep asking for the password
-- Status: on master, not released. Verified on Linux; Windows and macOS not tested yet
+- Status: released (clients 1.5.0-2, rustdesk-server 1.1.16-6, rustdesk-api 3.7.0), off by default. Verified by e2e and on Linux; Windows and macOS not tested yet
 - Design: [design-same-user-access.md](design-same-user-access.md); tracked in [api-server-roadmap.md](api-server-roadmap.md) (Phase 3)
 
 ### ScreenCaptureKit on macOS ([#26](https://github.com/crabamole/rustdesk/issues/26))

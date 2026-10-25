@@ -3,7 +3,7 @@
 Corporate deployment features for [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api).
 
 **Base:** sctgdesk-api-server (AGPL-3.0)  
-**Updated:** 2026-10-17
+**Updated:** 2026-10-25
 
 ## Architecture Context
 
@@ -127,7 +127,7 @@ Enforce organizational policies on client behavior during remote sessions.
 - [x] The device accepts the flag only on a verified `wss` rendezvous link with a `wss` relay, and only when the owner key is its own key
 - [x] Audit: such sessions have `primary_auth` 5 (same user)
 - Switch on the api-server (`SAME_USER_ACCESS`), off by default; no `custom.txt` key. Owners are recorded even when the switch is off
-- Status: on main/master, not released. Verified by e2e and on Linux; Windows and macOS not tested yet
+- Status: released (clients 1.5.0-2, rustdesk-server 1.1.16-6, rustdesk-api 3.7.0), off by default. Verified by e2e and on Linux; Windows and macOS not tested yet
 - Design: [design-same-user-access.md](design-same-user-access.md); needs our native builds on the device ([native-client-roadmap.md](native-client-roadmap.md))
 
 ## Phase 4: DLP & Compliance

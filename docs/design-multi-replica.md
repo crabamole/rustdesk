@@ -1,6 +1,6 @@
 # Design: Multiple Replicas, High Availability and Disaster Recovery
 
-**Status: design.**
+**Status: implemented** (chart 0.9.0, rustdesk-server 1.1.16-4, rustdesk-api 3.5.0; drains in 1.1.16-5, 3.6.0, chart 0.10.0).
 
 ## Goal
 
