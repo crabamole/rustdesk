@@ -148,6 +148,12 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 - Status: released (clients 1.5.0-2, rustdesk-server 1.1.16-6, rustdesk-api 3.7.0), off by default. Verified by e2e and on Linux; Windows and macOS not tested yet
 - Design: [design-same-user-access.md](design-same-user-access.md); tracked in [api-server-roadmap.md](api-server-roadmap.md) (Phase 3)
 
+### End-to-End Encryption Required
+- [x] A session never runs without end-to-end encryption: when the viewer cannot verify the device's key, our viewers refuse (upstream asks "Continue anyway?"), and our devices refuse a viewer that sends no key
+- Stock viewers that fall back to no encryption cannot connect to our devices
+- Status: merged, not released. Device side unit-tested; web client verified by e2e; native viewer not yet tested on a machine
+- Design: [design-e2ee-required.md](design-e2ee-required.md)
+
 ### Device Admission
 - [x] While the api-server switch `DEVICE_ADMISSION` is on, our builds show on the device that it waits for remote control approval or that remote control is not allowed (heartbeat field `admission`)
 - Stock clients are admitted and refused the same way; they only show no status

@@ -44,6 +44,7 @@ The web client shares ~68K lines of Dart with native clients. The web-specific l
 - [x] Dials only the relay URL hbbs hands out (no relay setting)
 - [x] Log in first: the login button replaces the ID field until the user logs in (1.5.0-1)
 - [x] Named cRustDesk; the powered-by link is hidden (1.5.0-5)
+- [x] Never runs a session without end-to-end encryption: a failed key check ends the connection instead of continuing unencrypted ([design-e2ee-required.md](design-e2ee-required.md))
 
 ### Phase 1: Testing Infrastructure
 
