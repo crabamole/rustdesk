@@ -113,7 +113,7 @@ have a signature (the display driver) keep it; the verify step skips the driver.
 
 - No signing for pull-request runs, or for manual runs outside the branches the `codesign` environments allow.
 - `flutter_windows.dll` still comes prebuilt from RustDesk's engine release (a mutable release asset, not pinned). Building the engine ourselves is future work.
-- No portable single-file Windows build; it waits for this design.
+- No portable single-file Windows build; not planned ([native-client-roadmap.md](native-client-roadmap.md#build-pipeline)).
 - macOS signing and notarization are unchanged.
 
 ## Operations

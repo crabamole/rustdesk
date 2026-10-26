@@ -1,8 +1,15 @@
 # RustDesk OSS Web Client Roadmap
 
-**Updated:** 2026-10-12
+**Updated:** 2026-10-26
 
 Upstream RustDesk removed the open-source web client in favor of a closed-source Pro offering. This roadmap tracks our effort to revive and maintain the web client against the OSS rendezvous server (hbbs/hbbr).
+
+## Next
+
+The web client is the way to view without an install (no portable native build is planned), so these come first:
+
+1. Viewer identity in audit records ([Phase 3](#phase-3-features))
+2. Reconnection on WebSocket drop, and clear messages for connection failures ([Phase 2](#phase-2-connection-reliability))
 
 ## Architecture Overview
 
