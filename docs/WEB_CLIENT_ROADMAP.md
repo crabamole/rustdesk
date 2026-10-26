@@ -64,6 +64,7 @@ Establish test coverage as a foundation for opinionated development.
 - [x] A silent relay ends the session: after 12 s without a message (`Websock.next()` timeout) the web client shows "Reconnect" and reconnects through another relay; verified with a frozen hbbr pod (e2e `ha/hbbr-freeze.spec.ts`, back within about 17 s)
 - [x] A dropped connection is retried as in the native client: a WebSocket that closes, times out or cannot connect shows Reconnect with a countdown (1, 2, 4, 8 s …); a device that is briefly offline after a drop is retried for 30 s; refusals (not logged in, not admitted, key mismatch, unknown ID) are not retried. Verified with a killed hbbr process and the browser offline for 15 s (e2e `webclient-reconnect`)
 - [x] Recent sessions list the devices this browser connected to, newest first, from `localStorage['peers']` ([#31](https://github.com/crabamole/rustdesk/issues/31))
+- [x] Session history works as on native clients: Delete, Rename, Forget password and Favorites on a stored session, without an open connection; logging out keeps the history, as native does
 - [ ] Audit the 118 `UnimplementedError` stubs in `web/bridge.dart` — categorize as: needed, not-applicable-to-web, or deferred
 
 ### Phase 3: Features
