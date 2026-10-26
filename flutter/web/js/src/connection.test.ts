@@ -34,6 +34,7 @@ vi.mock("./message.js", () => ({
   Resolution: { fromPartial: vi.fn((v: any) => v) },
   DisplayResolution: { fromPartial: vi.fn((v: any) => v) },
   Auth2FA: { fromPartial: vi.fn((v: any) => v) },
+  ScreenshotRequest: { fromPartial: vi.fn((v: any) => v) },
 }));
 
 vi.mock("./rendezvous.js", () => ({
@@ -383,6 +384,31 @@ describe("Connection", () => {
       expect(onCursorData).toHaveBeenCalledWith("7", 1, 2, 3, 4, expect.any(Uint8Array));
       expect((conn as any)._cursorShapes[7]).toMatchObject({ hotx: 1, hoty: 2, width: 3, height: 4 });
       delete (window as any).onCursorData;
+    });
+  });
+
+  describe("screenshot, as native", () => {
+    it("asks the device for the display and saves the PNG it sends back as a download", async () => {
+      (conn as any)._peerInfo = { version: "1.4.0" };
+      expect(conn.isScreenshotSupported()).toBe(true);
+      conn.takeScreenshot(1);
+      expect(mockWs.sendMessage.mock.calls.at(-1)[0].screenshot_request).toMatchObject({ display: 1 });
+      mockWs.next
+        .mockResolvedValueOnce({ screenshot_response: { sid: "", msg: "", data: new Uint8Array([137, 80]) } })
+        .mockResolvedValueOnce({ misc: { close_reason: "done" } });
+      await conn.msgLoop();
+      expect(globals.pushEvent).toHaveBeenCalledWith("screenshot", { msg: "" });
+      const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+      (URL as any).createObjectURL ??= () => "blob:x";
+      expect(conn.handleScreenshot("0:shot.png")).toBe("");
+      expect((click.mock.instances[0] as unknown as HTMLAnchorElement).download).toBe("shot.png");
+      expect(conn.handleScreenshot("2")).toBe("No cached screenshot");
+      click.mockRestore();
+    });
+
+    it("is not offered for devices older than 1.4.0", () => {
+      (conn as any)._peerInfo = { version: "1.3.9" };
+      expect(conn.isScreenshotSupported()).toBe(false);
     });
   });
 

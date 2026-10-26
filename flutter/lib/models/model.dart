@@ -496,6 +496,12 @@ class FfiModel with ChangeNotifier {
         close();
         Future.delayed(Duration.zero, () async {
           final ts = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+          // The browser saves a download where its settings say.
+          if (isWeb) {
+            bind.sessionHandleScreenshot(
+                sessionId: sessionId, action: '0:screenshot_$ts.png');
+            return;
+          }
           String? outputFile = await FilePicker.platform.saveFile(
             dialogTitle: '${translate('Save as')}...',
             fileName: 'screenshot_$ts.png',

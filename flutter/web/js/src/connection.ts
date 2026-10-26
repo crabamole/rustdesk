@@ -73,6 +73,7 @@ export default class Connection {
   // As native LoginConfigHandler.session_id: one random ID for the session, kept across reconnects.
   _sessionId: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
   _lastAuditNote = "";
+  _screenshot?: Uint8Array;
   _closed = false;
   _cursorShapes: { [id: string]: { hotx: number; hoty: number; width: number; height: number; colors: Uint8Array } } = {};
   _auditGuid = "";
@@ -360,6 +361,10 @@ export default class Connection {
         globals.pushEvent("cursor_id", { id: msg?.cursor_id });
       } else if (msg?.cursor_position) {
         globals.pushEvent("cursor_position", msg?.cursor_position);
+      } else if (msg?.screenshot_response) {
+        const r = msg.screenshot_response;
+        this._screenshot = r.msg ? undefined : r.data;
+        globals.pushEvent("screenshot", { msg: r.msg });
       } else if (msg?.misc) {
         if (!this.handleMisc(msg?.misc)) break;
       } else if (msg?.audio_frame) {
@@ -930,6 +935,33 @@ export default class Connection {
       ? message.Misc.fromPartial({ change_display_resolution: message.DisplayResolution.fromPartial({ display, resolution }) })
       : message.Misc.fromPartial({ change_resolution: resolution });
     this._ws?.sendMessage({ misc });
+  }
+
+  isScreenshotSupported(): boolean {
+    return getVersionNumber(this._peerInfo?.version || "") >= getVersionNumber("1.4.0");
+  }
+
+  // As native: the device takes the screenshot and replies with a PNG.
+  takeScreenshot(display: number) {
+    this._ws?.sendMessage({ screenshot_request: message.ScreenshotRequest.fromPartial({ display }) });
+  }
+
+  // As native handle_screenshot: "0:<name>" saves (here a browser download), "1" copies, "2" discards.
+  handleScreenshot(action: string): string {
+    const data = this._screenshot;
+    if (!data) return "No cached screenshot";
+    this._screenshot = undefined;
+    const blob = new Blob([data], { type: "image/png" });
+    if (action.startsWith("0:")) {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = action.substring(2);
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    } else if (action == "1") {
+      navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]).catch(console.error);
+    }
+    return "";
   }
 
   // As native is_keyboard_mode_supported; the web implements legacy and map mode.

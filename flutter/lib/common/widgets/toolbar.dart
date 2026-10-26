@@ -598,10 +598,9 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
         onPressed: () => ffi.recordingModel.toggle()));
   }
 
-  // to-do:
-  // 1. Web desktop
-  // 2. Mobile, copy the image to the clipboard
-  if ((isDefaultConn || ffi.connType == ConnType.viewCamera) && isDesktop) {
+  // to-do: Mobile, copy the image to the clipboard
+  if ((isDefaultConn || ffi.connType == ConnType.viewCamera) &&
+      (isDesktop || isWebDesktop)) {
     final isScreenshotSupported = bind.sessionGetCommonSync(
         sessionId: sessionId, key: 'is_screenshot_supported', param: '');
     if ('true' == isScreenshotSupported) {

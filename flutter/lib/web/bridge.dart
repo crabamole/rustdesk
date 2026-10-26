@@ -1903,7 +1903,8 @@ class RustdeskImpl {
 
   Future<String> sessionHandleScreenshot(
       {required UuidValue sessionId, required String action, dynamic hint}) {
-    throw UnimplementedError("sessionHandleScreenshot");
+    return Future(() =>
+        js.context.callMethod('getByName', ['handle_screenshot', action]));
   }
 
 
@@ -1912,12 +1913,16 @@ class RustdeskImpl {
       required String key,
       required String param,
       dynamic hint}) {
-    throw UnimplementedError("sessionGetCommonSync");
+    if (key == 'is_screenshot_supported') {
+      return js.context.callMethod('getByName', ['screenshot_supported']);
+    }
+    return '';
   }
 
   Future<void> sessionTakeScreenshot(
       {required UuidValue sessionId, required int display, dynamic hint}) {
-    throw UnimplementedError("sessionTakeScreenshot");
+    return Future(() => js.context
+        .callMethod('setByName', ['take_screenshot', display.toString()]));
   }
 
   Future<void> sessionOpenTerminal(

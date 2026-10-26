@@ -419,6 +419,9 @@ window.setByName = (name, value) => {
     case 'send_note':
       curConn.sendNote(value);
       break;
+    case 'take_screenshot':
+      curConn.takeScreenshot(parseInt(value));
+      break;
     case 'audit_guid':
       curConn._auditGuid = value;
       break;
@@ -674,6 +677,10 @@ function _getByName(name, arg) {
   switch (name) {
     case 'peers':
       return getPeersForDart();
+    case 'screenshot_supported':
+      return curConn?.isScreenshotSupported() ? 'true' : '';
+    case 'handle_screenshot':
+      return curConn?.handleScreenshot(arg) ?? 'No cached screenshot';
     case 'keyboard_mode_supported':
       return curConn?.isKeyboardModeSupported(arg) ? 'true' : '';
     case 'last_audit_note':
