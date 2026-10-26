@@ -367,6 +367,11 @@ export default class Connection {
         globals.pushEvent("cursor_id", { id: msg?.cursor_id });
       } else if (msg?.cursor_position) {
         globals.pushEvent("cursor_position", msg?.cursor_position);
+      } else if (msg?.peer_info) {
+        // As native: the device's displays changed during the session.
+        if (this._peerInfo) this._peerInfo.displays = msg.peer_info.displays;
+        globals.pushEvent("sync_peer_info", { displays: msg.peer_info.displays });
+        globals.pushEvent("sync_platform_additions", { platform_additions: msg.peer_info.platform_additions });
       } else if (msg?.screenshot_response) {
         const r = msg.screenshot_response;
         this._screenshot = r.msg ? undefined : r.data;
@@ -689,6 +694,11 @@ export default class Connection {
       case P.PrvOffUnknown: error("Privacy mode", "Turned off"); privacy(false); break;
     }
     return true;
+  }
+
+  toggleVirtualDisplay(display: number, on: boolean) {
+    const toggle_virtual_display = message.ToggleVirtualDisplay.fromPartial({ display, on });
+    this._ws?.sendMessage({ misc: message.Misc.fromPartial({ toggle_virtual_display }) });
   }
 
   togglePrivacyMode(impl_key: string, on: boolean) {

@@ -419,6 +419,11 @@ window.setByName = (name, value) => {
     case 'send_note':
       curConn.sendNote(value);
       break;
+    case 'toggle_virtual_display': {
+      const v = JSON.parse(value);
+      curConn.toggleVirtualDisplay(v.index, v.on);
+      break;
+    }
     case 'toggle_privacy_mode': {
       const v = JSON.parse(value);
       curConn.togglePrivacyMode(v.impl_key, v.on);

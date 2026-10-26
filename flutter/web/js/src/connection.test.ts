@@ -30,6 +30,7 @@ vi.mock("./message.js", () => ({
   BackNotification_BlockInputState: { BlkOnSucceeded: 2, BlkOnFailed: 3, BlkOffSucceeded: 4, BlkOffFailed: 5 },
   BackNotification_PrivacyModeState: { PrvOnByOther: 2, PrvNotSupported: 3, PrvOnSucceeded: 4, PrvOnFailedDenied: 5, PrvOnFailedPlugin: 6, PrvOnFailed: 7, PrvOffSucceeded: 8, PrvOffByPeer: 9, PrvOffFailed: 10, PrvOffUnknown: 11 },
   TogglePrivacyMode: { fromPartial: vi.fn((v: any) => v) },
+  ToggleVirtualDisplay: { fromPartial: vi.fn((v: any) => v) },
   Clipboard: { fromPartial: vi.fn((v: any) => v) },
   ClipboardFormat: { Text: 0, Html: 2 },
   ClipboardOffer: { fromPartial: vi.fn((v: any) => v) },
@@ -387,6 +388,18 @@ describe("Connection", () => {
       expect(c.getOption("view_style")).toBe("original");
       c.setOption("scroll_style", "bar");
       expect((localStorage.getItem("peers") || "").includes('"p1"')).toBe(true);
+    });
+  });
+
+  describe("display changes", () => {
+    it("hands the device's new displays to Flutter, as native", async () => {
+      const displays = [{ x: 0, y: 0, width: 1920, height: 1080 }, { x: 1920, y: 0, width: 1920, height: 1080 }];
+      mockWs.next
+        .mockResolvedValueOnce({ peer_info: { displays, platform_additions: '{"idd_impl":"rustdesk_idd"}' } })
+        .mockResolvedValueOnce({ misc: { close_reason: "done" } });
+      await conn.msgLoop();
+      expect(globals.pushEvent).toHaveBeenCalledWith("sync_peer_info", { displays });
+      expect(globals.pushEvent).toHaveBeenCalledWith("sync_platform_additions", { platform_additions: '{"idd_impl":"rustdesk_idd"}' });
     });
   });
 
@@ -947,6 +960,11 @@ describe("Connection", () => {
     it("follows the display the device reports, as native", () => {
       conn.handleMisc({ follow_current_display: 1 } as any);
       expect(globals.pushEvent).toHaveBeenCalledWith("follow_current_display", { display_idx: 1 });
+    });
+
+    it("asks the device to plug a virtual display in", () => {
+      conn.toggleVirtualDisplay(1, true);
+      expect(mockWs.sendMessage.mock.calls.at(-1)[0].misc.toggle_virtual_display).toEqual({ display: 1, on: true });
     });
 
     it("handles close_reason and returns false", () => {
