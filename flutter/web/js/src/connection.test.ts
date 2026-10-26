@@ -29,6 +29,10 @@ vi.mock("./message.js", () => ({
   ClipboardFormat: { Text: 0, Html: 2 },
   ClipboardOffer: { fromPartial: vi.fn((v: any) => v) },
   ClipboardReply: { fromPartial: vi.fn((v: any) => v) },
+  ChatMessage: { fromPartial: vi.fn((v: any) => v) },
+  Resolution: { fromPartial: vi.fn((v: any) => v) },
+  DisplayResolution: { fromPartial: vi.fn((v: any) => v) },
+  Auth2FA: { fromPartial: vi.fn((v: any) => v) },
 }));
 
 vi.mock("./rendezvous.js", () => ({
@@ -100,6 +104,10 @@ vi.mock("./common", () => ({
   decompress: vi.fn().mockResolvedValue(new Uint8Array(10)),
   mapKey: vi.fn((name: string) => ({ chr: name.charCodeAt(0) })),
   sleep: vi.fn().mockResolvedValue(undefined),
+  getVersionNumber: vi.fn((v: string) => {
+    const [a = 0, b = 0, c = 0] = (v || "").split("-")[0].split(".").map(Number);
+    return a * 1000000 + b * 1000 + c * 10;
+  }),
 }));
 
 vi.mock("./url", () => ({
@@ -108,6 +116,7 @@ vi.mock("./url", () => ({
   getDefaultUri: vi.fn(() => "ws://host:21118"),
   getHost: vi.fn(() => "host:21116"),
   getRelayUri: vi.fn((relay?: string) => relay || "ws://relay:21119"),
+  getApiServer: vi.fn(() => "https://api.example.com"),
 }));
 
 import Connection, { getConfigHost } from "./connection";
@@ -200,6 +209,13 @@ describe("Connection", () => {
   });
 
   describe("getImageQuality", () => {
+    it("falls back to the user's default image quality", () => {
+      localStorage.setItem("image_quality", "best");
+      expect(conn.getImageQuality()).toBe("best");
+      conn.setOption("image-quality", "low");
+      expect(conn.getImageQuality()).toBe("low");
+    });
+
     it("returns image-quality option", () => {
       conn.setOption("image-quality", "best");
       expect(conn.getImageQuality()).toBe("best");
@@ -229,6 +245,14 @@ describe("Connection", () => {
   });
 
   describe("getOptionMessage", () => {
+    it("sends the stored toggles at login, as native; view-only overrides", () => {
+      (conn as any)._options = { "follow-remote-cursor": true, "lock-after-session-end": true, "view-only": true };
+      expect(conn.getOptionMessage()).toMatchObject({
+        follow_remote_cursor: 1, disable_keyboard: 1, show_remote_cursor: 1, disable_clipboard: 1,
+      });
+      expect(conn.getOptionMessage()!.lock_after_session_end).toBeUndefined();
+    });
+
     it("returns undefined when no options set", () => {
       expect(conn.getOptionMessage()).toBeUndefined();
     });
@@ -270,6 +294,13 @@ describe("Connection", () => {
   });
 
   describe("close", () => {
+    it("tells the device before closing, once", () => {
+      conn.close();
+      conn.close();
+      const closes = mockWs.sendMessage.mock.calls.filter((c: any) => c[0].misc?.close_reason === "");
+      expect(closes.length).toBe(1);
+    });
+
     it("clears msgs and closes ws", () => {
       (conn as any)._msgs = [{ test: true }];
       conn.close();
@@ -290,6 +321,62 @@ describe("Connection", () => {
     it("falls back to web without a login", () => {
       (conn as any)._sendLoginMessage();
       expect(sentName()).toBe("web");
+    });
+  });
+
+  describe("session actions, as native", () => {
+    const sent = () => mockWs.sendMessage.mock.calls.at(-1)[0];
+
+    it("sends chat text", () => {
+      conn.sendChat("hi");
+      expect(sent().misc.chat_message).toEqual({ text: "hi" });
+    });
+
+    it("asks the device to restart", () => {
+      conn.restartRemoteDevice();
+      expect(sent().misc.restart_remote_device).toBe(true);
+    });
+
+    it("changes the resolution per display on newer peers, as one resolution on older ones", () => {
+      (conn as any)._peerInfo = { version: "1.5.0" };
+      conn.changeResolution(1, 1280, 800);
+      expect(sent().misc.change_display_resolution).toEqual({ display: 1, resolution: { width: 1280, height: 800 } });
+      (conn as any)._peerInfo = { version: "1.2.3" };
+      conn.changeResolution(0, 1024, 768);
+      expect(sent().misc.change_resolution).toEqual({ width: 1024, height: 768 });
+    });
+
+    it("sends custom quality shifted by 8 bits and custom fps", () => {
+      conn.setCustomImageQuality(70);
+      expect(sent().misc.option.custom_image_quality).toBe(70 << 8);
+      conn.setCustomFps(15);
+      expect(sent().misc.option.custom_fps).toBe(15);
+      conn.setImageQuality("custom");
+      expect(sent().misc.option.custom_image_quality).toBe(70 << 8);
+    });
+
+    it("sends the 2FA code", () => {
+      conn.send2fa("123456");
+      expect(sent().auth_2fa).toEqual({ code: "123456" });
+    });
+
+    it("sends a session ID in the login request", () => {
+      (conn as any)._sendLoginMessage();
+      expect(sent().login_request.session_id).toBe((conn as any)._sessionId);
+      expect((conn as any)._sessionId).toBeGreaterThan(0);
+    });
+
+    it("posts the note to the audit for this session when logged in", () => {
+      const fetchMock = vi.fn().mockResolvedValue({});
+      vi.stubGlobal("fetch", fetchMock);
+      conn.sendNote("first");
+      expect(fetchMock).not.toHaveBeenCalled();
+      localStorage.setItem("access_token", "t");
+      conn.sendNote("checked the logs");
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toMatch(/\/api\/audit\/conn$/);
+      expect(JSON.parse(init.body)).toEqual({ id: "test-id", session_id: (conn as any)._sessionId, note: "checked the logs" });
+      vi.unstubAllGlobals();
     });
   });
 
@@ -432,8 +519,33 @@ describe("Connection", () => {
       expect(mockWs.sendMessage).toHaveBeenCalled();
     });
 
-    it("ignores unknown option", () => {
-      conn.toggleOption("unknown-option");
+    // As native toggle_option: these reach the device, the rest are stored on the session only.
+    const sentOption = () => mockWs.sendMessage.mock.calls.at(-1)[0].misc.option;
+
+    it("sends follow-remote-cursor, follow-remote-window and show-my-cursor to the device", () => {
+      conn.toggleOption("follow-remote-cursor");
+      expect(sentOption().follow_remote_cursor).toBe(1);
+      conn.toggleOption("follow-remote-window");
+      expect(sentOption().follow_remote_window).toBe(1);
+      conn.toggleOption("show-my-cursor");
+      expect(sentOption().show_my_cursor).toBe(1);
+      expect(conn.getOption("show-my-cursor")).toBe(true);
+    });
+
+    it("turns the session view-only and back", () => {
+      conn.toggleOption("show-my-cursor");
+      conn.toggleOption("view-only");
+      expect(sentOption()).toMatchObject({ disable_keyboard: 1, disable_clipboard: 1, show_remote_cursor: 1, enable_file_transfer: 0, lock_after_session_end: 0 });
+      conn.toggleOption("view-only");
+      expect(sentOption()).toMatchObject({ disable_keyboard: 0, disable_clipboard: 0, show_remote_cursor: 0, show_my_cursor: 0 });
+      expect(conn.getOption("show-my-cursor")).toBe(false);
+    });
+
+    it("stores local-only toggles without sending them", () => {
+      conn.toggleOption("show-quality-monitor");
+      conn.toggleOption("zoom-cursor");
+      expect(conn.getOption("show-quality-monitor")).toBe(true);
+      expect(conn.getOption("zoom-cursor")).toBe(true);
       expect(mockWs.sendMessage).not.toHaveBeenCalled();
     });
   });
@@ -657,7 +769,7 @@ describe("Connection", () => {
     it("handles chat_message", () => {
 
       conn.handleMisc({ chat_message: { text: "hello" } } as any);
-      expect(globals.pushEvent).toHaveBeenCalledWith("chat", { text: "hello" });
+      expect(globals.pushEvent).toHaveBeenCalledWith("chat_client_mode", { text: "hello" });
     });
 
     it("handles permission_info for keyboard", () => {
@@ -750,6 +862,15 @@ describe("Connection", () => {
       (conn as any)._start = vi.fn().mockRejectedValue(new Error("fail"));
       await conn.start("test");
       expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "Error: fail", false);
+    });
+
+    it("ends quietly when the user closed the session", async () => {
+      (conn as any)._start = vi.fn(async () => {
+        conn.close();
+        throw { type: "close" };
+      });
+      await conn.start("test");
+      expect(globals.msgbox).not.toHaveBeenCalled();
     });
 
     it("shows 'Reset by the peer' for close events", async () => {

@@ -3,7 +3,7 @@ import _sodium from "libsodium-wrappers";
 import { CursorData } from "./message";
 import { loadVp9 } from "./codec";
 import { checkIfRetry, version } from "./gen_js_from_hbb";
-import { initZstd, translate } from "./common";
+import { getVersionNumber, initZstd, translate } from "./common";
 import PCMPlayer from "pcm-player";
 import { randomVerifier, s256Challenge } from "./pkce";
 
@@ -396,19 +396,46 @@ window.setByName = (name, value) => {
     }
     case 'login':
       value = JSON.parse(value);
-      curConn.setRemember(value.remember == 'true');
+      curConn.setRemember(value.remember === true || value.remember == 'true');
       curConn.login(value.password);
       break;
     case 'close':
+    case 'session_close':
       close();
+      break;
+    case 'send_chat':
+      curConn.sendChat(value);
+      break;
+    case 'restart':
+      curConn.restartRemoteDevice();
+      break;
+    case 'send_note':
+      curConn.sendNote(value);
+      break;
+    case 'audit_guid':
+      curConn._auditGuid = value;
+      break;
+    case 'change_resolution': {
+      const r = JSON.parse(value);
+      curConn.changeResolution(r.display, r.width, r.height);
+      break;
+    }
+    case 'custom_image_quality':
+      curConn.setCustomImageQuality(Number(value));
+      break;
+    case 'custom-fps':
+      curConn.setCustomFps(Number(value));
+      break;
+    case 'send_2fa':
+      curConn.send2fa(JSON.parse(value).code);
       break;
     case 'refresh':
       curConn.refresh();
       break;
     case 'reconnect':
-      curConn.reconnect();
+      curConn?.reconnect();
       break;
-    case 'toggle_option':
+    case 'option:toggle':
       curConn.toggleOption(value);
       break;
     case 'image_quality':
@@ -489,7 +516,7 @@ window.setByName = (name, value) => {
       if (['custom-rendezvous-server', 'key'].includes(value.name)) break;
       localStorage.setItem(value.name, value.value);
       break;
-    case 'peer_option':
+    case 'option:session':
       value = JSON.parse(value);
       curConn.setOption(value.name, value.value);
       break;
@@ -528,6 +555,8 @@ function getPeersForDart() {
   return peers.sort().reverse().map(x => x.slice(1));
 }
 
+const SESSION_DEFAULTS = ['view_style', 'scroll_style'];
+
 function getFavs() {
   try {
     const favs = JSON.parse(localStorage.getItem('fav'));
@@ -559,6 +588,15 @@ function _getByName(name, arg) {
   switch (name) {
     case 'peers':
       return getPeersForDart();
+    case 'last_audit_note':
+      return curConn?._lastAuditNote || '';
+    case 'audit_guid':
+      return curConn?._auditGuid || '';
+    case 'audit_server':
+      // As native: only for a logged-in user.
+      return localStorage.getItem('access_token') ? `${getApiServer()}/api/audit/${arg}` : '';
+    case 'get_version_number':
+      return String(getVersionNumber(arg));
     case 'load_recent_peers':
       pushStoredPeers('load_recent_peers', getPeersForDart());
       return '';
@@ -579,8 +617,8 @@ function _getByName(name, arg) {
       return localStorage.getItem('remote-id');
     case 'remember':
       return curConn.getRemember();
-    case 'toggle_option':
-      return curConn.getOption(arg) || false;
+    case 'option:toggle':
+      return !!curConn.getOption(arg);
     case 'option':
       if (arg === 'key') return getConfigKey();
       if (arg === 'custom-rendezvous-server') return getConfigHost();
@@ -588,7 +626,8 @@ function _getByName(name, arg) {
     case 'option:local':
       return localStorage.getItem(arg) || '';
     case 'option:session':
-      return '';
+      // As native, a session without its own value uses the user's default.
+      return curConn?.getOption(arg) || (SESSION_DEFAULTS.includes(arg) ? localStorage.getItem(arg) || '' : '');
     case 'option:user:default': {
       const v = localStorage.getItem(arg);
       if (v) return v;
@@ -611,8 +650,6 @@ function _getByName(name, arg) {
     case 'translate':
       arg = JSON.parse(arg);
       return translate(arg.locale, arg.text);
-    case 'peer_option':
-      return curConn.getOption(arg);
     case 'test_if_valid_server':
       break;
     case 'version':

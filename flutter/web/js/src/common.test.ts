@@ -26,7 +26,16 @@ vi.mock("./gen_js_from_hbb", () => ({
   },
 }));
 
-import { decompress, mapKey, sleep, translate, initZstd } from "./common";
+import { decompress, getVersionNumber, mapKey, sleep, translate, initZstd } from "./common";
+
+describe("getVersionNumber", () => {
+  it("matches hbb_common::get_version_number", () => {
+    expect(getVersionNumber("1.2.3")).toBe(1002030);
+    expect(getVersionNumber("1.1.10")).toBe(1001100);
+    expect(getVersionNumber("1.2.3-4")).toBe(1002034);
+    expect(getVersionNumber("")).toBe(0);
+  });
+});
 
 describe("sleep", () => {
   it("resolves after the given delay", async () => {

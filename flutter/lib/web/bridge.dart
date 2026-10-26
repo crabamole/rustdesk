@@ -1984,8 +1984,10 @@ class RustdeskImpl {
 
   Future<void> sessionSetEdgeScrollEdgeThickness(
       {required UuidValue sessionId, required int value, dynamic hint}) {
-    return Future(() => js.context.callMethod('setByName',
-        ['option:session', 'edge-scroll-edge-thickness', value.toString()]));
+    return Future(() => js.context.callMethod('setByName', [
+          'option:session',
+          jsonEncode({'name': 'edge-scroll-edge-thickness', 'value': value.toString()})
+        ]));
   }
 
   String sessionGetConnSessionId({required UuidValue sessionId, dynamic hint}) {

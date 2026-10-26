@@ -51,6 +51,19 @@ export function translate(locale: string, text: string): string {
 const zCode = "z".charCodeAt(0);
 const aCode = "a".charCodeAt(0);
 
+// As hbb_common::get_version_number: 1.2.3 -> 1002030, 1.2.3-4 -> 1002034.
+export function getVersionNumber(v: string): number {
+  const [main, patch] = (v || "").split("-");
+  let n = 0;
+  let last = 0;
+  for (const x of (main || "").split(".")) {
+    last = parseInt(x, 10) || 0;
+    n = n * 1000 + last;
+  }
+  n += last * 9;
+  return n + (parseInt(patch, 10) || 0);
+}
+
 export function mapKey(name: string, isDesktop: Boolean) {
   const tmp = KEY_MAP[name] || name;
   if (tmp.length == 1) {

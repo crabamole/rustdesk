@@ -64,6 +64,7 @@ vi.mock("./gen_js_from_hbb", () => ({
 vi.mock("./common", () => ({
   initZstd: vi.fn().mockResolvedValue(undefined),
   translate: vi.fn((locale: string, text: string) => text),
+  getVersionNumber: vi.fn(() => 1005000),
 }));
 
 const mockPCMPlayerInstances: Array<{ feed: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }> = [];
@@ -330,9 +331,9 @@ describe("setByName / getByName", () => {
     expect(conn.reconnect).toHaveBeenCalled();
   });
 
-  it("handles toggle_option via setByName", () => {
+  it("handles option:toggle via setByName", () => {
     const conn = newConn();
-    (window as any).setByName("toggle_option", "show-remote-cursor");
+    (window as any).setByName("option:toggle", "show-remote-cursor");
     expect(conn.toggleOption).toHaveBeenCalledWith("show-remote-cursor");
   });
 
@@ -450,9 +451,9 @@ describe("setByName / getByName", () => {
     expect(args[0]).toBe((3 | (4 << 3)));
   });
 
-  it("handles peer_option via setByName", () => {
+  it("handles option:session via setByName", () => {
     const conn = newConn();
-    (window as any).setByName("peer_option", JSON.stringify({ name: "zoom", value: "100" }));
+    (window as any).setByName("option:session", JSON.stringify({ name: "zoom", value: "100" }));
     expect(conn.setOption).toHaveBeenCalledWith("zoom", "100");
   });
 
@@ -485,9 +486,9 @@ describe("setByName / getByName", () => {
     expect((window as any).getByName("translate", JSON.stringify({ locale: "en", text: "hello" }))).toBe("hello");
   });
 
-  it("getByName returns peer_option from connection", () => {
+  it("getByName returns option:session from connection", () => {
     newConn();
-    expect((window as any).getByName("peer_option", "some_opt")).toBe("");
+    expect((window as any).getByName("option:session", "some_opt")).toBe("");
   });
 
   it("getByName returns get_conn_status", () => {
@@ -530,9 +531,26 @@ describe("setByName / getByName", () => {
     expect((window as any).getByName("remember")).toBe("false");
   });
 
-  it("getByName returns toggle_option from connection", () => {
+  it("option:toggle reads and toggles the session's toggle", () => {
     newConn();
-    expect((window as any).getByName("toggle_option", "some-opt")).toBe("false");
+    const conn = getConn() as any;
+    conn.getOption.mockReturnValueOnce(true);
+    expect((window as any).getByName("option:toggle", "show-quality-monitor")).toBe("true");
+    expect((window as any).getByName("option:toggle", "some-opt")).toBe("false");
+  });
+
+  it("option:session falls back to the user's default view and scroll style", () => {
+    newConn();
+    expect((window as any).getByName("option:session", "view_style")).toBe("");
+    localStorage.setItem("view_style", "original");
+    expect((window as any).getByName("option:session", "view_style")).toBe("original");
+    expect((window as any).getByName("option:session", "keyboard_mode")).toBe("");
+  });
+
+  it("login remembers the password when asked", () => {
+    newConn();
+    (window as any).setByName("login", JSON.stringify({ password: "pw", remember: true }));
+    expect((getConn() as any).setRemember).toHaveBeenCalledWith(true);
   });
 
   it("getByName returns peers sorted by tm descending", () => {
@@ -608,6 +626,36 @@ describe("setByName / getByName", () => {
       expect((window as any).getByName("peer_has_password", "b")).toBe("true");
       expect((window as any).getByName("peer_has_password", "a")).toBe("");
     });
+  });
+
+  it("routes the session actions the bridge sends", () => {
+    newConn();
+    const conn = getConn() as any;
+    conn.sendChat = vi.fn(); conn.restartRemoteDevice = vi.fn(); conn.sendNote = vi.fn();
+    conn.changeResolution = vi.fn(); conn.setCustomImageQuality = vi.fn(); conn.setCustomFps = vi.fn(); conn.send2fa = vi.fn();
+    (window as any).setByName("send_chat", "hi");
+    (window as any).setByName("restart");
+    (window as any).setByName("send_note", "n");
+    (window as any).setByName("change_resolution", JSON.stringify({ display: 1, width: 800, height: 600 }));
+    (window as any).setByName("custom_image_quality", 60);
+    (window as any).setByName("custom-fps", 20);
+    (window as any).setByName("send_2fa", JSON.stringify({ code: "123", trust_this_device: false }));
+    expect(conn.sendChat).toHaveBeenCalledWith("hi");
+    expect(conn.restartRemoteDevice).toHaveBeenCalled();
+    expect(conn.sendNote).toHaveBeenCalledWith("n");
+    expect(conn.changeResolution).toHaveBeenCalledWith(1, 800, 600);
+    expect(conn.setCustomImageQuality).toHaveBeenCalledWith(60);
+    expect(conn.setCustomFps).toHaveBeenCalledWith(20);
+    expect(conn.send2fa).toHaveBeenCalledWith("123");
+    (window as any).setByName("session_close");
+    expect(getConn()).toBeUndefined();
+  });
+
+  it("answers the version number and the audit server", () => {
+    expect((window as any).getByName("get_version_number", "1.5.0")).toBe("1005000");
+    expect((window as any).getByName("audit_server", "conn")).toBe("");
+    localStorage.setItem("access_token", "t");
+    expect((window as any).getByName("audit_server", "conn")).toMatch(/\/api\/audit\/conn$/);
   });
 
   it("getByName returns user default for scroll_style", () => {

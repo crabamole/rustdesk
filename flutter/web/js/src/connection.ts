@@ -4,7 +4,7 @@ import * as rendezvous from "./rendezvous.js";
 import { loadVp9 } from "./codec";
 import * as sha256 from "fast-sha256";
 import * as globals from "./globals";
-import { decompress, mapKey, sleep } from "./common";
+import { decompress, getVersionNumber, mapKey, sleep } from "./common";
 import { loadConfig, getConfigKey, getDefaultUri, getHost, getApiServer, getRelayUri } from "./url";
 
 // The device waits 5 s for a reply; give up before that.
@@ -69,6 +69,11 @@ export default class Connection {
   _msgbox: MsgboxCallback;
   _draw: DrawCallback;
   _peerInfo: message.PeerInfo | undefined;
+  // As native LoginConfigHandler.session_id: one random ID for the session, kept across reconnects.
+  _sessionId: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+  _lastAuditNote = "";
+  _closed = false;
+  _auditGuid = "";
   _firstFrame: Boolean | undefined;
   _videoDecoder: any;
   _decoderGeneration: number;
@@ -100,9 +105,12 @@ export default class Connection {
   }
 
   async start(id: string) {
+    this._closed = false;
     try {
       await this._start(id);
     } catch (e: any) {
+      // Closed by the user, as native: the session ends without an error.
+      if (this._closed) return;
       // Websock fails with a string or an event (closed, timed out, could not connect), never an
       // Error: a dropped connection, retried as the native client retries a relay connection.
       this.msgbox(
@@ -313,6 +321,8 @@ export default class Connection {
               r.error,
               "Do you want to enter again?"
             );
+          } else if (r.error == "2FA Required" || r.error == "Wrong 2FA Code") {
+            this.msgbox("input-2fa", r.error, "");
           } else {
             this.msgbox("error", "Login Error", r.error);
           }
@@ -388,6 +398,11 @@ export default class Connection {
   }
 
   close() {
+    // As native: tell the device first, so it ends the connection at once.
+    if (!this._closed) {
+      this._ws?.sendMessage({ misc: message.Misc.fromPartial({ close_reason: "" }) });
+    }
+    this._closed = true;
     this._msgs = [];
     clearInterval(this._interval);
     this._ws?.close();
@@ -439,6 +454,7 @@ export default class Connection {
       my_id: "web", // to-do
       my_name: viewerName(),
       password,
+      session_id: this._sessionId,
       option: this.getOptionMessage(),
       video_ack_required: true,
     });
@@ -453,15 +469,27 @@ export default class Connection {
     if (q != undefined) {
       msg.image_quality = q;
       n += 1;
-    }
-    if (this._options["show-remote-cursor"]) {
-      msg.show_remote_cursor = yes;
+    } else if (this.getImageQuality() == "custom") {
+      msg.custom_image_quality = this.customImageQuality() << 8;
       n += 1;
+      const fps = parseInt(this.getOption("custom-fps"), 10);
+      if (fps) msg.custom_fps = fps;
     }
-    if (this._options["lock-after-session-end"]) {
-      msg.lock_after_session_end = yes;
+    // As native get_option_message: view-only overrides the toggles it covers.
+    const o = this._options;
+    const viewOnly = !!o["view-only"];
+    const set = (field: string, on: boolean) => {
+      if (!on) return;
+      (msg as any)[field] = yes;
       n += 1;
-    }
+    };
+    set("disable_keyboard", viewOnly);
+    set("show_remote_cursor", viewOnly || !!o["show-remote-cursor"]);
+    set("show_my_cursor", viewOnly && !!o["show-my-cursor"]);
+    set("follow_remote_cursor", !!o["follow-remote-cursor"]);
+    set("follow_remote_window", !!o["follow-remote-window"]);
+    set("lock_after_session_end", !viewOnly && !!o["lock-after-session-end"]);
+    set("enable_file_transfer", !viewOnly && !!o["enable-file-copy-paste"]);
     if (this._options["privacy-mode"]) {
       msg.privacy_mode = yes;
       n += 1;
@@ -470,10 +498,7 @@ export default class Connection {
       msg.disable_audio = yes;
       n += 1;
     }
-    if (this._options["disable-clipboard"]) {
-      msg.disable_clipboard = yes;
-      n += 1;
-    }
+    set("disable_clipboard", viewOnly || !!o["disable-clipboard"]);
     return n > 0 ? msg : undefined;
   }
 
@@ -584,7 +609,7 @@ export default class Connection {
         misc.audio_format.sample_rate
       );
     } else if (misc.chat_message) {
-      globals.pushEvent("chat", { text: misc.chat_message.text });
+      globals.pushEvent("chat_client_mode", { text: misc.chat_message.text });
     } else if (misc.permission_info) {
       const p = misc.permission_info;
       console.info("Change permission " + p.permission + " -> " + p.enabled);
@@ -791,27 +816,41 @@ export default class Connection {
     this._ws?.sendMessage({ mouse_event });
   }
 
+  // As native toggle_option (src/client.rs): these reach the device; any other name is stored on
+  // the session only.
   toggleOption(name: string) {
-    const v = !this._options[name];
     const option = message.OptionMessage.fromPartial({});
-    const v2 = v
-      ? message.OptionMessage_BoolOption.Yes
-      : message.OptionMessage_BoolOption.No;
+    const yesNo = (b: boolean) =>
+      b ? message.OptionMessage_BoolOption.Yes : message.OptionMessage_BoolOption.No;
+    const flip = () => {
+      const v = !this._options[name];
+      this.setOption(name, v);
+      return v;
+    };
     switch (name) {
       case "show-remote-cursor":
-        option.show_remote_cursor = v2;
+        option.show_remote_cursor = yesNo(flip());
+        break;
+      case "follow-remote-cursor":
+        option.follow_remote_cursor = yesNo(flip());
+        break;
+      case "follow-remote-window":
+        option.follow_remote_window = yesNo(flip());
         break;
       case "disable-audio":
-        option.disable_audio = v2;
+        option.disable_audio = yesNo(flip());
         break;
       case "disable-clipboard":
-        option.disable_clipboard = v2;
+        option.disable_clipboard = yesNo(flip());
         break;
       case "lock-after-session-end":
-        option.lock_after_session_end = v2;
+        option.lock_after_session_end = yesNo(flip());
         break;
       case "privacy-mode":
-        option.privacy_mode = v2;
+        option.privacy_mode = yesNo(flip());
+        break;
+      case "enable-file-copy-paste":
+        option.enable_file_transfer = yesNo(flip());
         break;
       case "block-input":
         option.block_input = message.OptionMessage_BoolOption.Yes;
@@ -819,16 +858,33 @@ export default class Connection {
       case "unblock-input":
         option.block_input = message.OptionMessage_BoolOption.No;
         break;
+      case "show-my-cursor":
+        option.show_my_cursor = yesNo(flip());
+        break;
+      case "view-only": {
+        const on = flip();
+        option.disable_keyboard = yesNo(on);
+        option.disable_clipboard = yesNo(on || !!this._options["disable-clipboard"]);
+        option.show_remote_cursor = yesNo(on || !!this._options["show-remote-cursor"]);
+        option.enable_file_transfer = yesNo(!on && !!this._options["enable-file-copy-paste"]);
+        option.lock_after_session_end = yesNo(!on && !!this._options["lock-after-session-end"]);
+        if (!on && this._options["show-my-cursor"]) {
+          this.setOption("show-my-cursor", false);
+          option.show_my_cursor = message.OptionMessage_BoolOption.No;
+        }
+        break;
+      }
       default:
+        flip();
         return;
     }
-    if (name.indexOf("block-input") < 0) this.setOption(name, v);
     const misc = message.Misc.fromPartial({ option });
     this._ws?.sendMessage({ misc });
   }
 
   getImageQuality() {
-    return this.getOption("image-quality");
+    // As native, a session without its own value uses the user's default (Settings).
+    return this.getOption("image-quality") || localStorage.getItem("image_quality") || undefined;
   }
 
   getImageQualityEnum(
@@ -849,11 +905,67 @@ export default class Connection {
 
   setImageQuality(value: string) {
     this.setOption("image-quality", value);
+    if (value == "custom") {
+      this.sendOption({ custom_image_quality: this.customImageQuality() << 8 });
+      return;
+    }
     const image_quality = this.getImageQualityEnum(value, false);
     if (image_quality == undefined) return;
-    const option = message.OptionMessage.fromPartial({ image_quality });
-    const misc = message.Misc.fromPartial({ option });
+    this.sendOption({ image_quality });
+  }
+
+  // As native: the custom quality (percent, 50 when unset) goes out shifted left by 8 bits.
+  customImageQuality(): number {
+    return parseInt(this.getOption("custom_image_quality"), 10) || 50;
+  }
+
+  setCustomImageQuality(quality: number) {
+    this.setOption("custom_image_quality", String(quality));
+    this.sendOption({ custom_image_quality: quality << 8 });
+  }
+
+  setCustomFps(fps: number) {
+    this.setOption("custom-fps", String(fps));
+    this.sendOption({ custom_fps: fps });
+  }
+
+  sendOption(fields: Partial<message.OptionMessage>) {
+    const option = message.OptionMessage.fromPartial(fields);
+    this._ws?.sendMessage({ misc: message.Misc.fromPartial({ option }) });
+  }
+
+  sendChat(text: string) {
+    const chat_message = message.ChatMessage.fromPartial({ text });
+    this._ws?.sendMessage({ misc: message.Misc.fromPartial({ chat_message }) });
+  }
+
+  restartRemoteDevice() {
+    this._ws?.sendMessage({ misc: message.Misc.fromPartial({ restart_remote_device: true }) });
+  }
+
+  // As native: older peers take one resolution, newer ones a resolution per display.
+  changeResolution(display: number, width: number, height: number) {
+    const resolution = message.Resolution.fromPartial({ width, height });
+    const misc = getVersionNumber(this._peerInfo?.version || "") >= getVersionNumber("1.2.4")
+      ? message.Misc.fromPartial({ change_display_resolution: message.DisplayResolution.fromPartial({ display, resolution }) })
+      : message.Misc.fromPartial({ change_resolution: resolution });
     this._ws?.sendMessage({ misc });
+  }
+
+  // The browser has no hardware ID, so "trust this device" is not offered (native sends one).
+  send2fa(code: string) {
+    this._ws?.sendMessage({ auth_2fa: message.Auth2FA.fromPartial({ code }) });
+  }
+
+  // As native send_note: the note for this session goes to the api-server's audit, by session ID.
+  sendNote(note: string) {
+    this._lastAuditNote = note;
+    if (!localStorage.getItem("access_token")) return;
+    fetch(`${getApiServer()}/api/audit/conn`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: this._id, session_id: this._sessionId, note }),
+    }).catch((e) => console.error("send note:", e));
   }
 
   loadVideoDecoder() {
