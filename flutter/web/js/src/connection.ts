@@ -74,7 +74,6 @@ export default class Connection {
   _sessionId: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
   _lastAuditNote = "";
   _screenshot?: Uint8Array;
-  _keyboardAllowed = true;
   _selectedSid?: number;
   _closed = false;
   _cursorShapes: { [id: string]: { hotx: number; hoty: number; width: number; height: number; colors: Uint8Array } } = {};
@@ -615,7 +614,6 @@ export default class Connection {
       switch (p.permission) {
         case message.PermissionInfo_Permission.Keyboard:
           name = "keyboard";
-          this._keyboardAllowed = p.enabled;
           break;
         case message.PermissionInfo_Permission.Clipboard:
           name = "clipboard";
@@ -640,12 +638,6 @@ export default class Connection {
       globals.pushEvent("permission", { [name]: p.enabled });
     } else if (misc.back_notification) {
       return this.handleBackNotification(misc.back_notification);
-    } else if (misc.uac !== undefined) {
-      if (misc.uac && this._keyboardAllowed) this.msgbox("on-uac", "Prompt", "Please wait for confirmation of UAC...");
-      else this.cancelMsgbox("on-uac", "wait-uac", "elevation-error");
-    } else if (misc.foreground_window_elevated !== undefined) {
-      if (misc.foreground_window_elevated && this._keyboardAllowed) this.msgbox("on-foreground-elevated", "Prompt", "elevated_foreground_window_tip");
-      else this.cancelMsgbox("on-foreground-elevated", "wait-uac", "elevation-error");
     } else if (misc.follow_current_display !== undefined) {
       globals.pushEvent("follow_current_display", { display_idx: misc.follow_current_display });
     } else if (misc.switch_display) {
@@ -657,10 +649,6 @@ export default class Connection {
       return false;
     }
     return true;
-  }
-
-  cancelMsgbox(...tags: string[]) {
-    tags.forEach((tag) => globals.pushEvent("cancel_msgbox", { tag }));
   }
 
   // As native handle_back_notification. Returns false to end the session.

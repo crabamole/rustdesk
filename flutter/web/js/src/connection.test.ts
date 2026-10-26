@@ -963,14 +963,6 @@ describe("Connection", () => {
       expect(conn.handleMisc({ back_notification: { privacy_mode_state: 2, details: "", impl_key: "" } } as any)).toBe(false);
     });
 
-    it("shows the UAC prompt while keyboard is allowed and clears it after", () => {
-      const msgbox = vi.spyOn(conn, "msgbox");
-      conn.handleMisc({ uac: true } as any);
-      expect(msgbox).toHaveBeenCalledWith("on-uac", "Prompt", "Please wait for confirmation of UAC...");
-      conn.handleMisc({ uac: false } as any);
-      expect(globals.pushEvent).toHaveBeenCalledWith("cancel_msgbox", { tag: "on-uac" });
-    });
-
     it("asks the device to toggle a privacy mode", () => {
       conn.togglePrivacyMode("privacy_mode_impl_mag", true);
       expect(mockWs.sendMessage.mock.calls.at(-1)[0].misc.toggle_privacy_mode).toEqual({ impl_key: "privacy_mode_impl_mag", on: true });
