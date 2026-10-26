@@ -555,6 +555,26 @@ describe("setByName / getByName", () => {
     expect(result[2][0]).toBe("a");
   });
 
+  // #31: the Recent sessions list fills from a 'load_recent_peers' event, as on native.
+  it("load_recent_peers answers with the stored sessions, newest first", async () => {
+    localStorage.setItem("peers", JSON.stringify({
+      a: { tm: 1, info: { username: "ua", hostname: "ha", platform: "Linux" } },
+      b: { tm: 3, alias: "office", password: "secret", info: { username: "ub", hostname: "hb", platform: "Windows" } },
+      c: { tm: 2 },
+    }));
+    const handler = vi.fn();
+    (window as any).onRegisteredEvent = handler;
+    expect((window as any).getByName("load_recent_peers")).toBe("");
+    await new Promise((r) => setTimeout(r, 0));
+    const event = JSON.parse(handler.mock.calls[0][0]);
+    expect(event.name).toBe("load_recent_peers");
+    expect(JSON.parse(event.peers)).toEqual([
+      { id: "b", username: "ub", hostname: "hb", platform: "Windows", alias: "office" },
+      { id: "a", username: "ua", hostname: "ha", platform: "Linux", alias: "" },
+    ]);
+    delete (window as any).onRegisteredEvent;
+  });
+
   it("getByName returns user default for scroll_style", () => {
     expect((window as any).getByName("option:user:default", "scroll_style")).toBe("scrollauto");
   });

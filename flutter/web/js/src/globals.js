@@ -520,6 +520,19 @@ function _getByName(name, arg) {
   switch (name) {
     case 'peers':
       return getPeersForDart();
+    case 'load_recent_peers':
+      // As on native, the list arrives as an event after the call returns (peer_model.dart).
+      setTimeout(() => window.onRegisteredEvent?.(JSON.stringify({
+        name: 'load_recent_peers',
+        peers: JSON.stringify(getPeersForDart().map(([id, info]) => ({
+          id,
+          username: info.username || '',
+          hostname: info.hostname || '',
+          platform: info.platform || '',
+          alias: getPeers()[id]?.alias || '',
+        }))),
+      })), 0);
+      return '';
     case 'remote_id':
       return localStorage.getItem('remote-id');
     case 'remember':
