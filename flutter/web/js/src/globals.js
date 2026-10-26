@@ -423,11 +423,26 @@ window.setByName = (name, value) => {
     case 'switch_display':
       curConn.switchDisplay(value);
       break;
-    case 'remove':
+    case 'remove_peer': {
       const peers = getPeers();
       delete peers[value];
       localStorage.setItem('peers', JSON.stringify(peers));
       break;
+    }
+    case 'fav':
+      localStorage.setItem('fav', value);
+      break;
+    case 'option:peer': {
+      // As native set_peer_option: a stored session's option, created if missing; empty removes it.
+      const { id, name, value: v } = JSON.parse(value);
+      const peers = getPeers();
+      const peer = peers[id] || {};
+      if (v) peer[name] = v;
+      else delete peer[name];
+      peers[id] = peer;
+      localStorage.setItem('peers', JSON.stringify(peers));
+      break;
+    }
     case 'input_key': {
       const k = JSON.parse(value);
       const conn = curConn;
@@ -513,6 +528,30 @@ function getPeersForDart() {
   return peers.sort().reverse().map(x => x.slice(1));
 }
 
+function getFavs() {
+  try {
+    const favs = JSON.parse(localStorage.getItem('fav'));
+    return Array.isArray(favs) ? favs : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// As on native, peer lists arrive as an event after the call returns (peer_model.dart); stored
+// passwords are not sent.
+function pushStoredPeers(name, peers) {
+  setTimeout(() => window.onRegisteredEvent?.(JSON.stringify({
+    name,
+    peers: JSON.stringify(peers.map(([id, info]) => ({
+      id,
+      username: info.username || '',
+      hostname: info.hostname || '',
+      platform: info.platform || '',
+      alias: getPeers()[id]?.alias || '',
+    }))),
+  })), 0);
+}
+
 // Mirrors res/custom/*.json; the web client reads no custom.txt.
 const buildinOptions = { 'hide-powered-by-me': 'Y' };
 
@@ -521,18 +560,21 @@ function _getByName(name, arg) {
     case 'peers':
       return getPeersForDart();
     case 'load_recent_peers':
-      // As on native, the list arrives as an event after the call returns (peer_model.dart).
-      setTimeout(() => window.onRegisteredEvent?.(JSON.stringify({
-        name: 'load_recent_peers',
-        peers: JSON.stringify(getPeersForDart().map(([id, info]) => ({
-          id,
-          username: info.username || '',
-          hostname: info.hostname || '',
-          platform: info.platform || '',
-          alias: getPeers()[id]?.alias || '',
-        }))),
-      })), 0);
+      pushStoredPeers('load_recent_peers', getPeersForDart());
       return '';
+    case 'fav':
+      return JSON.stringify(getFavs());
+    case 'load_fav_peers': {
+      const favs = getFavs();
+      pushStoredPeers('load_fav_peers', getPeersForDart().filter(([id]) => favs.includes(id)));
+      return '';
+    }
+    case 'option:peer': {
+      const { id, name } = JSON.parse(arg);
+      return getPeers()[id]?.[name] ?? '';
+    }
+    case 'peer_has_password':
+      return getPeers()[arg]?.password ? 'true' : '';
     case 'remote_id':
       return localStorage.getItem('remote-id');
     case 'remember':

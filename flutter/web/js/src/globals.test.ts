@@ -360,14 +360,6 @@ describe("setByName / getByName", () => {
     expect(conn.switchDisplay).toHaveBeenCalledWith("1");
   });
 
-  it("handles remove via setByName", () => {
-    localStorage.setItem("peers", JSON.stringify({ abc: { tm: 1 }, def: { tm: 2 } }));
-    (window as any).setByName("remove", "abc");
-    const peers = JSON.parse(localStorage.getItem("peers")!);
-    expect(peers.abc).toBeUndefined();
-    expect(peers.def).toBeDefined();
-  });
-
   it("handles input_key via setByName", () => {
     const conn = newConn();
     (window as any).setByName("input_key", JSON.stringify({
@@ -573,6 +565,49 @@ describe("setByName / getByName", () => {
       { id: "a", username: "ua", hostname: "ha", platform: "Linux", alias: "" },
     ]);
     delete (window as any).onRegisteredEvent;
+  });
+
+  // Session history as on native: remove, favourites, per-session options without a connection.
+  describe("session history", () => {
+    const stored = () => JSON.parse(localStorage.getItem("peers")!);
+    beforeEach(() => {
+      localStorage.setItem("peers", JSON.stringify({
+        a: { tm: 1, info: { hostname: "ha" } },
+        b: { tm: 2, password: "1,2,3", info: { hostname: "hb" } },
+      }));
+    });
+
+    it("remove_peer deletes the stored session", () => {
+      (window as any).setByName("remove_peer", "a");
+      expect(Object.keys(stored())).toEqual(["b"]);
+    });
+
+    it("favourites are stored and listed from the stored sessions", async () => {
+      expect((window as any).getByName("fav")).toBe("[]");
+      (window as any).setByName("fav", JSON.stringify(["a", "missing"]));
+      expect(JSON.parse((window as any).getByName("fav"))).toEqual(["a", "missing"]);
+      const handler = vi.fn();
+      (window as any).onRegisteredEvent = handler;
+      (window as any).getByName("load_fav_peers");
+      await new Promise((r) => setTimeout(r, 0));
+      const event = JSON.parse(handler.mock.calls[0][0]);
+      expect(event.name).toBe("load_fav_peers");
+      expect(JSON.parse(event.peers).map((p: any) => p.id)).toEqual(["a"]);
+      delete (window as any).onRegisteredEvent;
+    });
+
+    it("option:peer sets and clears a session's option without a connection", () => {
+      (window as any).setByName("option:peer", JSON.stringify({ id: "a", name: "alias", value: "office" }));
+      expect((window as any).getByName("option:peer", JSON.stringify({ id: "a", name: "alias" }))).toBe("office");
+      expect(stored().a.tm).toBe(1);
+      (window as any).setByName("option:peer", JSON.stringify({ id: "b", name: "password", value: "" }));
+      expect(stored().b.password).toBeUndefined();
+    });
+
+    it("peer_has_password reports a remembered password", () => {
+      expect((window as any).getByName("peer_has_password", "b")).toBe("true");
+      expect((window as any).getByName("peer_has_password", "a")).toBe("");
+    });
   });
 
   it("getByName returns user default for scroll_style", () => {
