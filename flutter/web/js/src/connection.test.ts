@@ -378,6 +378,18 @@ describe("Connection", () => {
     });
   });
 
+  describe("session options", () => {
+    it("are readable as soon as the session starts, as native", () => {
+      const c = new Connection();
+      (globals.initSodium as any).mockReturnValueOnce(new Promise(() => {}));
+      (globals.getPeers as any).mockReturnValueOnce({ "p1": { view_style: "original" } });
+      c.start("p1");
+      expect(c.getOption("view_style")).toBe("original");
+      c.setOption("scroll_style", "bar");
+      expect((localStorage.getItem("peers") || "").includes('"p1"')).toBe(true);
+    });
+  });
+
   describe("remote cursor", () => {
     it("keeps each shape by ID and hands it to Flutter", async () => {
       const onCursorData = vi.fn();

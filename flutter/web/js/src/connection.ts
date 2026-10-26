@@ -110,6 +110,10 @@ export default class Connection {
 
   async start(id: string) {
     this._closed = false;
+    // As native, the peer's options are there when the session is created: Flutter reads them
+    // right after session_start, before the first await below.
+    this._id = id;
+    if (!this._options) this._options = globals.getPeers()[id] || {};
     try {
       await this._start(id);
     } catch (e: any) {
