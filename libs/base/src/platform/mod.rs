@@ -71,6 +71,14 @@ extern "C" fn breakdown_signal_handler(sig: i32) {
     // unsuccessful exit (KeepAlive SuccessfulExit=false), and macOS then writes a crash report.
     unsafe {
         libc::signal(sig, libc::SIG_DFL);
+        // The signal is blocked while its handler runs; raised as is, it would only be pending.
+        #[cfg(unix)]
+        {
+            let mut set: libc::sigset_t = std::mem::zeroed();
+            libc::sigemptyset(&mut set);
+            libc::sigaddset(&mut set, sig);
+            libc::pthread_sigmask(libc::SIG_UNBLOCK, &set, std::ptr::null_mut());
+        }
         libc::raise(sig);
     }
     exit(1);
