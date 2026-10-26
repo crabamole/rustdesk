@@ -5,6 +5,7 @@ import { loadVp9 } from "./codec";
 import * as sha256 from "fast-sha256";
 import * as globals from "./globals";
 import { decompress, getVersionNumber, mapKey, sleep } from "./common";
+import { HID_TO_LINUX_CODE, HID_TO_MACOS_CODE, HID_TO_MACOS_ISO_CODE, HID_TO_WIN_SCANCODE, LETTER_HIDS, NUMPAD_HIDS } from "./keymap";
 import { loadConfig, getConfigKey, getDefaultUri, getHost, getApiServer, getRelayUri } from "./url";
 
 // The device waits 5 s for a reply; give up before that.
@@ -929,6 +930,31 @@ export default class Connection {
       ? message.Misc.fromPartial({ change_display_resolution: message.DisplayResolution.fromPartial({ display, resolution }) })
       : message.Misc.fromPartial({ change_resolution: resolution });
     this._ws?.sendMessage({ misc });
+  }
+
+  // As native is_keyboard_mode_supported; the web implements legacy and map mode.
+  isKeyboardModeSupported(mode: string): boolean {
+    if (mode == "legacy") return true;
+    if (mode != "map") return false;
+    const pi = this._peerInfo;
+    return !!pi && !/android/i.test(pi.platform) && getVersionNumber(pi.version) >= getVersionNumber("1.2.0");
+  }
+
+  // Map mode, as native for a USB HID code (rdev::usb_hid_code_to_*, keyboard.rs): the key's code on
+  // the peer's platform, and Caps Lock / Num Lock for letter and keypad keys.
+  inputMapKey(usbHid: number, lockModes: number, down: boolean) {
+    const platform = this._peerInfo?.platform || "";
+    const table = /windows/i.test(platform) ? HID_TO_WIN_SCANCODE
+      : /mac/i.test(platform) ? (localStorage.getItem("kb_layout_type") == "ISO" ? HID_TO_MACOS_ISO_CODE : HID_TO_MACOS_CODE)
+      : /linux/i.test(platform) ? HID_TO_LINUX_CODE
+      : undefined;
+    const chr = table ? table[usbHid] : usbHid;
+    if (chr === undefined) return;
+    const modifiers: message.ControlKey[] = [];
+    if (LETTER_HIDS.has(usbHid) && lockModes & (1 << 1)) modifiers.push(message.ControlKey.CapsLock);
+    if (NUMPAD_HIDS.has(usbHid) && lockModes & (1 << 2)) modifiers.push(message.ControlKey.NumLock);
+    const key_event = message.KeyEvent.fromPartial({ mode: message.KeyboardMode.Map, chr, down, modifiers });
+    this._ws?.sendMessage({ key_event });
   }
 
   // The browser has no hardware ID, so "trust this device" is not offered (native sends one).

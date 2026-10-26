@@ -21,8 +21,9 @@ vi.mock("./message.js", () => ({
   PeerInfo: { fromPartial: vi.fn((v: any) => v) },
   ControlKey: {
     Alt: 1, Control: 2, Shift: 3, Meta: 4,
-    CtrlAltDel: 100, Delete: 101, LockScreen: 102,
+    CtrlAltDel: 100, Delete: 101, LockScreen: 102, CapsLock: 3, NumLock: 63,
   },
+  KeyboardMode: { Legacy: 0, Map: 1 },
   ImageQuality: { Low: 0, Best: 1, Balanced: 2 },
   PermissionInfo_Permission: { Keyboard: 1, Clipboard: 2, Audio: 3 },
   Clipboard: { fromPartial: vi.fn((v: any) => v) },
@@ -321,6 +322,53 @@ describe("Connection", () => {
     it("falls back to web without a login", () => {
       (conn as any)._sendLoginMessage();
       expect(sentName()).toBe("web");
+    });
+  });
+
+  describe("map mode, as native", () => {
+    const sentKey = () => mockWs.sendMessage.mock.calls.at(-1)[0].key_event;
+
+    it("sends the peer platform's key code for the USB HID code", () => {
+      (conn as any)._peerInfo = { platform: "Windows", version: "1.5.0" };
+      conn.inputMapKey(4, 0, true);
+      expect(sentKey()).toEqual({ mode: 1, chr: 30, down: true, modifiers: [] });
+      (conn as any)._peerInfo = { platform: "Linux", version: "1.5.0" };
+      conn.inputMapKey(80, 0, false);
+      expect(sentKey()).toMatchObject({ chr: 113, down: false });
+      (conn as any)._peerInfo = { platform: "Mac OS", version: "1.5.0" };
+      conn.inputMapKey(53, 0, true);
+      expect(sentKey().chr).toBe(50);
+      localStorage.setItem("kb_layout_type", "ISO");
+      conn.inputMapKey(53, 0, true);
+      expect(sentKey().chr).toBe(10);
+      localStorage.removeItem("kb_layout_type");
+    });
+
+    it("adds Caps Lock to letter keys and Num Lock to keypad keys", () => {
+      (conn as any)._peerInfo = { platform: "Windows", version: "1.5.0" };
+      conn.inputMapKey(4, 0b110, true);
+      expect(sentKey().modifiers).toEqual([3]);
+      conn.inputMapKey(89, 0b110, true);
+      expect(sentKey().modifiers).toEqual([63]);
+      conn.inputMapKey(40, 0b110, true);
+      expect(sentKey().modifiers).toEqual([]);
+    });
+
+    it("sends nothing for a key the peer's table lacks", () => {
+      (conn as any)._peerInfo = { platform: "Windows", version: "1.5.0" };
+      conn.inputMapKey(0x7fff, 0, true);
+      expect(mockWs.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it("offers map mode as native: not for Android peers or before 1.2.0", () => {
+      (conn as any)._peerInfo = { platform: "Linux", version: "1.5.0" };
+      expect(conn.isKeyboardModeSupported("map")).toBe(true);
+      expect(conn.isKeyboardModeSupported("translate")).toBe(false);
+      (conn as any)._peerInfo = { platform: "Android", version: "1.5.0" };
+      expect(conn.isKeyboardModeSupported("map")).toBe(false);
+      (conn as any)._peerInfo = { platform: "Linux", version: "1.1.9" };
+      expect(conn.isKeyboardModeSupported("map")).toBe(false);
+      expect(conn.isKeyboardModeSupported("legacy")).toBe(true);
     });
   });
 

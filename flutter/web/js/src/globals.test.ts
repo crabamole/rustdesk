@@ -636,6 +636,25 @@ describe("setByName / getByName", () => {
     });
   });
 
+  it("map-mode keys go out in order, and Ctrl+V offers the clipboard first", async () => {
+    newConn();
+    const conn = getConn() as any;
+    const order: string[] = [];
+    conn.inputMapKey = vi.fn((hid: number) => order.push(`key ${hid}`));
+    conn.offerClipboard = vi.fn(async () => { order.push("offer"); });
+    const key = (usb_hid: number, down: boolean) =>
+      (window as any).setByName("flutter_key_event", JSON.stringify({ name: "", usb_hid, lock_modes: 0, ...(down ? { down: "true" } : {}) }));
+    key(0x19, true);
+    key(0x19, false);
+    key(0xE0, true);
+    key(0x19, true);
+    await new Promise((r) => setTimeout(r, 0));
+    key(0xE0, false);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(order).toEqual(["key 25", "key 25", "key 224", "offer", "key 25", "key 224"]);
+    expect(conn.inputMapKey).toHaveBeenCalledWith(0x19, 0, true);
+  });
+
   it("routes the session actions the bridge sends", () => {
     newConn();
     const conn = getConn() as any;

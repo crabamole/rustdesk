@@ -432,10 +432,10 @@ class RustdeskImpl {
     }
   }
 
-  // Map mode needs flutter_key_event, which the JS side does not implement yet.
   bool sessionIsKeyboardModeSupported(
       {required UuidValue sessionId, required String mode, dynamic hint}) {
-    return mode == kKeyLegacyMode;
+    return 'true' ==
+        js.context.callMethod('getByName', ['keyboard_mode_supported', mode]);
   }
 
   bool sessionIsMultiUiSession({required UuidValue sessionId, dynamic hint}) {

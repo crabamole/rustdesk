@@ -371,6 +371,11 @@ export function decrypt(signed, nonce, key) {
 
 // Keys wait behind a pending clipboard offer so Ctrl/Cmd+V reaches the device after it.
 let _keyQueue = null;
+// USB HID usages: left/right Control and Meta (Command), and V.
+const MODIFIER_HIDS = new Set([0xE0, 0xE4, 0xE3, 0xE7]);
+const HID_V = 0x19;
+const heldModifiers = new Set();
+
 function queueKey(before, send) {
   if (!_keyQueue && !before) return send();
   const p = (_keyQueue || Promise.resolve()).then(before).then(send).catch(e => console.error(e));
@@ -428,6 +433,19 @@ window.setByName = (name, value) => {
     case 'custom-fps':
       curConn.setCustomFps(Number(value));
       break;
+    case 'flutter_key_event': {
+      const k = JSON.parse(value);
+      const conn = curConn;
+      const down = k.down === 'true' || k.down === true;
+      if (MODIFIER_HIDS.has(k.usb_hid)) {
+        if (down) heldModifiers.add(k.usb_hid);
+        else heldModifiers.delete(k.usb_hid);
+      }
+      // As in legacy mode: Ctrl/Cmd+V offers the browser clipboard before the key goes out.
+      const paste = k.usb_hid == HID_V && down && heldModifiers.size > 0;
+      queueKey(paste ? () => conn.offerClipboard(true) : undefined, () => conn.inputMapKey(k.usb_hid, k.lock_modes || 0, down));
+      break;
+    }
     case 'send_2fa':
       curConn.send2fa(JSON.parse(value).code);
       break;
@@ -656,6 +674,8 @@ function _getByName(name, arg) {
   switch (name) {
     case 'peers':
       return getPeersForDart();
+    case 'keyboard_mode_supported':
+      return curConn?.isKeyboardModeSupported(arg) ? 'true' : '';
     case 'last_audit_note':
       return curConn?._lastAuditNote || '';
     case 'audit_guid':
