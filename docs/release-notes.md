@@ -2,6 +2,16 @@
 
 Newest first. The release workflow copies a version's section into its GitHub Release.
 
+## 1.5.0-6
+
+- Device admission: a device shows "pending" or "rejected" in its home-page status line while an administrator has not admitted it. Needs rustdesk-server 1.1.16-7 and rustdesk-api 3.9.0 with the chart's `deviceAdmission` switch on; with the switch off nothing changes.
+- **Sessions always use end-to-end encryption.** A viewer (native and web) refuses a device whose key it cannot verify, instead of offering "Continue anyway"; a device refuses a viewer that sends no key. Older viewers that use "Continue anyway" are refused by 1.5.0-6 devices.
+- macOS: a device whose `--server` crashes is restarted at once and macOS writes a crash report. Before, it stayed offline until the next login.
+- Web client, now close to the native session features: Take screenshot; Copy fingerprint; choosing a monitor shows it; follow the remote cursor and window across monitors; display changes during a session; privacy mode and block user input with the device's replies; virtual displays; choosing the Windows user session to view; Map keyboard mode; the remote cursor shape; the session toolbar and its options reach the device. Recent sessions, Favorites and the session history menu (Delete, Rename, Forget password) work as on native clients.
+- Web client: a dropped connection is retried with the Reconnect countdown; the device's connection prompt and the audit name the logged-in user instead of "web"; a link `<web client>/#/<id>` opens a session to that device, and a password in such a link is ignored.
+- Not in the web client: file transfer, terminal, camera, TCP tunneling and RDP, Switch Sides, recording, voice call, the codec menu and Translate keyboard mode.
+- Works with rustdesk-server 1.1.16-7, rustdesk-api 3.9.0 and Helm chart 0.14.0.
+
 ## 1.5.0-5
 
 - The About page shows "cRustDesk v<version> · source · based on RustDesk · AGPL-3.0", with links to this project, to upstream RustDesk and to the licence. The RustDesk website and privacy links, the vendor copyright line and the slogan are removed. Report problems at github.com/crabamole/rustdesk/issues, not to RustDesk.
