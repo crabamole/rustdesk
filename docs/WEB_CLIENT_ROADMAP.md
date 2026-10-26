@@ -1,6 +1,6 @@
 # RustDesk OSS Web Client Roadmap
 
-**Updated:** 2026-10-26
+**Updated:** 2026-10-27
 
 Upstream RustDesk removed the open-source web client in favor of a closed-source Pro offering. This roadmap tracks our effort to revive and maintain the web client against the OSS rendezvous server (hbbs/hbbr).
 
@@ -70,6 +70,8 @@ Establish test coverage as a foundation for opinionated development.
 - [x] Keys typed into a session dialog stay in the dialog (they also went to the remote device)
 - [x] Main page: online status of device cards, address book and group cache
 - [x] The remote cursor shape is the local mouse cursor
+- [x] More native session features (2026-10-27): Take screenshot (Save as downloads the PNG, Copy puts the image on the clipboard); Copy fingerprint (the device key); choosing a monitor shows it (the request carried the wrong display number, and the new display's first frame was lost while the decoder reloaded); follow remote cursor and window across monitors; display changes during a session; privacy mode and block user input with the device's replies; UAC and elevated-window prompts; virtual displays (RustDesk and Amyuni drivers); choosing the Windows user session to view; the restart, block input and privacy mode permissions hide what the device denies. A link `<web client>/#/<id>` opens a session to that device
+- [x] Session options are readable as soon as the session starts (Flutter read them before the connection loaded them)
 - [ ] Audit the 118 `UnimplementedError` stubs in `web/bridge.dart` — categorize as: needed, not-applicable-to-web, or deferred
 
 ### Phase 3: Features
@@ -91,7 +93,7 @@ Establish test coverage as a foundation for opinionated development.
 ## Non-Goals
 
 - **Rust-to-wasm compilation**: The JS protocol reimplementation works. Porting to wasm would be a rewrite, not an incremental improvement.
-- **Feature parity with native clients**: The web client is for quick remote access, not a full replacement. Features like screen recording, file manager, multi-monitor are out of scope.
+- **Feature parity with native clients**: The web client is for quick remote access, not a full replacement. Features like screen recording and the file manager are out of scope.
 - **File transfer**: not planned; our DC build turns file transfer off on devices (data-out lock).
 - **Auto-connect via URL parameters** (`?id=…&pw=…`): dropped until there is a secure design; a password in the URL ends up in browser history, proxy logs and the Referer header.
 - **Upstream merge**: This fork diverges intentionally from upstream's closed-source direction. We track upstream Dart/Flutter changes but own the web-specific layer.
