@@ -4,6 +4,8 @@ import { CursorData } from "./message";
 import { loadVp9 } from "./codec";
 import { checkIfRetry, version } from "./gen_js_from_hbb";
 import { getVersionNumber, initZstd, translate } from "./common";
+import Websock from "./websock";
+import { getDefaultUri } from "./url";
 import PCMPlayer from "pcm-player";
 import { randomVerifier, s256Challenge } from "./pkce";
 
@@ -459,6 +461,29 @@ window.setByName = (name, value) => {
     case 'fav':
       localStorage.setItem('fav', value);
       break;
+    case 'query_onlines':
+      queryOnlines(JSON.parse(value));
+      break;
+    // Address book and group caches, as native config::Ab and config::Group: the JSON as given, and
+    // an empty object when nothing is cached (native returns its default, never an empty string).
+    case 'save_ab':
+      localStorage.setItem('ab_cache', value);
+      break;
+    case 'clear_ab':
+      localStorage.removeItem('ab_cache');
+      break;
+    case 'load_ab':
+      setTimeout(() => window.onLoadAbFinished?.(localStorage.getItem('ab_cache') || '{}'), 0);
+      break;
+    case 'save_group':
+      localStorage.setItem('group_cache', value);
+      break;
+    case 'clear_group':
+      localStorage.removeItem('group_cache');
+      break;
+    case 'load_group':
+      setTimeout(() => window.onLoadGroupFinished?.(localStorage.getItem('group_cache') || '{}'), 0);
+      break;
     case 'option:peer': {
       // As native set_peer_option: a stored session's option, created if missing; empty removes it.
       const { id, name, value: v } = JSON.parse(value);
@@ -556,6 +581,31 @@ function getPeersForDart() {
 }
 
 const SESSION_DEFAULTS = ['view_style', 'scroll_style'];
+
+// As native query_online_states: hbbs answers one bit per ID, high bit first; the result goes to
+// the peer lists as callback_query_onlines.
+export async function queryOnlines(ids) {
+  const ws = new Websock(getDefaultUri(), true);
+  try {
+    await ws.open();
+    ws.sendRendezvous({ online_request: { id: '', peers: ids } });
+    const msg = await ws.next(3000);
+    const states = msg?.online_response?.states;
+    if (!states) return;
+    const onlines = [];
+    const offlines = [];
+    ids.forEach((id, i) => ((states[i >> 3] ?? 0) & (0x80 >> (i % 8)) ? onlines : offlines).push(id));
+    window.onRegisteredEvent?.(JSON.stringify({
+      name: 'callback_query_onlines',
+      onlines: onlines.join(','),
+      offlines: offlines.join(','),
+    }));
+  } catch (e) {
+    console.warn('query onlines:', e);
+  } finally {
+    ws.close();
+  }
+}
 
 function getFavs() {
   try {

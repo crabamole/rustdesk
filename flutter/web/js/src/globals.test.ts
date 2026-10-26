@@ -35,6 +35,14 @@ vi.mock("./connection", () => {
   };
 });
 
+const wsMock = {
+  open: vi.fn().mockResolvedValue(undefined),
+  sendRendezvous: vi.fn(),
+  next: vi.fn(),
+  close: vi.fn(),
+};
+vi.mock("./websock", () => ({ default: vi.fn(function () { return wsMock; }) }));
+
 vi.mock("libsodium-wrappers", () => ({
   default: {
     ready: Promise.resolve(),
@@ -80,7 +88,7 @@ vi.mock("pcm-player", () => {
 });
 
 import {
-  isDesktop, msgbox, pushEvent, setConn, getConn, close, newConn,
+  isDesktop, queryOnlines, msgbox, pushEvent, setConn, getConn, close, newConn,
   verify, genBoxKeyPair, genSecretKey, seal, encrypt, decrypt,
   getPeers, copyToClipboard, draw, sendOffCanvas, initAudio, playAudio,
   initSodium, resetRendererForTest,
@@ -656,6 +664,35 @@ describe("setByName / getByName", () => {
     expect((window as any).getByName("audit_server", "conn")).toBe("");
     localStorage.setItem("access_token", "t");
     expect((window as any).getByName("audit_server", "conn")).toMatch(/\/api\/audit\/conn$/);
+  });
+
+  // As native query_online_states: one bit per ID, high bit first.
+  it("queryOnlines reports which IDs hbbs sees online", async () => {
+    wsMock.next.mockResolvedValueOnce({ online_response: { states: new Uint8Array([0b10100000]) } });
+    const handler = vi.fn();
+    (window as any).onRegisteredEvent = handler;
+    await queryOnlines(["a", "b", "c"]);
+    expect(wsMock.sendRendezvous).toHaveBeenCalledWith({ online_request: { id: "", peers: ["a", "b", "c"] } });
+    expect(JSON.parse(handler.mock.calls[0][0])).toEqual({ name: "callback_query_onlines", onlines: "a,c", offlines: "b" });
+    expect(wsMock.close).toHaveBeenCalled();
+    delete (window as any).onRegisteredEvent;
+  });
+
+  it("keeps the address book and group caches as given", async () => {
+    (window as any).setByName("save_ab", '{"ab":1}');
+    (window as any).setByName("save_group", '{"g":1}');
+    const ab = vi.fn(), group = vi.fn();
+    (window as any).onLoadAbFinished = ab;
+    (window as any).onLoadGroupFinished = group;
+    (window as any).setByName("load_ab");
+    (window as any).setByName("load_group");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(ab).toHaveBeenCalledWith('{"ab":1}');
+    expect(group).toHaveBeenCalledWith('{"g":1}');
+    (window as any).setByName("clear_ab");
+    (window as any).setByName("load_ab");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(ab).toHaveBeenLastCalledWith("{}");
   });
 
   it("getByName returns user default for scroll_style", () => {
