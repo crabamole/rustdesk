@@ -16,7 +16,7 @@ The web client is the way to view without an install (no portable native build i
 ```
 Flutter Dart UI (93% shared with desktop/mobile)
        |
-   web/bridge.dart (JS interop, 131 methods stubbed)
+   web/bridge.dart (JS interop, 118 methods stubbed)
        |
    JS bridge: globals.js (setByName/getByName dispatch)
        |
@@ -36,9 +36,14 @@ The web client shares ~68K lines of Dart with native clients. The web-specific l
 - [x] Remove Firebase analytics
 - [x] Fix JS build for modern Node.js/TypeScript
 - [x] Make server settings UI read-only on web
-- [x] Force English locale for web client
+- [x] UI language follows the browser (or `?lang=<code>`), English as fallback; the web settings have no language choice
 - [x] Add a Dockerfile for containerized builds
 - [x] Remove untested wss:// support (restored later, tested; see WSS support in Phase 3)
+- [x] Loads nothing from the internet: CanvasKit and fonts come from the web client itself
+- [x] Never falls back to public servers; shows when no server is configured
+- [x] Dials only the relay URL hbbs hands out (no relay setting)
+- [x] Log in first: the login button replaces the ID field until the user logs in (1.5.0-1)
+- [x] Named cRustDesk; the powered-by link is hidden (1.5.0-5)
 
 ### Phase 1: Testing Infrastructure
 
@@ -60,17 +65,15 @@ Establish test coverage as a foundation for opinionated development.
 - [x] A silent relay ends the session: after 12 s without a message (`Websock.next()` timeout) the web client shows "Reconnect" and reconnects through another relay; verified with a frozen hbbr pod (e2e `ha/hbbr-freeze.spec.ts`, back within about 17 s)
 - [ ] Reconnection logic on WebSocket drop
 - [ ] Recent sessions always empty: `load_recent_peers` is never answered ([#31](https://github.com/crabamole/rustdesk/issues/31))
-- [ ] Audit the 131 `UnimplementedError` stubs in `web/bridge.dart` — categorize as: needed, not-applicable-to-web, or deferred
+- [ ] Audit the 118 `UnimplementedError` stubs in `web/bridge.dart` — categorize as: needed, not-applicable-to-web, or deferred
 
 ### Phase 3: Features
 
 - [x] **WSS support**: `url.ts` resolves `/ws/id` to `wss://` on HTTPS pages (same-origin, behind a TLS-terminating reverse proxy); covered by `url.test.ts` and used in production over HTTPS
-- [ ] **Auto-connect via URL params**: `?id=<peer_id>&pw=<password>` for embedded/kiosk use (inspired by MonsieurBiche fork)
-- [x] **Clipboard support**: text in both directions; the browser clipboard is sent when the pointer enters the remote view and before Ctrl/Cmd+V (Chromium, after the user allows clipboard access); respects the host's clipboard permission
-- [ ] **File transfer**: Basic upload/download (many bridge stubs to implement)
+- [x] **Clipboard support**: text in both directions; respects the host's clipboard permission. Viewer → device is on request (1.5.0-4): when the pointer enters the remote view and before Ctrl/Cmd+V, the web client reads the browser clipboard and offers only its formats; the device asks for the text when an app on it reads the clipboard, and audits it ([design-clipboard-on-request.md](design-clipboard-on-request.md)). Reading needs the user's clipboard permission (Chromium); Firefox and Safari refuse reads without a user gesture
 - [ ] **Mobile browser**: Responsive layout and touch input handling
 - [x] **Login without polling**: redeem a one-time result from a same-origin callback page with a PKCE verifier ([design-oidc-login.md](design-oidc-login.md))
-- [ ] **Viewer identity**: send the logged-in user instead of the hard-coded `my_id: "web"` (`connection.ts`); audit records show every browser session as viewer `web`
+- [ ] **Viewer identity**: the login request sends the hard-coded `my_id: "web"` and `my_name: "web"` (`connection.ts`), so the device's connection prompt and the audit row's viewer ID and name show `web`. The audit already names the user (from the login token); send the logged-in user's name as `my_name`
 
 ### Phase 4: Operations
 
@@ -84,6 +87,8 @@ Establish test coverage as a foundation for opinionated development.
 
 - **Rust-to-wasm compilation**: The JS protocol reimplementation works. Porting to wasm would be a rewrite, not an incremental improvement.
 - **Feature parity with native clients**: The web client is for quick remote access, not a full replacement. Features like screen recording, file manager, multi-monitor are out of scope.
+- **File transfer**: not planned; our DC build turns file transfer off on devices (data-out lock).
+- **Auto-connect via URL parameters** (`?id=…&pw=…`): dropped until there is a secure design; a password in the URL ends up in browser history, proxy logs and the Referer header.
 - **Upstream merge**: This fork diverges intentionally from upstream's closed-source direction. We track upstream Dart/Flutter changes but own the web-specific layer.
 
 ## Community Forks
@@ -102,7 +107,7 @@ Reviewed for feature inspiration (none have strong traction):
 |------|---------|
 | `flutter/web/js/src/connection.ts` | WebSocket connection to hbbs/hbbr |
 | `flutter/web/js/src/globals.js` | JS bridge (setByName/getByName dispatch) |
-| `flutter/lib/web/bridge.dart` | Dart-side bridge (131 stubs) |
+| `flutter/lib/web/bridge.dart` | Dart-side bridge (118 stubs) |
 | `flutter/lib/models/web_model.dart` | Web platform FFI |
 | `flutter/lib/mobile/widgets/dialog.dart` | Server settings dialog (read-only on web) |
 | `flutter/web/config.json` | Server config (host/key) |
