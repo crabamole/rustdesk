@@ -944,6 +944,11 @@ describe("Connection", () => {
       expect(mockWs.sendMessage.mock.calls.at(-1)[0].misc.toggle_privacy_mode).toEqual({ impl_key: "privacy_mode_impl_mag", on: true });
     });
 
+    it("follows the display the device reports, as native", () => {
+      conn.handleMisc({ follow_current_display: 1 } as any);
+      expect(globals.pushEvent).toHaveBeenCalledWith("follow_current_display", { display_idx: 1 });
+    });
+
     it("handles close_reason and returns false", () => {
       const result = conn.handleMisc({ close_reason: "Kicked" } as any);
       expect(result).toBe(false);

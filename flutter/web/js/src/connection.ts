@@ -639,6 +639,8 @@ export default class Connection {
     } else if (misc.foreground_window_elevated !== undefined) {
       if (misc.foreground_window_elevated && this._keyboardAllowed) this.msgbox("on-foreground-elevated", "Prompt", "elevated_foreground_window_tip");
       else this.cancelMsgbox("on-foreground-elevated", "wait-uac", "elevation-error");
+    } else if (misc.follow_current_display !== undefined) {
+      globals.pushEvent("follow_current_display", { display_idx: misc.follow_current_display });
     } else if (misc.switch_display) {
       this.loadVideoDecoder();
       globals.pushEvent("switch_display", misc.switch_display);
