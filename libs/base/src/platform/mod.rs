@@ -67,7 +67,13 @@ extern "C" fn breakdown_signal_handler(sig: i32) {
             callback()
         }
     }
-    exit(0);
+    // End as the crash it is, not with exit(0): the macOS agent restarts --server only after an
+    // unsuccessful exit (KeepAlive SuccessfulExit=false), and macOS then writes a crash report.
+    unsafe {
+        libc::signal(sig, libc::SIG_DFL);
+        libc::raise(sig);
+    }
+    exit(1);
 }
 
 #[cfg(not(debug_assertions))]
