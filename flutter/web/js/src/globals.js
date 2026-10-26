@@ -461,6 +461,17 @@ window.setByName = (name, value) => {
     case 'fav':
       localStorage.setItem('fav', value);
       break;
+    case 'cursor': {
+      // The remote cursor as the local one: a data URL with its hot spot, or 'auto'.
+      const el = document.querySelector('flutter-view') || document.querySelector('flt-glass-pane') || document.body;
+      if (value === 'auto') {
+        el.style.cursor = 'auto';
+      } else {
+        const c = JSON.parse(value);
+        el.style.cursor = `url(${c.url}) ${c.hotx} ${c.hoty}, auto`;
+      }
+      break;
+    }
     case 'query_onlines':
       queryOnlines(JSON.parse(value));
       break;
@@ -581,6 +592,13 @@ function getPeersForDart() {
 }
 
 const SESSION_DEFAULTS = ['view_style', 'scroll_style'];
+
+// The bridge looks up a remote cursor shape by ID; the callback gets nothing for an unknown one.
+window.getCursorShape = (id, callback) => {
+  const s = getConn()?._cursorShapes?.[id];
+  if (s) callback(s.hotx, s.hoty, s.width, s.height, s.colors);
+  else callback(0, 0, 0, 0, null);
+};
 
 // As native query_online_states: hbbs answers one bit per ID, high bit first; the result goes to
 // the peer lists as callback_query_onlines.

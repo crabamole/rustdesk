@@ -324,6 +324,20 @@ describe("Connection", () => {
     });
   });
 
+  describe("remote cursor", () => {
+    it("keeps each shape by ID and hands it to Flutter", async () => {
+      const onCursorData = vi.fn();
+      (window as any).onCursorData = onCursorData;
+      mockWs.next
+        .mockResolvedValueOnce({ cursor_data: { id: 7, hotx: 1, hoty: 2, width: 3, height: 4, colors: new Uint8Array([9]) } })
+        .mockResolvedValueOnce({ misc: { close_reason: "done" } });
+      await conn.msgLoop();
+      expect(onCursorData).toHaveBeenCalledWith("7", 1, 2, 3, 4, expect.any(Uint8Array));
+      expect((conn as any)._cursorShapes[7]).toMatchObject({ hotx: 1, hoty: 2, width: 3, height: 4 });
+      delete (window as any).onCursorData;
+    });
+  });
+
   describe("session actions, as native", () => {
     const sent = () => mockWs.sendMessage.mock.calls.at(-1)[0];
 

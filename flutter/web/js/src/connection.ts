@@ -73,6 +73,7 @@ export default class Connection {
   _sessionId: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
   _lastAuditNote = "";
   _closed = false;
+  _cursorShapes: { [id: string]: { hotx: number; hoty: number; width: number; height: number; colors: Uint8Array } } = {};
   _auditGuid = "";
   _firstFrame: Boolean | undefined;
   _videoDecoder: any;
@@ -351,31 +352,9 @@ export default class Connection {
         const cd = msg?.cursor_data;
         const c = await decompress(cd.colors);
         if (!c) continue;
-        cd.colors = c;
-        globals.pushEvent("cursor_data", cd);
-        /*
-        let ctx = cursorCanvas.getContext("2d");
-        cursorCanvas.width = cd.width;
-        cursorCanvas.height = cd.height;
-        let imgData = new ImageData(
-          new Uint8ClampedArray(c),
-          cd.width,
-          cd.height
-        );
-        ctx?.clearRect(0, 0, cd.width, cd.height);
-        ctx?.putImageData(imgData, 0, 0);
-        let url = cursorCanvas.toDataURL();
-        const img = document.createElement("img");
-        img.src = url;
-        this._cursors[cd.id] = img;
-        //cursorCanvas.width /= 2.;
-        //cursorCanvas.height /= 2.;
-        //ctx?.drawImage(img, cursorCanvas.width, cursorCanvas.height);
-        url = cursorCanvas.toDataURL();
-        document.body.style.cursor =
-          "url(" + url + ")" + cd.hotx + " " + cd.hoty + ", default";
-        console.log(document.body.style.cursor);
-        */
+        // As native: shapes are kept by ID, later cursor_id messages refer to them.
+        this._cursorShapes[cd.id] = { hotx: cd.hotx, hoty: cd.hoty, width: cd.width, height: cd.height, colors: c };
+        (window as any).onCursorData?.(String(cd.id), cd.hotx, cd.hoty, cd.width, cd.height, c);
       } else if (msg?.cursor_id) {
         globals.pushEvent("cursor_id", { id: msg?.cursor_id });
       } else if (msg?.cursor_position) {

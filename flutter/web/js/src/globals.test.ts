@@ -666,6 +666,23 @@ describe("setByName / getByName", () => {
     expect((window as any).getByName("audit_server", "conn")).toMatch(/\/api\/audit\/conn$/);
   });
 
+  it("sets the remote cursor shape as the page's cursor, and back to auto", () => {
+    (window as any).setByName("cursor", JSON.stringify({ url: "data:image/png;base64,AA==", hotx: 3, hoty: 4 }));
+    expect(document.body.style.cursor).toContain("data:image/png;base64,AA==");
+    (window as any).setByName("cursor", "auto");
+    expect(document.body.style.cursor).toBe("auto");
+  });
+
+  it("getCursorShape answers a stored shape, and nothing for an unknown one", () => {
+    newConn();
+    (getConn() as any)._cursorShapes = { "7": { hotx: 1, hoty: 2, width: 3, height: 4, colors: new Uint8Array([9]) } };
+    const cb = vi.fn();
+    (window as any).getCursorShape("7", cb);
+    (window as any).getCursorShape("8", cb);
+    expect(cb).toHaveBeenNthCalledWith(1, 1, 2, 3, 4, new Uint8Array([9]));
+    expect(cb).toHaveBeenNthCalledWith(2, 0, 0, 0, 0, null);
+  });
+
   // As native query_online_states: one bit per ID, high bit first.
   it("queryOnlines reports which IDs hbbs sees online", async () => {
     wsMock.next.mockResolvedValueOnce({ online_response: { states: new Uint8Array([0b10100000]) } });
