@@ -65,7 +65,7 @@ Establish test coverage as a foundation for opinionated development.
 - [x] A dropped connection is retried as in the native client: a WebSocket that closes, times out or cannot connect shows Reconnect with a countdown (1, 2, 4, 8 s …); a device that is briefly offline after a drop is retried for 30 s; refusals (not logged in, not admitted, key mismatch, unknown ID) are not retried. Verified with a killed hbbr process and the browser offline for 15 s (e2e `webclient-reconnect`)
 - [x] Recent sessions list the devices this browser connected to, newest first, from `localStorage['peers']` ([#31](https://github.com/crabamole/rustdesk/issues/31))
 - [x] Session history works as on native clients: Delete, Rename, Forget password and Favorites on a stored session, without an open connection; logging out keeps the history, as native does
-- [x] Session toolbar and actions work as on native clients (2026-10-26): Display and Keyboard toggles reach the device (show remote cursor, mute, disable clipboard, lock after session end, view mode, show my cursor, …) and stay set; scale and scroll style, image quality (also custom quality and FPS), resolution; text chat; Close ends the connection at once; Note reaches the connection's audit; Remember password; saved OS password; 2FA prompt; Settings defaults for view style and image quality. Before, the bridge used names the JS side never handled and most of these were silent no-ops
+- [x] Session toolbar and actions work as on native clients (2026-10-26): Display and Keyboard toggles reach the device (show remote cursor, mute, disable clipboard, lock after session end, view mode, show my cursor, …) and stay set; scale and scroll style, image quality (also custom quality and FPS), resolution; text chat; Close ends the connection at once; Note reaches the connection's audit; Remember password; saved OS password; Settings defaults for view style and image quality. Before, the bridge used names the JS side never handled and most of these were silent no-ops
 - [x] Map keyboard mode, as native: the peer platform's own key codes (tables from rdev), Caps/Num Lock, Ctrl/Cmd+V offers the clipboard first; verified on Linux, macOS and Windows devices
 - [x] Keys typed into a session dialog stay in the dialog (they also went to the remote device)
 - [x] Main page: online status of device cards, address book and group cache
@@ -99,6 +99,7 @@ Establish test coverage as a foundation for opinionated development.
 - **Codec choice and 4:4:4**: the web client decodes VP9 only; the codec menu stays native-only.
 - **Translate keyboard mode**: the web client offers Map mode only.
 - **Restart remote device**: not supported; our builds turn remote restart off on devices, so the device denies it and the menu item stays hidden.
+- **2FA**: not supported yet on any client; the web client follows when the native clients get it.
 - **Other native-only features**: terminal, camera, TCP tunneling and RDP, Switch Sides, direct IP and LAN discovery, WebRTC peer-to-peer (the web client always uses the relay), screen recording, voice call, Android navigation buttons and gestures.
 - **Upstream merge**: This fork diverges intentionally from upstream's closed-source direction. We track upstream Dart/Flutter changes but own the web-specific layer.
 
