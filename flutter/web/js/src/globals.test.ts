@@ -365,8 +365,8 @@ describe("setByName / getByName", () => {
 
   it("handles switch_display via setByName", () => {
     const conn = newConn();
-    (window as any).setByName("switch_display", "1");
-    expect(conn.switchDisplay).toHaveBeenCalledWith("1");
+    (window as any).setByName("switch_display", JSON.stringify({ isDesktop: true, sessionId: "s", value: [1] }));
+    expect(conn.switchDisplay).toHaveBeenCalledWith(1);
   });
 
   it("handles input_key via setByName", () => {

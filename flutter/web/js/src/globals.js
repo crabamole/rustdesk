@@ -470,9 +470,12 @@ window.setByName = (name, value) => {
     case 'ctrl_alt_del':
       curConn.ctrlAltDel();
       break;
-    case 'switch_display':
-      curConn.switchDisplay(value);
+    case 'switch_display': {
+      // The web shows one display at a time, as native with one display chosen.
+      const displays = JSON.parse(value).value;
+      if (displays.length == 1) curConn.switchDisplay(displays[0]);
       break;
+    }
     case 'remove_peer': {
       const peers = getPeers();
       delete peers[value];

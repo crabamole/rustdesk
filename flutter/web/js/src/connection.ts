@@ -753,6 +753,9 @@ export default class Connection {
     const switch_display = message.SwitchDisplay.fromPartial({ display });
     const misc = message.Misc.fromPartial({ switch_display });
     this._ws?.sendMessage({ misc });
+    // As native without texture render: capture only the chosen display.
+    const capture_displays = message.CaptureDisplays.fromPartial({ set: [display] });
+    this._ws?.sendMessage({ misc: message.Misc.fromPartial({ capture_displays }) });
   }
 
   async inputOsPassword(seq: string) {
@@ -1017,6 +1020,8 @@ export default class Connection {
       }
       this._videoDecoder = decoder;
       console.log("vp9 loaded");
+      // Frames that came while it loaded were dropped; a still screen sends no new key frame.
+      if (this._firstFrame) this.refresh();
     }, (err: any) => {
       if (gen !== this._decoderGeneration) return;
       this.msgbox("error", "Error", "Failed to load video decoder");

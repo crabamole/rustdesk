@@ -17,6 +17,7 @@ vi.mock("./message.js", () => ({
   MouseEvent: { fromPartial: vi.fn((v: any) => v) },
   Misc: { fromPartial: vi.fn((v: any) => v) },
   SwitchDisplay: { fromPartial: vi.fn((v: any) => v) },
+  CaptureDisplays: { fromPartial: vi.fn((v: any) => v) },
   PublicKey: { fromPartial: vi.fn((v: any) => v) },
   PeerInfo: { fromPartial: vi.fn((v: any) => v) },
   ControlKey: {
@@ -553,7 +554,9 @@ describe("Connection", () => {
   describe("switchDisplay", () => {
     it("sends switch_display misc message", () => {
       conn.switchDisplay(1);
-      expect(mockWs.sendMessage).toHaveBeenCalled();
+      const sent = mockWs.sendMessage.mock.calls.map((c: any) => c[0].misc);
+      expect(sent.at(-2).switch_display).toEqual({ display: 1 });
+      expect(sent.at(-1).capture_displays).toEqual({ set: [1] });
     });
   });
 
@@ -892,6 +895,12 @@ describe("Connection", () => {
 
       conn.handleMisc({ switch_display: { display: 1 } } as any);
       expect(globals.pushEvent).toHaveBeenCalledWith("switch_display", { display: 1 });
+    });
+
+    it("asks for a fresh picture once the decoder is reloaded after a display switch", () => {
+      (conn as any)._firstFrame = true;
+      conn.handleMisc({ switch_display: { display: 1 } } as any);
+      expect(mockWs.sendMessage.mock.calls.at(-1)[0].misc.refresh_video).toBe(true);
     });
 
     it("handles close_reason and returns false", () => {
