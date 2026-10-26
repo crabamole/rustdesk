@@ -42,6 +42,15 @@ jobs:
             exit 1
           fi
 
+      # publish needs this section; fail here, before the builds and the signing.
+      - name: Check the release notes
+        if: steps.check.outputs.release == 'true'
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          awk -v v="## $VERSION" '$0 == v {f = 1; next} /^## / {f = 0} f' docs/release-notes.md > section.md
+          [ -s section.md ] || { echo "docs/release-notes.md has no section for $VERSION"; exit 1; }
+
   windows:
     needs: version
     if: needs.version.outputs.release == 'true' || github.event_name == 'workflow_dispatch'
