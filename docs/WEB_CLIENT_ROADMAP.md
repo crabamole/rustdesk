@@ -8,8 +8,7 @@ Upstream RustDesk removed the open-source web client in favor of a closed-source
 
 The web client is the way to view without an install (no portable native build is planned), so these come first:
 
-1. Recent sessions always empty ([Phase 2](#phase-2-connection-reliability), [#31](https://github.com/crabamole/rustdesk/issues/31))
-2. Clearer messages for connection failures, if the retry countdown is not enough ([Phase 2](#phase-2-connection-reliability))
+1. Clearer messages for connection failures, if the retry countdown is not enough ([Phase 2](#phase-2-connection-reliability))
 
 ## Architecture Overview
 
@@ -43,7 +42,7 @@ The web client shares ~68K lines of Dart with native clients. The web-specific l
 - [x] Never falls back to public servers; shows when no server is configured
 - [x] Dials only the relay URL hbbs hands out (no relay setting)
 - [x] Log in first: the login button replaces the ID field until the user logs in (1.5.0-1)
-- [x] Named cRustDesk; the powered-by link is hidden (1.5.0-5)
+- [x] Named cRustDesk; the powered-by link is hidden (1.5.0-5); the page and browser tab are titled cRustDesk, without "(Preview)"
 - [x] Never runs a session without end-to-end encryption: a failed key check ends the connection instead of continuing unencrypted ([design-e2ee-required.md](design-e2ee-required.md))
 
 ### Phase 1: Testing Infrastructure
@@ -64,7 +63,7 @@ Establish test coverage as a foundation for opinionated development.
 - [ ] Improve error handling for connection failures (clear user-facing messages)
 - [x] A silent relay ends the session: after 12 s without a message (`Websock.next()` timeout) the web client shows "Reconnect" and reconnects through another relay; verified with a frozen hbbr pod (e2e `ha/hbbr-freeze.spec.ts`, back within about 17 s)
 - [x] A dropped connection is retried as in the native client: a WebSocket that closes, times out or cannot connect shows Reconnect with a countdown (1, 2, 4, 8 s …); a device that is briefly offline after a drop is retried for 30 s; refusals (not logged in, not admitted, key mismatch, unknown ID) are not retried. Verified with a killed hbbr process and the browser offline for 15 s (e2e `webclient-reconnect`)
-- [ ] Recent sessions always empty: `load_recent_peers` is never answered ([#31](https://github.com/crabamole/rustdesk/issues/31))
+- [x] Recent sessions list the devices this browser connected to, newest first, from `localStorage['peers']` ([#31](https://github.com/crabamole/rustdesk/issues/31))
 - [ ] Audit the 118 `UnimplementedError` stubs in `web/bridge.dart` — categorize as: needed, not-applicable-to-web, or deferred
 
 ### Phase 3: Features
