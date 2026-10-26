@@ -46,7 +46,7 @@ export function getConfigHost(): string {
   return getHost();
 }
 
-type MsgboxCallback = (type: string, title: string, text: string) => void;
+type MsgboxCallback = (type: string, title: string, text: string, retry?: boolean) => void;
 type DrawCallback = (data: Uint8Array) => void;
 //const cursorCanvas = document.createElement("canvas");
 
@@ -103,10 +103,13 @@ export default class Connection {
     try {
       await this._start(id);
     } catch (e: any) {
+      // Websock fails with a string or an event (closed, timed out, could not connect), never an
+      // Error: a dropped connection, retried as the native client retries a relay connection.
       this.msgbox(
         "error",
         "Connection Error",
-        e.type == "close" ? "Reset by the peer" : String(e)
+        e.type == "close" ? "Reset by the peer" : String(e),
+        !(e instanceof Error)
       );
     }
   }
@@ -159,26 +162,26 @@ export default class Connection {
     const rr = msg.relay_response;
     if (phr) {
       if (phr?.other_failure) {
-        this.msgbox("error", "Error", phr?.other_failure);
+        this.msgbox("error", "Connection Error", phr?.other_failure);
         return;
       }
       // As in the native client: an answer without the peer's address is a failure, including ID_NOT_EXIST (0).
       if (!phr.socket_addr?.length) {
         switch (phr.failure) {
           case rendezvous.PunchHoleResponse_Failure.ID_NOT_EXIST:
-            this.msgbox("error", "Error", "ID does not exist");
+            this.msgbox("error", "Connection Error", "ID does not exist");
             break;
           case rendezvous.PunchHoleResponse_Failure.OFFLINE:
-            this.msgbox("error", "Error", "Remote desktop is offline");
+            this.msgbox("error", "Connection Error", "Remote desktop is offline");
             break;
           case rendezvous.PunchHoleResponse_Failure.LICENSE_MISMATCH:
-            this.msgbox("error", "Error", "Key mismatch");
+            this.msgbox("error", "Connection Error", "Key mismatch");
             break;
           case rendezvous.PunchHoleResponse_Failure.LICENSE_OVERUSE:
-            this.msgbox("error", "Error", "Key overuse");
+            this.msgbox("error", "Connection Error", "Key overuse");
             break;
           default:
-            this.msgbox("error", "Error", "Connection failed");
+            this.msgbox("error", "Connection Error", "Connection failed");
             break;
         }
         return;
@@ -377,8 +380,8 @@ export default class Connection {
     }
   }
 
-  msgbox(type_: string, title: string, text: string) {
-    this._msgbox?.(type_, title, text);
+  msgbox(type_: string, title: string, text: string, retry = false) {
+    this._msgbox?.(type_, title, text, retry);
   }
 
   draw(frame: any) {

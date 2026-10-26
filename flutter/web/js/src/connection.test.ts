@@ -466,7 +466,7 @@ describe("Connection", () => {
   describe("handlePeerInfo", () => {
     it("shows error when no displays", () => {
       conn.handlePeerInfo({ displays: [] } as any);
-      expect(globals.msgbox).toHaveBeenCalledWith("error", "Remote Error", "No Display");
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Remote Error", "No Display", false);
     });
 
     it("pushes peer_info event on success", () => {
@@ -708,7 +708,7 @@ describe("Connection", () => {
     it("calls the msgbox callback", () => {
 
       conn.msgbox("info", "Title", "Text");
-      expect(globals.msgbox).toHaveBeenCalledWith("info", "Title", "Text");
+      expect(globals.msgbox).toHaveBeenCalledWith("info", "Title", "Text", false);
     });
   });
 
@@ -726,7 +726,7 @@ describe("Connection", () => {
       const custom = vi.fn();
       conn.setMsgbox(custom);
       conn.msgbox("info", "T", "M");
-      expect(custom).toHaveBeenCalledWith("info", "T", "M");
+      expect(custom).toHaveBeenCalledWith("info", "T", "M", false);
     });
 
     it("sets custom draw callback", () => {
@@ -749,14 +749,14 @@ describe("Connection", () => {
 
       (conn as any)._start = vi.fn().mockRejectedValue(new Error("fail"));
       await conn.start("test");
-      expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "Error: fail");
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "Error: fail", false);
     });
 
     it("shows 'Reset by the peer' for close events", async () => {
 
       (conn as any)._start = vi.fn().mockRejectedValue({ type: "close" });
       await conn.start("test");
-      expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "Reset by the peer");
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "Reset by the peer", true);
     });
   });
 
@@ -791,7 +791,7 @@ describe("Connection", () => {
         vp9s: { frames: [{ data: new Uint8Array([1, 2]) }] },
       } as any);
 
-      expect(globals.msgbox).toHaveBeenCalledWith("", "", "");
+      expect(globals.msgbox).toHaveBeenCalledWith("", "", "", false);
     });
 
     it("draws frame when decoder succeeds", () => {
@@ -904,7 +904,7 @@ describe("Connection", () => {
     it("connects to rendezvous and handles punch_hole_response with other_failure", async () => {
       nextWsResponse = { punch_hole_response: { other_failure: "Server busy" } };
       await (conn as any)._start("test-peer");
-      expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "Server busy");
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "Server busy", false);
     });
 
     it("does not treat failure 0 as an error when the peer address is set", async () => {
@@ -916,37 +916,37 @@ describe("Connection", () => {
     it("handles ID_NOT_EXIST failure", async () => {
       nextWsResponse = { punch_hole_response: { failure: 0, socket_addr: new Uint8Array(0) } };
       await (conn as any)._start("test-peer");
-      expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "ID does not exist");
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "ID does not exist", false);
     });
 
     it("handles OFFLINE failure", async () => {
       nextWsResponse = { punch_hole_response: { failure: 1 } };
       await (conn as any)._start("test-peer");
-      expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "Remote desktop is offline");
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "Remote desktop is offline", false);
     });
 
     it("handles LICENSE_MISMATCH failure", async () => {
       nextWsResponse = { punch_hole_response: { failure: 2 } };
       await (conn as any)._start("test-peer");
-      expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "Key mismatch");
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "Key mismatch", false);
     });
 
     it("handles LICENSE_OVERUSE failure", async () => {
       nextWsResponse = { punch_hole_response: { failure: 3 } };
       await (conn as any)._start("test-peer");
-      expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "Key overuse");
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "Key overuse", false);
     });
 
     it("handles unrecognized nonzero failure with generic message", async () => {
       nextWsResponse = { punch_hole_response: { failure: 99 } };
       await (conn as any)._start("test-peer");
-      expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "Connection failed");
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "Connection failed", false);
     });
 
     it("handles relay_response with no version", async () => {
       nextWsResponse = { relay_response: { version: 0, pk: new Uint8Array(32), uuid: "test-uuid" } };
       await (conn as any)._start("test-peer");
-      expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "Remote version is low, not support web");
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "Remote version is low, not support web", false);
     });
 
     it("loads stored password from options", async () => {

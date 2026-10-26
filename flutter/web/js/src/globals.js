@@ -121,10 +121,10 @@ export function isDesktop() {
   return !isMobile();
 }
 
-export function msgbox(type, title, text) {
+export function msgbox(type, title, text, retry = false) {
   if (!type || (type == 'error' && !text)) return;
   const text2 = text.toLowerCase();
-  var hasRetry = checkIfRetry(type, title, text) ? 'true' : '';
+  var hasRetry = retry || checkIfRetry(type, title, text) ? 'true' : '';
   if (window.onGlobalEvent) {
     window.onGlobalEvent(JSON.stringify({ name: 'msgbox', type, title, text, link: '', hasRetry }));
   } else {

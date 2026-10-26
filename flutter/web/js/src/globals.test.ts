@@ -118,6 +118,19 @@ describe("msgbox", () => {
     delete (window as any).onGlobalEvent;
   });
 
+  it("offers a retry for a dropped connection, not for a refusal", () => {
+    const handler = vi.fn();
+    (window as any).onGlobalEvent = handler;
+    const hasRetry = () => JSON.parse(handler.mock.calls.at(-1)[0]).hasRetry;
+    msgbox("error", "Connection Error", "Failed to connect to rendezvous server", true);
+    expect(hasRetry()).toBe("true");
+    msgbox("error", "Connection Error", "Failed to connect to rendezvous server");
+    expect(hasRetry()).toBe("");
+    msgbox("error", "Connection Error", "The connection is not allowed. You have not logged in.");
+    expect(hasRetry()).toBe("");
+    delete (window as any).onGlobalEvent;
+  });
+
   it("warns when no handler", () => {
     const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
     delete (window as any).onGlobalEvent;
