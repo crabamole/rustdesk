@@ -106,6 +106,7 @@ vi.mock("./common", () => ({
   decompress: vi.fn().mockResolvedValue(new Uint8Array(10)),
   mapKey: vi.fn((name: string) => ({ chr: name.charCodeAt(0) })),
   sleep: vi.fn().mockResolvedValue(undefined),
+  pkToFingerprint: vi.fn(() => "fp"),
   getVersionNumber: vi.fn((v: string) => {
     const [a = 0, b = 0, c = 0] = (v || "").split("-")[0].split(".").map(Number);
     return a * 1000000 + b * 1000 + c * 10;
@@ -1251,6 +1252,7 @@ describe("Connection", () => {
 
       const result = await (conn as any).secure(new Uint8Array(32));
       expect(result).toBe(true);
+      expect(globals.pushEvent).toHaveBeenCalledWith("fingerprint", { fingerprint: "fp" });
       expect(mockWs.setSecretKey).toHaveBeenCalled();
     });
 

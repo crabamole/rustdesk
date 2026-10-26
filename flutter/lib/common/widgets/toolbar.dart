@@ -631,8 +631,8 @@ List<TTextMenu> toolbarControls(BuildContext context, String id, FFI ffi) {
       ));
     }
   }
-  // fingerprint
-  if (!(isDesktop || isWebDesktop)) {
+  // fingerprint; the web has no tab menu, where desktop offers it
+  if (!isDesktop) {
     v.add(TTextMenu(
       child: Text(translate('Copy Fingerprint')),
       onPressed: () => onCopyFingerprint(FingerprintState.find(id).value),

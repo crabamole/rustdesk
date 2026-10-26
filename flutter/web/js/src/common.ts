@@ -92,3 +92,9 @@ function getLang(): string {
     return "";
   }
 }
+
+// As native pk_to_fingerprint: the device key in hex, a space every 4 digits.
+export function pkToFingerprint(pk: Uint8Array): string {
+  const hex = Array.from(pk, (b) => b.toString(16).padStart(2, "0")).join("");
+  return hex.replace(/(.{4})(?=.)/g, "$1 ");
+}

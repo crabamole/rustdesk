@@ -4,7 +4,7 @@ import * as rendezvous from "./rendezvous.js";
 import { loadVp9 } from "./codec";
 import * as sha256 from "fast-sha256";
 import * as globals from "./globals";
-import { decompress, getVersionNumber, mapKey, sleep } from "./common";
+import { decompress, getVersionNumber, mapKey, pkToFingerprint, sleep } from "./common";
 import { HID_TO_LINUX_CODE, HID_TO_MACOS_CODE, HID_TO_MACOS_ISO_CODE, HID_TO_WIN_SCANCODE, LETTER_HIDS, NUMPAD_HIDS } from "./keymap";
 import { loadConfig, getConfigKey, getDefaultUri, getHost, getApiServer, getRelayUri } from "./url";
 
@@ -296,6 +296,7 @@ export default class Connection {
     });
     this._ws?.sendMessage({ public_key });
     this._ws?.setSecretKey(secret_key);
+    globals.pushEvent("fingerprint", { fingerprint: pkToFingerprint(pk) });
     console.log("secured");
     return true;
   }

@@ -26,7 +26,7 @@ vi.mock("./gen_js_from_hbb", () => ({
   },
 }));
 
-import { decompress, getVersionNumber, mapKey, sleep, translate, initZstd } from "./common";
+import { decompress, getVersionNumber, mapKey, pkToFingerprint, sleep, translate, initZstd } from "./common";
 
 describe("getVersionNumber", () => {
   it("matches hbb_common::get_version_number", () => {
@@ -129,5 +129,11 @@ describe("decompress", () => {
 describe("initZstd", () => {
   it("initializes without error", async () => {
     await expect(initZstd()).resolves.toBeUndefined();
+  });
+});
+
+describe("pkToFingerprint", () => {
+  it("formats the device key as native does", () => {
+    expect(pkToFingerprint(new Uint8Array([0x01, 0xab, 0xcd, 0xef, 0x12]))).toBe("01ab cdef 12");
   });
 });
