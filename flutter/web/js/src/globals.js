@@ -419,6 +419,11 @@ window.setByName = (name, value) => {
     case 'send_note':
       curConn.sendNote(value);
       break;
+    case 'toggle_privacy_mode': {
+      const v = JSON.parse(value);
+      curConn.togglePrivacyMode(v.impl_key, v.on);
+      break;
+    }
     case 'take_screenshot':
       curConn.takeScreenshot(parseInt(value));
       break;

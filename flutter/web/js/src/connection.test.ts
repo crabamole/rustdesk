@@ -26,7 +26,10 @@ vi.mock("./message.js", () => ({
   },
   KeyboardMode: { Legacy: 0, Map: 1 },
   ImageQuality: { Low: 0, Best: 1, Balanced: 2 },
-  PermissionInfo_Permission: { Keyboard: 1, Clipboard: 2, Audio: 3 },
+  PermissionInfo_Permission: { Keyboard: 1, Clipboard: 2, Audio: 3, Restart: 5, BlockInput: 7, PrivacyMode: 8 },
+  BackNotification_BlockInputState: { BlkOnSucceeded: 2, BlkOnFailed: 3, BlkOffSucceeded: 4, BlkOffFailed: 5 },
+  BackNotification_PrivacyModeState: { PrvOnByOther: 2, PrvNotSupported: 3, PrvOnSucceeded: 4, PrvOnFailedDenied: 5, PrvOnFailedPlugin: 6, PrvOnFailed: 7, PrvOffSucceeded: 8, PrvOffByPeer: 9, PrvOffFailed: 10, PrvOffUnknown: 11 },
+  TogglePrivacyMode: { fromPartial: vi.fn((v: any) => v) },
   Clipboard: { fromPartial: vi.fn((v: any) => v) },
   ClipboardFormat: { Text: 0, Html: 2 },
   ClipboardOffer: { fromPartial: vi.fn((v: any) => v) },
@@ -595,9 +598,10 @@ describe("Connection", () => {
       expect(conn.getOption("lock-after-session-end")).toBe(true);
     });
 
-    it("toggles privacy-mode", () => {
+    it("asks for privacy mode, kept only once the device confirms it, as native", () => {
       conn.toggleOption("privacy-mode");
-      expect(conn.getOption("privacy-mode")).toBe(true);
+      expect(mockWs.sendMessage.mock.calls.at(-1)[0].misc.option.privacy_mode).toBe(1);
+      expect(conn.getOption("privacy-mode")).toBeUndefined();
     });
 
     it("handles block-input without setting option", () => {
@@ -883,8 +887,8 @@ describe("Connection", () => {
     });
 
     it("keeps the session running for permissions it does not show", () => {
-      // File (4), Restart (5), Recording (6): hosts report them disabled at login.
-      for (const permission of [4, 5, 6, 99]) {
+      // File (4), Recording (6): hosts report them disabled at login.
+      for (const permission of [4, 6, 99]) {
         const result = conn.handleMisc({ permission_info: { permission, enabled: false } } as any);
         expect(result).toBe(true);
       }
@@ -901,6 +905,31 @@ describe("Connection", () => {
       (conn as any)._firstFrame = true;
       conn.handleMisc({ switch_display: { display: 1 } } as any);
       expect(mockWs.sendMessage.mock.calls.at(-1)[0].misc.refresh_video).toBe(true);
+    });
+
+    it("shows block input and privacy mode results from the device, as native", () => {
+      expect(conn.handleMisc({ back_notification: { block_input_state: 2, details: "", impl_key: "" } } as any)).toBe(true);
+      expect(globals.pushEvent).toHaveBeenCalledWith("update_block_input_state", { input_state: "on" });
+      conn.handleMisc({ back_notification: { privacy_mode_state: 4, details: "", impl_key: "privacy_mode_impl_virtual_display" } } as any);
+      expect(conn.getOption("privacy-mode")).toBe(true);
+      expect(conn.getOption("privacy-mode-impl-key")).toBe("privacy_mode_impl_virtual_display");
+      expect(globals.pushEvent).toHaveBeenCalledWith("update_privacy_mode", {});
+      conn.handleMisc({ back_notification: { privacy_mode_state: 9, details: "", impl_key: "" } } as any);
+      expect(conn.getOption("privacy-mode")).toBeUndefined();
+      expect(conn.handleMisc({ back_notification: { privacy_mode_state: 2, details: "", impl_key: "" } } as any)).toBe(false);
+    });
+
+    it("shows the UAC prompt while keyboard is allowed and clears it after", () => {
+      const msgbox = vi.spyOn(conn, "msgbox");
+      conn.handleMisc({ uac: true } as any);
+      expect(msgbox).toHaveBeenCalledWith("on-uac", "Prompt", "Please wait for confirmation of UAC...");
+      conn.handleMisc({ uac: false } as any);
+      expect(globals.pushEvent).toHaveBeenCalledWith("cancel_msgbox", { tag: "on-uac" });
+    });
+
+    it("asks the device to toggle a privacy mode", () => {
+      conn.togglePrivacyMode("privacy_mode_impl_mag", true);
+      expect(mockWs.sendMessage.mock.calls.at(-1)[0].misc.toggle_privacy_mode).toEqual({ impl_key: "privacy_mode_impl_mag", on: true });
     });
 
     it("handles close_reason and returns false", () => {

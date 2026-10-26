@@ -74,6 +74,7 @@ export default class Connection {
   _sessionId: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
   _lastAuditNote = "";
   _screenshot?: Uint8Array;
+  _keyboardAllowed = true;
   _closed = false;
   _cursorShapes: { [id: string]: { hotx: number; hoty: number; width: number; height: number; colors: Uint8Array } } = {};
   _auditGuid = "";
@@ -603,6 +604,7 @@ export default class Connection {
       switch (p.permission) {
         case message.PermissionInfo_Permission.Keyboard:
           name = "keyboard";
+          this._keyboardAllowed = p.enabled;
           break;
         case message.PermissionInfo_Permission.Clipboard:
           name = "clipboard";
@@ -611,11 +613,28 @@ export default class Connection {
         case message.PermissionInfo_Permission.Audio:
           name = "audio";
           break;
+        case message.PermissionInfo_Permission.Restart:
+          name = "restart";
+          break;
+        case message.PermissionInfo_Permission.BlockInput:
+          name = "block_input";
+          break;
+        case message.PermissionInfo_Permission.PrivacyMode:
+          name = "privacy_mode";
+          break;
         default:
           // Not shown on web; returning falsy would end the message loop.
           return true;
       }
       globals.pushEvent("permission", { [name]: p.enabled });
+    } else if (misc.back_notification) {
+      return this.handleBackNotification(misc.back_notification);
+    } else if (misc.uac !== undefined) {
+      if (misc.uac && this._keyboardAllowed) this.msgbox("on-uac", "Prompt", "Please wait for confirmation of UAC...");
+      else this.cancelMsgbox("on-uac", "wait-uac", "elevation-error");
+    } else if (misc.foreground_window_elevated !== undefined) {
+      if (misc.foreground_window_elevated && this._keyboardAllowed) this.msgbox("on-foreground-elevated", "Prompt", "elevated_foreground_window_tip");
+      else this.cancelMsgbox("on-foreground-elevated", "wait-uac", "elevation-error");
     } else if (misc.switch_display) {
       this.loadVideoDecoder();
       globals.pushEvent("switch_display", misc.switch_display);
@@ -625,6 +644,50 @@ export default class Connection {
       return false;
     }
     return true;
+  }
+
+  cancelMsgbox(...tags: string[]) {
+    tags.forEach((tag) => globals.pushEvent("cancel_msgbox", { tag }));
+  }
+
+  // As native handle_back_notification. Returns false to end the session.
+  handleBackNotification(n: message.BackNotification): boolean {
+    const B = message.BackNotification_BlockInputState;
+    const P = message.BackNotification_PrivacyModeState;
+    const blockInput = (on: boolean) => globals.pushEvent("update_block_input_state", { input_state: on ? "on" : "off" });
+    const privacy = (on: boolean) => {
+      this.setOption("privacy-mode", on || undefined);
+      // As native, devices older than 1.2.4 send no key.
+      if (on) this.setOption("privacy-mode-impl-key", n.impl_key || "privacy_mode_impl_mag");
+      globals.pushEvent("update_privacy_mode", {});
+    };
+    const error = (title: string, text: string) => this.msgbox("custom-error", title, text);
+    switch (n.block_input_state) {
+      case B.BlkOnSucceeded: blockInput(true); break;
+      case B.BlkOnFailed: error("Block user input", n.details || "Failed"); blockInput(false); break;
+      case B.BlkOffSucceeded: blockInput(false); break;
+      case B.BlkOffFailed: error("Unblock user input", n.details || "Failed"); break;
+    }
+    switch (n.privacy_mode_state) {
+      case P.PrvOnByOther:
+        this.msgbox("error", "Connecting...", "Someone turns on privacy mode, exit");
+        return false;
+      case P.PrvNotSupported: error("Privacy mode", "Unsupported"); privacy(false); break;
+      case P.PrvOnSucceeded: this.msgbox("custom-nocancel", "Privacy mode", "Enter privacy mode"); privacy(true); break;
+      case P.PrvOnFailedDenied: error("Privacy mode", "Peer denied"); privacy(false); break;
+      case P.PrvOnFailedPlugin:
+      case P.PrvOnFailed: error("Privacy mode", n.details || "Failed"); privacy(false); break;
+      case P.PrvOffSucceeded: this.msgbox("custom-nocancel", "Privacy mode", "Exit privacy mode"); privacy(false); break;
+      case P.PrvOffByPeer: error("Privacy mode", "Peer exit"); privacy(false); break;
+      case P.PrvOffFailed: error("Privacy mode", n.details || "Failed to turn off"); break;
+      case P.PrvOffUnknown: error("Privacy mode", "Turned off"); privacy(false); break;
+    }
+    return true;
+  }
+
+  togglePrivacyMode(impl_key: string, on: boolean) {
+    const toggle_privacy_mode = message.TogglePrivacyMode.fromPartial({ impl_key, on });
+    this._ws?.sendMessage({ misc: message.Misc.fromPartial({ toggle_privacy_mode }) });
   }
 
   getRemember(): Boolean {
@@ -836,7 +899,7 @@ export default class Connection {
         option.lock_after_session_end = yesNo(flip());
         break;
       case "privacy-mode":
-        option.privacy_mode = yesNo(flip());
+        option.privacy_mode = yesNo(!this._options["privacy-mode"]);
         break;
       case "enable-file-copy-paste":
         option.enable_file_transfer = yesNo(flip());
