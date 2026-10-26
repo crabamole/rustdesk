@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Op de geminimaliseerde werkbalk weergeven"),
         ("All monitors", "Alle monitors"),
         ("#{} monitor", "#{} monitor"),
-        ("conn-e2ee-unavailable-tip", "Kon end-to-end encryptie niet verifiëren.\nHet externe apparaat is mogelijk nog steeds aan het instellen. Probeer het later opnieuw.\nAls dit blijft gebeuren, kan het zijn dat de server onbetrouwbaar is.\nToch doorgaan?"),
         ("ID whitelisting", "Witte lijst met ID's"),
         ("Use ID whitelisting", "Witte lijst met ID's gebruiken"),
         ("id_whitelist_tip", "Alleen ID's op de witte lijst krijgen toegang tot mijn apparaat"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "Uw IP wordt door de ander geblokkeerd"),
         ("id_whitelist_caveat_tip", "De ID wordt vermeld door de verbindende client. Deze witte lijst vermindert de zichtbaarheid en vervangt niet het wachtwoord of 2FA."),
         ("whitelist_cidr_tip", "CIDR-notatie wordt ondersteund, bijv. 192.168.1.0/24"),
-        ("Continue", "Doorgaan"),
         ("Browser didn't open? Use the url below to sign in.", "Is de browser niet geopend? Gebruik onderstaande URL om in te loggen."),
         ("Lock canvas", "Canvas vergrendelen"),
         ("Sync clipboard between sessions", "Klembord synchroniseren tussen sessies"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

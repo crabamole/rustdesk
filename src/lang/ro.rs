@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Afișează în bara de instrumente minimizată"),
         ("All monitors", "Toate monitoarele"),
         ("#{} monitor", "Monitor {}"),
-        ("conn-e2ee-unavailable-tip", "Criptarea end-to-end nu a putut fi verificată.\nDispozitivul la distanță poate fi încă în curs de configurare. Încercați din nou mai târziu.\nDacă acest lucru continuă, serverul poate să nu fie de încredere.\nContinuați oricum?"),
         ("ID whitelisting", "Listă de ID-uri autorizate"),
         ("Use ID whitelisting", "Folosește lista de ID-uri autorizate"),
         ("id_whitelist_tip", "Doar ID-urile autorizate pot accesa acest dispozitiv"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "Adresa ta IP este blocată de dispozitivul de la distanță"),
         ("id_whitelist_caveat_tip", "ID-ul este raportat de clientul care se conectează. Lista albă reduce expunerea și nu înlocuiește parola sau 2FA"),
         ("whitelist_cidr_tip", "Notația CIDR este acceptată, de exemplu 192.168.1.0/24"),
-        ("Continue", "Continuă"),
         ("Browser didn't open? Use the url below to sign in.", "Browserul nu s-a deschis? Folosește URL-ul de mai jos pentru a te conecta."),
         ("Lock canvas", "Blochează ecranul"),
         ("Sync clipboard between sessions", "Sincronizează clipboardul între sesiuni"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

@@ -7384,6 +7384,35 @@ mod test {
         assert_eq!(unauthorized_count(), 0);
     }
 
+    // A controller that answers our signed identity without a key, as upstream's does when its key
+    // check fails, is refused: the session never runs without end-to-end encryption.
+    #[tokio::test]
+    async fn test_unencrypted_controller_is_refused() {
+        let _serial = UNAUTHORIZED_TESTS.lock().unwrap_or_else(|e| e.into_inner());
+        let mut empty_key = Message::new();
+        empty_key.set_public_key(PublicKey::new());
+        for (answer, refusal) in [
+            (empty_key, "did not encrypt"),
+            (Message::new(), "invalid message type"),
+        ] {
+            let (served, mut controller, addr) = stalled_incoming().await;
+            let handshake = tokio::spawn(crate::server::create_tcp_connection(
+                crate::server::new_for_test(),
+                served,
+                addr,
+                true,
+                Default::default(),
+            ));
+            let signed_id = hbb_common::timeout(3000, controller.next()).await.unwrap();
+            assert!(signed_id.is_some(), "the device sends its signed identity first");
+            controller.send(&answer).await.unwrap();
+            match hbb_common::timeout(3000, handshake).await {
+                Ok(Ok(Err(e))) => assert!(e.to_string().contains(refusal), "{}", e),
+                other => panic!("an unencrypted controller was not refused: {:?}", other.map(|r| r.map(|r| r.is_ok()))),
+            }
+        }
+    }
+
     #[cfg(feature = "flutter")]
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
     #[test]

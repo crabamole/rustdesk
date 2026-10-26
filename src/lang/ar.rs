@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "الإظهار على شريط الأدوات المُصغّر"),
         ("All monitors", "جميع الشاشات"),
         ("#{} monitor", "الشاشة رقم {}"),
-        ("conn-e2ee-unavailable-tip", "تعذر التحقق من التشفير من طرف إلى طرف.\nقد يكون الجهاز البعيد ما يزال قيد الإعداد. حاول مرة أخرى لاحقًا.\nإذا استمر حدوث ذلك، فقد يكون الخادم غير موثوق به.\nهل تريد المتابعة على أي حال؟"),
         ("ID whitelisting", "القائمة البيضاء للمعرفات"),
         ("Use ID whitelisting", "استخدام القائمة البيضاء للمعرفات"),
         ("id_whitelist_tip", "فقط المعرفات في القائمة البيضاء تستطيع الوصول لي"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "تم حظر عنوان IP الخاص بك من قبل الطرف الآخر"),
         ("id_whitelist_caveat_tip", "يتم الإبلاغ عن المعرف من قبل العميل المتصل. القائمة البيضاء تقلل من التعرض ولا تغني عن كلمة المرور أو 2FA"),
         ("whitelist_cidr_tip", "يتم دعم صيغة CIDR، مثال: 192.168.1.0/24"),
-        ("Continue", "متابعة"),
         ("Browser didn't open? Use the url below to sign in.", "لم يفتح المتصفح؟ استخدم الرابط أدناه لتسجيل الدخول."),
         ("Lock canvas", "قفل اللوحة"),
         ("Sync clipboard between sessions", "مزامنة الحافظة بين الجلسات"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

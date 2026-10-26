@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Rādīt minimizētajā rīkjoslā"),
         ("All monitors", "Visi monitori"),
         ("#{} monitor", "Monitors {}"),
-        ("conn-e2ee-unavailable-tip", "Neizdevās pārbaudīt pilnīgu šifrēšanu.\nAttālā ierīce, iespējams, vēl tiek iestatīta. Mēģiniet vēlreiz vēlāk.\nJa tas turpinās, serveris var nebūt uzticams.\nVai tomēr turpināt?"),
         ("ID whitelisting", "ID baltais saraksts"),
         ("Use ID whitelisting", "Izmantot balto ID sarakstu"),
         ("id_whitelist_tip", "Man var piekļūt tikai baltajā sarakstā iekļautie ID"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "Jūsu IP adresi ir bloķējusi otra puse"),
         ("id_whitelist_caveat_tip", "ID paziņo klients, kas veido savienojumu. Baltais saraksts samazina pakļautību un neaizstāj paroli vai 2FA"),
         ("whitelist_cidr_tip", "Tiek atbalstīts CIDR pieraksts, piemēram 192.168.1.0/24"),
-        ("Continue", "Turpināt"),
         ("Browser didn't open? Use the url below to sign in.", "Pārlūkprogramma neatvērās? Izmantojiet tālāk norādīto URL, lai pieslēgtos."),
         ("Lock canvas", "Bloķēt audeklu"),
         ("Sync clipboard between sessions", "Sinhronizēt starpliktuvi starp sesijām"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

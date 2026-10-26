@@ -267,7 +267,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("wayland-soft-keyboard-input-label", "Soft keyboard input"),
         ("wayland-keyboard-input-reset-choice-tip", "Reset keyboard input choice"),
         ("remember-wayland-keyboard-choice-tip", "Don't ask again for this remote computer"),
-        ("conn-e2ee-unavailable-tip", "Could not verify end-to-end encryption.\nThe remote device may still be setting up. Try again later.\nIf this keeps happening, the server may be untrusted.\nContinue anyway?"),
         ("id_whitelist_tip", "Only whitelisted IDs can access me"),
         ("id_whitelist_wildcard_tip", "Wildcards are supported: '*' matches any number of characters, '?' matches exactly one character"),
         ("id_whitelist_caveat_tip", "The ID is reported by the connecting client. This whitelist reduces exposure and does not replace the password or 2FA."),
@@ -286,5 +285,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("clipboard_on_request_browser_tip", "This browser does not allow paste into the remote device."),
         ("admission_pending_tip", "Other devices cannot connect to this device until an administrator allows it. You can still connect to other devices."),
         ("admission_rejected_tip", "An administrator does not allow other devices to connect to this device. You can still connect to other devices."),
+        ("conn-e2ee-refused-tip", "Could not verify end-to-end encryption, so the connection was refused.\nThe server or the network may not be trusted. Contact your administrator."),
     ].iter().cloned().collect();
 }

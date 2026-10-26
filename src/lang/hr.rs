@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Prikaži na minimiziranoj alatnoj traci"),
         ("All monitors", "Svi monitori"),
         ("#{} monitor", "Monitor {}"),
-        ("conn-e2ee-unavailable-tip", "End-to-end enkripcija nije mogla biti potvrđena.\nUdaljeni uređaj se možda još postavlja. Pokušajte ponovno kasnije.\nAko se to nastavi događati, poslužitelj možda nije pouzdan.\nIpak nastaviti?"),
         ("ID whitelisting", "ID pouzdana lista"),
         ("Use ID whitelisting", "Koristi popis pouzdanih ID-ova"),
         ("id_whitelist_tip", "Mogu mi pristupiti samo dozvoljeni ID-ovi"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "Vašu IP adresu je blokiralo udaljeno računalo"),
         ("id_whitelist_caveat_tip", "ID prijavljuje klijent koji se povezuje. Ova lista smanjuje izloženost i ne zamjenjuje lozinku ni 2FA"),
         ("whitelist_cidr_tip", "Podržan je CIDR zapis, primjerice 192.168.1.0/24"),
-        ("Continue", "Nastavi"),
         ("Browser didn't open? Use the url below to sign in.", "Preglednik se nije otvorio? Za prijavu upotrijebite URL u nastavku."),
         ("Lock canvas", "Zaključaj pozadinu"),
         ("Sync clipboard between sessions", "Sinkroniziraj međuspremnik između sesija"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

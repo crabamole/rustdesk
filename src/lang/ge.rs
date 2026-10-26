@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "ჩვენება ჩაკეცილ ხელსაწყოთა ზოლზე"),
         ("All monitors", "ყველა მონიტორი"),
         ("#{} monitor", "მონიტორი {}"),
-        ("conn-e2ee-unavailable-tip", "ბოლომდე დაშიფვრის გადამოწმება ვერ მოხერხდა.\nდისტანციური მოწყობილობა შესაძლოა ჯერ კიდევ მზადდება. სცადეთ მოგვიანებით.\nთუ ეს კვლავ გაგრძელდება, სერვერი შესაძლოა არასანდო იყოს.\nმაინც გააგრძელებთ?"),
         ("ID whitelisting", "დაშვებული ID-ების სია"),
         ("Use ID whitelisting", "ID თეთრი სიის გამოყენება"),
         ("id_whitelist_tip", "მხოლოდ თეთრ სიაში არსებულ ID-ებს შეუძლიათ ჩემს მოწყობილობაზე წვდომა."),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "თქვენი IP მისამართი დაბლოკილია მეორე მხარის მიერ"),
         ("id_whitelist_caveat_tip", "ID-ს აცხადებს დამაკავშირებელი კლიენტი. თეთრი სია ამცირებს ექსპოზიციას და ვერ ჩაანაცვლებს პაროლს ან 2FA-ს"),
         ("whitelist_cidr_tip", "მხარდაჭერილია CIDR ჩანაწერი, მაგალითად 192.168.1.0/24"),
-        ("Continue", "გაგრძელება"),
         ("Browser didn't open? Use the url below to sign in.", "ბრაუზერი არ გაიხსნა? შესასვლელად გამოიყენეთ ქვემოთ მოცემული ბმული."),
         ("Lock canvas", "ტილოს დაბლოკვა"),
         ("Sync clipboard between sessions", "გაცვლის ბუფერის სინქრონიზაცია სესიებს შორის"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "சிறிதாக்கப்பட்ட கருவிப்பட்டையில் காட்டு"),
         ("All monitors", "அனைத்து மானிட்டர்களும்"),
         ("#{} monitor", "மானிட்டர் {}"),
-        ("conn-e2ee-unavailable-tip", "முடிவு-முதல்-முடிவு குறியாக்கத்தை சரிபார்க்க முடியவில்லை.\nதொலை சாதனம் இன்னும் அமைக்கப்பட்டுக் கொண்டிருக்கலாம். பின்னர் மீண்டும் முயற்சிக்கவும்.\nஇது தொடர்ந்து நடந்தால், சேவையகம் நம்பகமற்றதாக இருக்கலாம்.\nஎப்படியும் தொடரவா?"),
         ("ID whitelisting", "ID அனுமதிப்பட்டியல்"),
         ("Use ID whitelisting", "ID அனுமதிப்பட்டியலைப் பயன்படுத்து"),
         ("id_whitelist_tip", "அனுமதிப்பட்டியலில் உள்ள ID-கள் மட்டுமே என்னை அணுக முடியும்"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "உங்கள் IP முகவரி மறுமுனையால் தடுக்கப்பட்டுள்ளது"),
         ("id_whitelist_caveat_tip", "இணைக்கும் கிளையண்டே ID-ஐ தெரிவிக்கிறது. அனுமதிப்பட்டியல் வெளிப்பாட்டைக் குறைக்கிறது; கடவுச்சொல் அல்லது 2FA-க்கு மாற்றாகாது"),
         ("whitelist_cidr_tip", "CIDR குறியீடு ஆதரிக்கப்படுகிறது, எடுத்துக்காட்டாக 192.168.1.0/24"),
-        ("Continue", "தொடர்க"),
         ("Browser didn't open? Use the url below to sign in.", "உலாவி திறக்கவில்லையா? உள்நுழைய கீழே உள்ள URL ஐப் பயன்படுத்தவும்."),
         ("Lock canvas", "கேன்வாஸைப் பூட்டு"),
         ("Sync clipboard between sessions", "அமர்வுகளுக்கு இடையே கிளிப்போர்டை ஒத்திசைக்கவும்"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

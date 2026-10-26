@@ -209,9 +209,19 @@ export default class Connection {
       uuid,
     });
     ws.sendRendezvous({ request_relay });
-    const secure = (await this.secure(pk)) || false;
-    globals.pushEvent("connection_ready", { secure, direct: false });
+    if (!(await this.secure(pk))) {
+      this.close();
+      return;
+    }
+    globals.pushEvent("connection_ready", { secure: true, direct: false });
     await this.msgLoop();
+  }
+
+  // Upstream continues unencrypted when a check fails; we never run a session without end-to-end
+  // encryption (docs/design-e2ee-required.md).
+  refuseInsecure(): false {
+    this.msgbox("error", "Insecure Connection", "conn-e2ee-refused-tip");
+    return false;
   }
 
   async secure(pk: Uint8Array | undefined) {
@@ -238,45 +248,33 @@ export default class Connection {
         );
     }
     if (!pk) {
-      // send an empty message out in case server is setting up secure and waiting for first message
-      const public_key = message.PublicKey.fromPartial({});
-      this._ws?.sendMessage({ public_key });
-      return;
+      return this.refuseInsecure();
     }
     const msg = (await this._ws?.next()) as message.Message;
     let signedId: any = msg?.signed_id;
     if (!signedId) {
       console.error("Handshake failed: invalid message type");
-      const public_key = message.PublicKey.fromPartial({});
-      this._ws?.sendMessage({ public_key });
-      return;
+      return this.refuseInsecure();
     }
     try {
       signedId = await globals.verify(signedId.id, Uint8Array.from(pk!));
     } catch (e) {
       console.error(e);
-      // fall back to non-secure connection in case pk mismatch
-      console.error("pk mismatch, fall back to non-secure");
-      const public_key = message.PublicKey.fromPartial({});
-      this._ws?.sendMessage({ public_key });
-      return;
+      console.error("Handshake failed: pk mismatch");
+      return this.refuseInsecure();
     }
     const idpk = rendezvous.IdPk.decode(signedId);
     const id = idpk.id;
     const theirPk = idpk.pk;
     if (id != this._id!) {
       console.error("Handshake failed: sign failure");
-      const public_key = message.PublicKey.fromPartial({});
-      this._ws?.sendMessage({ public_key });
-      return;
+      return this.refuseInsecure();
     }
     if (theirPk.length != 32) {
       console.error(
         "Handshake failed: invalid public box key length from peer"
       );
-      const public_key = message.PublicKey.fromPartial({});
-      this._ws?.sendMessage({ public_key });
-      return;
+      return this.refuseInsecure();
     }
     const [mySk, asymmetric_value] = globals.genBoxKeyPair();
     const secret_key = globals.genSecretKey();

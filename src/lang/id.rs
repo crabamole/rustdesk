@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Tampilkan di bilah alat yang diperkecil"),
         ("All monitors", "Semua monitor"),
         ("#{} monitor", "Monitor {}"),
-        ("conn-e2ee-unavailable-tip", "Tidak dapat memverifikasi enkripsi ujung ke ujung.\nPerangkat jarak jauh mungkin masih disiapkan. Coba lagi nanti.\nJika ini terus terjadi, server mungkin tidak tepercaya.\nTetap lanjutkan?"),
         ("ID whitelisting", "Daftar ID yang diizinkan"),
         ("Use ID whitelisting", "Gunakan daftar ID yang diizinkan"),
         ("id_whitelist_tip", "Hanya ID yang diizinkan dapat mengakses"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "IP Anda diblokir oleh perangkat remote"),
         ("id_whitelist_caveat_tip", "ID dilaporkan oleh klien yang terhubung. Daftar ini mengurangi paparan dan bukan pengganti kata sandi atau 2FA"),
         ("whitelist_cidr_tip", "Notasi CIDR didukung, misalnya 192.168.1.0/24"),
-        ("Continue", "Lanjutkan"),
         ("Browser didn't open? Use the url below to sign in.", "Browser tidak terbuka? Gunakan URL di bawah ini untuk masuk."),
         ("Lock canvas", "Kunci kanvas"),
         ("Sync clipboard between sessions", "Sinkronkan papan klip antar sesi"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

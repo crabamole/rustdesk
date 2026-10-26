@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "نمایش در نوار ابزار کوچک‌شده"),
         ("All monitors", "همه نمایشگرها"),
         ("#{} monitor", "نمایشگر {}"),
-        ("conn-e2ee-unavailable-tip", "رمزنگاری سرتاسری قابل تأیید نیست.\nدستگاه راه دور ممکن است هنوز در حال آماده‌سازی باشد. بعداً دوباره تلاش کنید.\nاگر این مشکل ادامه داشت، سرور ممکن است نامطمئن باشد.\nبا این حال ادامه می‌دهید؟"),
         ("ID whitelisting", "لیست شناسه های مجاز"),
         ("Use ID whitelisting", "استفاده از لیست شناسه های مجاز"),
         ("id_whitelist_tip", "فقط شناسه های مجاز می توانند به این دسکتاپ متصل شوند"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "نشانی IP شما توسط طرف مقابل مسدود شده است"),
         ("id_whitelist_caveat_tip", "شناسه توسط کلاینت متصل شونده گزارش می شود. لیست مجاز سطح در معرض بودن را کاهش می دهد و جایگزین رمز عبور یا 2FA نیست"),
         ("whitelist_cidr_tip", "نماد CIDR پشتیبانی می شود، برای مثال 192.168.1.0/24"),
-        ("Continue", "ادامه"),
         ("Browser didn't open? Use the url below to sign in.", "مرورگر باز نشد؟ برای ورود از نشانی زیر استفاده کنید."),
         ("Lock canvas", "قفل کردن صفحه"),
         ("Sync clipboard between sessions", "همگام‌سازی کلیپ‌بورد بین نشست‌ها"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

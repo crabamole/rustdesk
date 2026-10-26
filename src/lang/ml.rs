@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "ചെറുതാക്കിയ ടൂൾബാറിൽ കാണിക്കുക"),
         ("All monitors", "എല്ലാ മോണിറ്ററുകളും"),
         ("#{} monitor", "മോണിറ്റർ {}"),
-        ("conn-e2ee-unavailable-tip", "എൻഡ്-ടു-എൻഡ് എൻക്രിപ്ഷൻ പരിശോധിക്കാൻ കഴിഞ്ഞില്ല.\nദൂരസ്ഥ ഉപകരണം ഇനിയും സജ്ജീകരണത്തിലായിരിക്കാം. പിന്നീട് വീണ്ടും ശ്രമിക്കുക.\nഇത് തുടർന്നാൽ സർവർ വിശ്വസനീയമല്ലായിരിക്കാം.\nഎങ്കിലും തുടരണമോ?"),
         ("ID whitelisting", "ID വൈറ്റ്‌ലിസ്റ്റിംഗ്"),
         ("Use ID whitelisting", "ID വൈറ്റ്‌ലിസ്റ്റിംഗ് ഉപയോഗിക്കുക"),
         ("id_whitelist_tip", "വൈറ്റ്‌ലിസ്റ്റ് ചെയ്ത ID-കൾക്ക് മാത്രമേ എന്നെ ആക്‌സസ് ചെയ്യാൻ കഴിയൂ"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "നിങ്ങളുടെ IP വിലാസം മറുവശം ബ്ലോക്ക് ചെയ്തിരിക്കുന്നു"),
         ("id_whitelist_caveat_tip", "കണക്റ്റ് ചെയ്യുന്ന ക്ലയന്റാണ് ID റിപ്പോർട്ട് ചെയ്യുന്നത്. വൈറ്റ്‌ലിസ്റ്റ് എക്സ്പോഷർ കുറയ്ക്കുന്നു; പാസ്‌വേഡിനോ 2FA-യ്ക്കോ പകരമല്ല"),
         ("whitelist_cidr_tip", "CIDR നൊട്ടേഷൻ പിന്തുണയ്ക്കുന്നു, ഉദാഹരണത്തിന് 192.168.1.0/24"),
-        ("Continue", "തുടരുക"),
         ("Browser didn't open? Use the url below to sign in.", "ബ്രൗസർ തുറന്നില്ലേ? ലോഗിൻ ചെയ്യാൻ താഴെയുള്ള URL ഉപയോഗിക്കുക."),
         ("Lock canvas", "ക്യാൻവാസ് ലോക്ക് ചെയ്യുക"),
         ("Sync clipboard between sessions", "സെഷനുകൾക്കിടയിൽ ക്ലിപ്പ്ബോർഡ് സമന്വയിപ്പിക്കുക"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

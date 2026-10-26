@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Visualizza nella barra strumenti ridotta a icona"),
         ("All monitors", "Tutti gli schermi"),
         ("#{} monitor", "Schermo {}"),
-        ("conn-e2ee-unavailable-tip", "Impossibile verificare la crittografia end-to-end.\nIl dispositivo remoto potrebbe essere ancora in configurazione. Riprova più tardi.\nSe il problema persiste, il server potrebbe non essere attendibile.\nVuoi continuare?"),
         ("ID whitelisting", "ID autorizzati"),
         ("Use ID whitelisting", "Usa elenco ID autorizzati"),
         ("id_whitelist_tip", "Possono connettersi a questo desktop solo gli ID autorizzati"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "Il tuo IP è bloccato dal dispositivo remoto"),
         ("id_whitelist_caveat_tip", "L'ID è dichiarato dal client che si connette. Questo elenco riduce l'esposizione e non sostituisce la password o la 2FA"),
         ("whitelist_cidr_tip", "È supportata la notazione CIDR, ad esempio 192.168.1.0/24"),
-        ("Continue", "Continua"),
         ("Browser didn't open? Use the url below to sign in.", "Il browser non si è aperto? Usa l'URL qui sotto per accedere."),
         ("Lock canvas", "Blocca tela"),
         ("Sync clipboard between sessions", "Sincronizza appunti tra le sessioni"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

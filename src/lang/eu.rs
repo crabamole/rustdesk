@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Erakutsi minimizatutako tresna-barran"),
         ("All monitors", "Monitore guztiak"),
         ("#{} monitor", "{}. monitorea"),
-        ("conn-e2ee-unavailable-tip", "Ezin izan da muturretik muturrerako enkriptatzea egiaztatu.\nUrruneko gailua oraindik konfiguratzen ari daiteke. Saiatu berriro geroago.\nHonek jarraitzen badu, zerbitzaria fidagaitza izan daiteke.\nHala ere jarraitu?"),
         ("ID whitelisting", "Onartutako IDak"),
         ("Use ID whitelisting", "Erabili ID onartuen zerrenda"),
         ("id_whitelist_tip", "Baimendutako IDak soilik konektatu daitezke mahaigain honetara"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "Beste aldeak zure IP helbidea blokeatu du"),
         ("id_whitelist_caveat_tip", "IDa konektatzen den bezeroak jakinarazten du. Zerrenda honek esposizioa murrizten du eta ez du pasahitza edo 2FA ordezkatzen"),
         ("whitelist_cidr_tip", "CIDR notazioa onartzen da, adibidez 192.168.1.0/24"),
-        ("Continue", "Jarraitu"),
         ("Browser didn't open? Use the url below to sign in.", "Nabigatzailea ez da ireki? Erabili beheko URLa saioa hasteko."),
         ("Lock canvas", "Blokeatu oihala"),
         ("Sync clipboard between sessions", "Sinkronizatu arbela saioen artean"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

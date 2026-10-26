@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Mostra a la barra d’eines minimitzada"),
         ("All monitors", "Tots els monitors"),
         ("#{} monitor", "Monitor {}"),
-        ("conn-e2ee-unavailable-tip", "No s'ha pogut verificar el xifratge d'extrem a extrem.\nEl dispositiu remot encara es pot estar configurant. Torneu-ho a provar més tard.\nSi això continua passant, el servidor pot no ser de confiança.\nVoleu continuar igualment?"),
         ("ID whitelisting", "ID admesos"),
         ("Use ID whitelisting", "Utilitza un llistat d'ID admesos"),
         ("id_whitelist_tip", "Només els ID admesos es podran connectar"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "La vostra IP està bloquejada per l'altre extrem"),
         ("id_whitelist_caveat_tip", "L'ID és informat pel client que es connecta. Aquesta llista blanca redueix l'exposició i no substitueix la contrasenya ni la 2FA"),
         ("whitelist_cidr_tip", "S'admet la notació CIDR, per exemple 192.168.1.0/24"),
-        ("Continue", "Continua"),
         ("Browser didn't open? Use the url below to sign in.", "No s'ha obert el navegador? Utilitzeu l'URL de sota per iniciar la sessió."),
         ("Lock canvas", "Bloca el llenç"),
         ("Sync clipboard between sessions", "Sincronitza el porta-retalls entre sessions"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

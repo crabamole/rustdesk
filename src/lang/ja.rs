@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "最小化したツールバーに表示"),
         ("All monitors", "すべてのディスプレイ"),
         ("#{} monitor", "ディスプレイ {}"),
-        ("conn-e2ee-unavailable-tip", "エンドツーエンド暗号化を確認できませんでした。\nリモートデバイスはまだ準備中の可能性があります。後でもう一度お試しください。\nこの問題が続く場合、サーバーが信頼できない可能性があります。\nそれでも続行しますか？"),
         ("ID whitelisting", "ID ホワイトリスト"),
         ("Use ID whitelisting", "ID ホワイトリストを使用する"),
         ("id_whitelist_tip", "ホワイトリストに登録された ID からのみ接続を許可します"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "あなたの IP アドレスは接続先によってブロックされています"),
         ("id_whitelist_caveat_tip", "ID は接続するクライアントから申告されます。ホワイトリストは露出を減らすもので、パスワードや 2FA の代わりにはなりません"),
         ("whitelist_cidr_tip", "CIDR 表記に対応しています。例: 192.168.1.0/24"),
-        ("Continue", "続行"),
         ("Browser didn't open? Use the url below to sign in.", "ブラウザが開きませんでしたか？下記の URL からログインしてください。"),
         ("Lock canvas", "キャンバスをロック"),
         ("Sync clipboard between sessions", "セッション間でクリップボードを同期"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

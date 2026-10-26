@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "在最小化工具列上顯示"),
         ("All monitors", "所有顯示器"),
         ("#{} monitor", "{} 號顯示器"),
-        ("conn-e2ee-unavailable-tip", "無法驗證端到端加密。\n遠端裝置可能仍在準備中，請稍後再試。\n如果此問題持續發生，伺服器可能不受信任。\n仍要繼續嗎？"),
         ("ID whitelisting", "ID 白名單"),
         ("Use ID whitelisting", "只允許白名單上的 ID 進行連線"),
         ("id_whitelist_tip", "只有白名單上的 ID 可以存取"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "您的 IP 已被對方封鎖"),
         ("id_whitelist_caveat_tip", "ID 由對端客戶端回報。此白名單用於減少暴露面，不能取代密碼或 2FA。"),
         ("whitelist_cidr_tip", "支援 CIDR 寫法，例如 192.168.1.0/24"),
-        ("Continue", "繼續"),
         ("Browser didn't open? Use the url below to sign in.", "瀏覽器未開啟？請使用下方網址登入。"),
         ("Lock canvas", "鎖定畫布"),
         ("Sync clipboard between sessions", "在工作階段間同步剪貼簿"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

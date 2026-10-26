@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Näytä pienennetyssä työkalurivissä"),
         ("All monitors", "Kaikki näytöt"),
         ("#{} monitor", "Näyttö {}"),
-        ("conn-e2ee-unavailable-tip", "Päästä päähän -salausta ei voitu vahvistaa.\nEtälaite voi olla vielä määritettävänä. Yritä myöhemmin uudelleen.\nJos tämä jatkuu, palvelin ei ehkä ole luotettava.\nJatketaanko silti?"),
         ("ID whitelisting", "ID sallintalista"),
         ("Use ID whitelisting", "Käytä ID sallintalistaa"),
         ("id_whitelist_tip", "Vain sallitut ID:t voivat muodostaa yhteyden"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "Vastapuoli on estänyt IP-osoitteesi"),
         ("id_whitelist_caveat_tip", "ID on yhdistävän asiakkaan ilmoittama. Sallintalista pienentää altistusta eikä korvaa salasanaa tai 2FA:ta"),
         ("whitelist_cidr_tip", "CIDR-merkintä on tuettu, esimerkiksi 192.168.1.0/24"),
-        ("Continue", "Jatka"),
         ("Browser didn't open? Use the url below to sign in.", "Eikö selain avautunut? Kirjaudu sisään alla olevan osoitteen kautta."),
         ("Lock canvas", "Lukitse näkymä"),
         ("Sync clipboard between sessions", "Synkronoi leikepöytä istuntojen välillä"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

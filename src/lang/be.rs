@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Паказваць на згорнутай панэлі інструментаў"),
         ("All monitors", "Усе манітори"),
         ("#{} monitor", "Манітор {}"),
-        ("conn-e2ee-unavailable-tip", "Не ўдалося праверыць скразное шыфраванне.\nАддаленая прылада, магчыма, яшчэ наладжваецца. Паспрабуйце пазней.\nКалі гэта будзе паўтарацца, сервер можа быць ненадзейным.\nУсё роўна працягнуць?"),
         ("ID whitelisting", "Спіс дазволеных ID"),
         ("Use ID whitelisting", "Выкарыстоўваць белы спіс ID"),
         ("id_whitelist_tip", "Атрымліваць доступ да маёй прылады могуць толькі ID з белага спісу."),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "Ваш IP-адрас заблакаваны аддаленай прыладай"),
         ("id_whitelist_caveat_tip", "ID паведамляецца кліентам, які падключаецца. Белы спіс памяншае паверхню атакі і не замяняе пароль або 2FA"),
         ("whitelist_cidr_tip", "Падтрымліваецца натацыя CIDR, напрыклад: 192.168.1.0/24"),
-        ("Continue", "Працягнуць"),
         ("Browser didn't open? Use the url below to sign in.", "Браўзер не адкрыўся? Скарыстайцеся спасылкай ніжэй, каб увайсці."),
         ("Lock canvas", "Заблакіраваць палатно"),
         ("Sync clipboard between sessions", "Сінхранізаваць буфер абмену паміж сеансамі"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

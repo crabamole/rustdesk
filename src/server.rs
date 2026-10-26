@@ -332,13 +332,14 @@ async fn identity_handshake(stream: &mut Stream, secure: bool) -> ResultType<()>
                                 },
                             )?;
                         } else if pk.asymmetric_value.is_empty() {
-                            Config::set_key_confirmed(false);
-                            log::info!("Force to update pk");
+                            // Upstream runs the session unencrypted here; ours never runs one
+                            // without end-to-end encryption (docs/design-e2ee-required.md).
+                            bail!("Handshake failed: the controller did not encrypt the connection");
                         } else {
                             bail!("Handshake failed: invalid public sign key length from peer");
                         }
                     } else {
-                        log::error!("Handshake failed: invalid message type");
+                        bail!("Handshake failed: invalid message type");
                     }
                 } else {
                     bail!("Handshake failed: invalid message format");

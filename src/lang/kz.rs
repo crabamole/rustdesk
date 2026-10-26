@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Кішірейтілген құралдар тақтасында көрсету"),
         ("All monitors", "Барлық мониторлар"),
         ("#{} monitor", "Монитор {}"),
-        ("conn-e2ee-unavailable-tip", "Ұштан-ұшқа шифрлауды тексеру мүмкін болмады.\nҚашықтағы құрылғы әлі бапталып жатқан болуы мүмкін. Кейінірек қайталап көріңіз.\nЕгер бұл қайталана берсе, сервер сенімсіз болуы мүмкін.\nСонда да жалғастыру керек пе?"),
         ("ID whitelisting", "ID Ақ-тізімі"),
         ("Use ID whitelisting", "ID ақ-тізімін қолдану"),
         ("id_whitelist_tip", "Маған тек ақ-тізімделген ID қол жеткізе алады"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "Сіздің IP-мекенжайыңыз қарсы тараппен бұғатталған"),
         ("id_whitelist_caveat_tip", "ID қосылатын клиентпен хабарланады. Ақ-тізім әсер ету аумағын азайтады және құпия сөзді немесе 2FA-ны алмастырмайды"),
         ("whitelist_cidr_tip", "CIDR жазбасына қолдау көрсетіледі, мысалы 192.168.1.0/24"),
-        ("Continue", "Жалғастыру"),
         ("Browser didn't open? Use the url below to sign in.", "Браузер ашылмады ма? Кіру үшін төмендегі сілтемені пайдаланыңыз."),
         ("Lock canvas", "Кенепті құлыптау"),
         ("Sync clipboard between sessions", "Сеанстар арасында көшіру-тақтасын синхрондау"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Mustra in sa barra de aina minimizada"),
         ("All monitors", "Totu sos ischermos"),
         ("#{} monitor", "Ischermu {}"),
-        ("conn-e2ee-unavailable-tip", "No est istadu possìbile verificare sa tzifratzione de punta a punta.\nSu dispositivu remotu podet èssere ancora in fase de configuratzione. Torra a proare prus a tardu.\nSi custu sighit a acontèssere, su server podet non èssere fidadu.\nBoles sighire comente siat?"),
         ("ID whitelisting", "ID autorizados"),
         ("Use ID whitelisting", "Imprea elencu ID autorizados"),
         ("id_whitelist_tip", "Si podent connètere a custa iscrivania petzi sos ID autorizados"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "S'indiritzu IP tuo est blocadu dae s'àtera parte"),
         ("id_whitelist_caveat_tip", "S'ID est decraradu dae su cliente chi si connetet. Custu elencu minimat s'espositzione e non sostituit sa crae o su 2FA"),
         ("whitelist_cidr_tip", "Sa notatzione CIDR est suportada, pro esempru 192.168.1.0/24"),
-        ("Continue", "Sighi"),
         ("Browser didn't open? Use the url below to sign in.", "Non s'est abertu su navigadore? Imprea s'URL inoghe in suta pro intrare."),
         ("Lock canvas", "Bloca sa tela"),
         ("Sync clipboard between sessions", "Sincroniza sa punta de billete intre is sessiones"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

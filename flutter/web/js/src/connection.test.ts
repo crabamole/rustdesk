@@ -980,6 +980,16 @@ describe("Connection", () => {
       expect(msgLoopSpy).toHaveBeenCalled();
     });
 
+    it("starts no session when the handshake is refused", async () => {
+      vi.spyOn(conn as any, "secure").mockResolvedValue(false);
+      const msgLoopSpy = vi.spyOn(conn as any, "msgLoop").mockResolvedValue(undefined);
+
+      await conn.connectRelay({ pk: new Uint8Array(32), uuid: "test-uuid" } as any);
+
+      expect(globals.pushEvent).not.toHaveBeenCalledWith("connection_ready", expect.anything());
+      expect(msgLoopSpy).not.toHaveBeenCalled();
+    });
+
     it("dials the relay server named in the relay response", async () => {
       vi.spyOn(conn as any, "secure").mockResolvedValue(true);
       vi.spyOn(conn as any, "msgLoop").mockResolvedValue(undefined);
@@ -1004,15 +1014,21 @@ describe("Connection", () => {
   });
 
   describe("secure", () => {
-    it("sends empty public key when pk is undefined", async () => {
-      await (conn as any).secure(undefined);
-      expect(mockWs.sendMessage).toHaveBeenCalled();
+    // Every failed check refuses the session: nothing is sent and the user is told why.
+    const expectRefused = (result: unknown) => {
+      expect(result).toBe(false);
+      expect(mockWs.sendMessage).not.toHaveBeenCalled();
+      expect(mockWs.setSecretKey).not.toHaveBeenCalled();
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Insecure Connection", "conn-e2ee-refused-tip", false);
+    };
+
+    it("refuses when hbbs sends no peer key", async () => {
+      expectRefused(await (conn as any).secure(undefined));
     });
 
-    it("sends empty public key when pk verification fails", async () => {
+    it("refuses when the peer key does not verify under the server key", async () => {
       vi.mocked(globals.verify).mockRejectedValueOnce(new Error("verify failed"));
-      await (conn as any).secure(new Uint8Array(32));
-      expect(mockWs.sendMessage).toHaveBeenCalled();
+      expectRefused(await (conn as any).secure(new Uint8Array(32)));
     });
 
     it("establishes secure connection with valid pk", async () => {
@@ -1029,38 +1045,34 @@ describe("Connection", () => {
       expect(mockWs.setSecretKey).toHaveBeenCalled();
     });
 
-    it("falls back when signed_id is missing", async () => {
-
+    it("refuses when the device sends no signed identity", async () => {
       IdPk.decode.mockReturnValueOnce({ id: "test-id", pk: new Uint8Array(32) });
       vi.mocked(globals.verify).mockResolvedValueOnce(new Uint8Array(64));
       mockWs.next.mockResolvedValueOnce({});
-
-      await (conn as any).secure(new Uint8Array(32));
-      expect(mockWs.sendMessage).toHaveBeenCalled();
+      expectRefused(await (conn as any).secure(new Uint8Array(32)));
     });
 
-    it("falls back when id doesn't match", async () => {
+    it("refuses when the device's signature does not verify under its key", async () => {
+      IdPk.decode.mockReturnValueOnce({ id: "test-id", pk: new Uint8Array(32) });
+      vi.mocked(globals.verify).mockResolvedValueOnce(new Uint8Array(64)).mockRejectedValueOnce(new Error("bad sig"));
+      mockWs.next.mockResolvedValueOnce({ signed_id: { id: new Uint8Array(32) } });
+      expectRefused(await (conn as any).secure(new Uint8Array(32)));
+    });
 
+    it("refuses when the signed identity names another ID", async () => {
       IdPk.decode.mockReturnValueOnce({ id: "test-id", pk: new Uint8Array(32) });
       vi.mocked(globals.verify).mockResolvedValueOnce(new Uint8Array(64));
-      mockWs.next.mockResolvedValueOnce({
-        signed_id: { id: new Uint8Array(32) },
-      });
+      mockWs.next.mockResolvedValueOnce({ signed_id: { id: new Uint8Array(32) } });
       IdPk.decode.mockReturnValueOnce({ id: "wrong-id", pk: new Uint8Array(32) });
-
-      await (conn as any).secure(new Uint8Array(32));
+      expectRefused(await (conn as any).secure(new Uint8Array(32)));
     });
 
-    it("falls back when peer pk length is wrong", async () => {
-
+    it("refuses when the device's box key has the wrong length", async () => {
       IdPk.decode.mockReturnValueOnce({ id: "test-id", pk: new Uint8Array(32) });
       vi.mocked(globals.verify).mockResolvedValueOnce(new Uint8Array(64));
-      mockWs.next.mockResolvedValueOnce({
-        signed_id: { id: new Uint8Array(32) },
-      });
+      mockWs.next.mockResolvedValueOnce({ signed_id: { id: new Uint8Array(32) } });
       IdPk.decode.mockReturnValueOnce({ id: "test-id", pk: new Uint8Array(16) });
-
-      await (conn as any).secure(new Uint8Array(32));
+      expectRefused(await (conn as any).secure(new Uint8Array(32)));
     });
   });
 });

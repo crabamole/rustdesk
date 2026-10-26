@@ -4974,7 +4974,6 @@ pub trait Interface: Send + Clone + 'static + Sized {
 #[derive(Clone)]
 pub enum Data {
     Close,
-    RejectInsecureConnection,
     Login((String, String, String, bool)),
     Message(Message),
     #[cfg(not(any(target_os = "android", target_os = "ios")))]
@@ -5000,31 +4999,15 @@ pub enum Data {
     ElevateWithLogon(String, String),
     NewVoiceCall,
     CloseVoiceCall,
-    ContinueInsecureConnection,
     ResetDecoder(Option<usize>),
     RenameFile((i32, String, String, bool)),
     TakeScreenshot((i32, String)),
 }
 
-pub async fn confirm_insecure_connection(
-    interface: &impl Interface,
-    receiver: &mut UnboundedReceiver<Data>,
-) -> bool {
-    interface.msgbox(
-        "insecure-connection-nocancel-hasclose",
-        "Insecure Connection",
-        "conn-e2ee-unavailable-tip",
-        "",
-    );
-    while let Some(data) = receiver.recv().await {
-        match data {
-            Data::ContinueInsecureConnection => return true,
-            Data::RejectInsecureConnection => return false,
-            Data::Close => return false,
-            _ => {}
-        }
-    }
-    false
+/// Upstream asks whether to continue without end-to-end encryption; our builds refuse
+/// (docs/design-e2ee-required.md).
+pub fn refuse_insecure_connection(interface: &impl Interface) {
+    interface.msgbox("error", "Insecure Connection", "conn-e2ee-refused-tip", "");
 }
 
 /// Keycode for key events.

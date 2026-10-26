@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Afficher dans la barre d’outils réduite"),
         ("All monitors", "Tous les moniteurs"),
         ("#{} monitor", "Moniteur {}"),
-        ("conn-e2ee-unavailable-tip", "Impossible de vérifier le chiffrement de bout en bout.\nL'appareil distant est peut-être encore en cours de configuration. Réessayez plus tard.\nSi le problème persiste, le serveur n'est peut-être pas fiable.\nContinuer quand même ?"),
         ("ID whitelisting", "Liste blanche d’ID"),
         ("Use ID whitelisting", "Utiliser une liste blanche d’ID"),
         ("id_whitelist_tip", "Seuls les ID inclus dans la liste blanche pourront accéder à mon appareil"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "Votre adresse IP est bloquée par l’appareil distant"),
         ("id_whitelist_caveat_tip", "L’ID est déclaré par le client qui se connecte. Cette liste blanche réduit l’exposition et ne remplace ni le mot de passe ni la 2FA"),
         ("whitelist_cidr_tip", "La notation CIDR est prise en charge, par exemple 192.168.1.0/24"),
-        ("Continue", "Continuer"),
         ("Browser didn't open? Use the url below to sign in.", "Le navigateur ne s’est pas ouvert ? Utilisez l’URL ci-dessous pour vous connecter."),
         ("Lock canvas", "Verrouiller la vue"),
         ("Sync clipboard between sessions", "Synchroniser le presse-papiers entre les sessions"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

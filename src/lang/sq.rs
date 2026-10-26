@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Shfaq te shiriti i minimizuar i veglave"),
         ("All monitors", "Të gjithë monitorët"),
         ("#{} monitor", "Monitori {}"),
-        ("conn-e2ee-unavailable-tip", "Enkriptimi nga skaji në skaj nuk mund të verifikohej.\nPajisja e largët mund të jetë ende duke u konfiguruar. Provoni përsëri më vonë.\nNëse kjo vazhdon të ndodhë, serveri mund të mos jetë i besueshëm.\nTë vazhdohet gjithsesi?"),
         ("ID whitelisting", "Lista e bardhë e ID-ve"),
         ("Use ID whitelisting", "Përdor listën e bardhë të ID-ve"),
         ("id_whitelist_tip", "Vetëm ID-të e listës së bardhë mund të më aksesojnë."),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "IP-ja juaj është bllokuar nga pala tjetër"),
         ("id_whitelist_caveat_tip", "ID-ja raportohet nga klienti që lidhet. Lista e bardhë zvogëlon ekspozimin dhe nuk zëvendëson fjalëkalimin ose 2FA"),
         ("whitelist_cidr_tip", "Mbështetet shënimi CIDR, për shembull 192.168.1.0/24"),
-        ("Continue", "Vazhdo"),
         ("Browser didn't open? Use the url below to sign in.", "Shfletuesi nuk u hap? Përdorni URL-në më poshtë për të hyrë."),
         ("Lock canvas", "Kyç canvas"),
         ("Sync clipboard between sessions", "Sinkronizo clipboard-in midis sesioneve"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

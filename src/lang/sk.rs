@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Zobraziť na minimalizovanom paneli nástrojov"),
         ("All monitors", "Všetky monitory"),
         ("#{} monitor", "Monitor {}"),
-        ("conn-e2ee-unavailable-tip", "Nepodarilo sa overiť koncové šifrovanie.\nVzdialené zariadenie sa možno stále nastavuje. Skúste to znova neskôr.\nAk sa to bude opakovať, server nemusí byť dôveryhodný.\nNapriek tomu pokračovať?"),
         ("ID whitelisting", "Zoznam povolených ID"),
         ("Use ID whitelisting", "Použiť ID whitelisting"),
         ("id_whitelist_tip", "Len vymenované ID majú oprávnenie sa pripojiť k vzdialenej správe"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "Vaša IP adresa je blokovaná protistranou"),
         ("id_whitelist_caveat_tip", "ID nahlasuje pripájajúci sa klient. Tento zoznam znižuje vystavenie a nenahrádza heslo ani 2FA"),
         ("whitelist_cidr_tip", "Je podporovaný zápis CIDR, napríklad 192.168.1.0/24"),
-        ("Continue", "Pokračovať"),
         ("Browser didn't open? Use the url below to sign in.", "Neotvoril sa prehliadač? Na prihlásenie použite URL nižšie."),
         ("Lock canvas", "Uzamknúť zobrazenie"),
         ("Sync clipboard between sessions", "Synchronizovať schránku medzi reláciami"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

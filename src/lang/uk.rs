@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Показувати на згорнутій панелі інструментів"),
         ("All monitors", "Усі монітори"),
         ("#{} monitor", "Монітор {}"),
-        ("conn-e2ee-unavailable-tip", "Не вдалося перевірити наскрізне шифрування.\nВіддалений пристрій, можливо, ще налаштовується. Спробуйте пізніше.\nЯкщо це повторюється, сервер може бути ненадійним.\nПродовжити все одно?"),
         ("ID whitelisting", "Список дозволених ID"),
         ("Use ID whitelisting", "Використовувати білий список ID"),
         ("id_whitelist_tip", "Лише ID з білого списку можуть отримати доступ до мене"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "Вашу IP-адресу заблоковано віддаленим пристроєм"),
         ("id_whitelist_caveat_tip", "ID повідомляється клієнтом, що підключається. Білий список зменшує поверхню атаки і не замінює пароль або 2FA"),
         ("whitelist_cidr_tip", "Підтримується нотація CIDR, наприклад 192.168.1.0/24"),
-        ("Continue", "Продовжити"),
         ("Browser didn't open? Use the url below to sign in.", "Браузер не відкрився? Скористайтеся посиланням нижче, щоб увійти."),
         ("Lock canvas", "Блокування полотна"),
         ("Sync clipboard between sessions", "Синхронізувати буфер обміну між сеансами"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

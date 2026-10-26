@@ -751,7 +751,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "چھوٹے کیے گئے ٹول بار پر دکھائیں"),
         ("All monitors", "تمام مانیٹر"),
         ("#{} monitor", "#{} مانیٹر"),
-        ("conn-e2ee-unavailable-tip", "اینڈ ٹو اینڈ خفیہ کاری کی تصدیق نہیں ہو سکی۔\nدور دراز آلہ ابھی ترتیب دیا جا رہا ہو سکتا ہے۔ بعد میں دوبارہ کوشش کریں۔\nاگر ایسا بار بار ہو تو ممکن ہے سرور قابلِ اعتماد نہ ہو۔\nپھر بھی جاری رکھیں؟"),
         ("ID whitelisting", "ID وائٹ لسٹنگ"),
         ("Use ID whitelisting", "ID وائٹ لسٹنگ استعمال کریں"),
         ("id_whitelist_tip", "صرف وائٹ لسٹ میں شامل IDs مجھ تک رسائی حاصل کر سکتی ہیں"),
@@ -761,7 +760,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "آپ کا IP دوسرے فریق نے مسدود کر دیا ہے"),
         ("id_whitelist_caveat_tip", "ID کی اطلاع منسلک ہونے والا کلائنٹ خود دیتا ہے۔ یہ وائٹ لسٹ خطرے کو کم کرتی ہے، پاس ورڈ یا 2FA کا متبادل نہیں۔"),
         ("whitelist_cidr_tip", "CIDR اشاریہ معاون ہے، مثلاً 192.168.1.0/24"),
-        ("Continue", "جاری رکھیں"),
         ("Browser didn't open? Use the url below to sign in.", "براؤزر نہیں کھلا؟ سائن اِن کرنے کے لیے نیچے دیا گیا URL استعمال کریں۔"),
         ("Lock canvas", "کینوس مقفل کریں"),
         ("Sync clipboard between sessions", "سیشنز کے درمیان کلپ بورڈ ہم آہنگ کریں"),
@@ -798,6 +796,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }
 

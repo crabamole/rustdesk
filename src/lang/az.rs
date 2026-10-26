@@ -748,7 +748,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Kiçildilmiş alətlər panelində göstər"),
         ("All monitors", "Bütün monitorlar"),
         ("#{} monitor", "#{} monitor"),
-        ("conn-e2ee-unavailable-tip", "Uçdan-uca şifrələmə doğrulana bilmədi.\nUzaq cihaz hələ qurulma mərhələsində ola bilər. Sonra yenidən cəhd edin.\nBu təkrarlanırsa, server etibarsız ola bilər.\nYenə də davam edilsin?"),
         ("ID whitelisting", "ID ağ siyahısı"),
         ("Use ID whitelisting", "ID ağ siyahısından istifadə et"),
         ("id_whitelist_tip", "Yalnız ağ siyahıdakı ID-lər mənə giriş edə bilər"),
@@ -758,7 +757,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "IP-niz qarşı tərəf tərəfindən bloklanıb"),
         ("id_whitelist_caveat_tip", "ID qoşulan klient tərəfindən bildirilir. Bu ağ siyahı riski azaldır, lakin parolu və ya 2FA-nı əvəz etmir."),
         ("whitelist_cidr_tip", "CIDR yazılışı dəstəklənir, məsələn 192.168.1.0/24"),
-        ("Continue", "Davam et"),
         ("Browser didn't open? Use the url below to sign in.", "Brauzer açılmadı? Daxil olmaq üçün aşağıdakı URL-dən istifadə edin."),
         ("Lock canvas", "Kətanı kilidlə"),
         ("Sync clipboard between sessions", "Mübadilə buferini sessiyalar arasında sinxronlaşdır"),
@@ -798,5 +796,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

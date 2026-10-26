@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "न्यूनतम किए गए टूलबार पर दिखाएं"),
         ("All monitors", "सभी मॉनिटर"),
         ("#{} monitor", "मॉनिटर {}"),
-        ("conn-e2ee-unavailable-tip", "एंड-टू-एंड एन्क्रिप्शन सत्यापित नहीं किया जा सका।\nदूरस्थ डिवाइस अभी भी सेट अप हो रहा हो सकता है। बाद में फिर प्रयास करें।\nयदि यह समस्या बनी रहती है, तो सर्वर अविश्वसनीय हो सकता है।\nफिर भी जारी रखें?"),
         ("ID whitelisting", "ID श्वेतसूची (Whitelisting)"),
         ("Use ID whitelisting", "ID श्वेतसूची का उपयोग करें"),
         ("id_whitelist_tip", "केवल श्वेतसूचीबद्ध ID ही मुझ तक पहुंच सकते हैं"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "आपका IP दूसरे पक्ष द्वारा अवरुद्ध कर दिया गया है"),
         ("id_whitelist_caveat_tip", "ID कनेक्ट करने वाले क्लाइंट द्वारा बताई जाती है। श्वेतसूची जोखिम कम करती है और पासवर्ड या 2FA का विकल्प नहीं है"),
         ("whitelist_cidr_tip", "CIDR नोटेशन समर्थित है, उदाहरण के लिए 192.168.1.0/24"),
-        ("Continue", "जारी रखें"),
         ("Browser didn't open? Use the url below to sign in.", "ब्राउज़र नहीं खुला? लॉगिन करने के लिए नीचे दिए गए URL का उपयोग करें।"),
         ("Lock canvas", "कैनवास लॉक करें"),
         ("Sync clipboard between sessions", "सत्रों के बीच क्लिपबोर्ड सिंक करें"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

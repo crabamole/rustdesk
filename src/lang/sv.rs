@@ -746,7 +746,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Show on the minimized toolbar", "Visa i det minimerade verktygsfältet"),
         ("All monitors", "Alla skärmar"),
         ("#{} monitor", "Skärm {}"),
-        ("conn-e2ee-unavailable-tip", "End-to-end-kryptering kunde inte verifieras.\nFjärrenheten kan fortfarande konfigureras. Försök igen senare.\nOm detta fortsätter kan servern vara opålitlig.\nFortsätta ändå?"),
         ("ID whitelisting", "ID-vitlistning"),
         ("Use ID whitelisting", "Använd ID-vitlistning"),
         ("id_whitelist_tip", "Bara vitlistade ID:n kan koppla upp till mig"),
@@ -756,7 +755,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Your ip is blocked by the peer", "Din IP-adress är blockerad av motparten"),
         ("id_whitelist_caveat_tip", "ID:t rapporteras av klienten som ansluter. Vitlistan minskar exponeringen och ersätter inte lösenord eller 2FA"),
         ("whitelist_cidr_tip", "CIDR-notation stöds, till exempel 192.168.1.0/24"),
-        ("Continue", "Fortsätt"),
         ("Browser didn't open? Use the url below to sign in.", "Öppnades inte webbläsaren? Använd URL:en nedan för att logga in."),
         ("Lock canvas", "Lås canvas"),
         ("Sync clipboard between sessions", "Synkronisera urklipp mellan sessioner"),
@@ -796,5 +794,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", ""),
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
+        ("conn-e2ee-refused-tip", ""),
     ].iter().cloned().collect();
 }

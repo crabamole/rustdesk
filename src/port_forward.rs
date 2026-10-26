@@ -178,10 +178,9 @@ async fn connect_and_login(
         Client::start(id, key, token, conn_type, interface.clone()).await?;
     interface.update_direct(Some(direct));
     if !stream.is_secured() && !crate::common::is_direct_ip_access(id) {
-        if !confirm_insecure_connection(&interface, ui_receiver).await {
-            *close_port_forward = true;
-            return Ok(None);
-        }
+        refuse_insecure_connection(&interface);
+        *close_port_forward = true;
+        return Ok(None);
     }
     let mut buffer = Vec::new();
     let mut received = false;
@@ -419,10 +418,9 @@ async fn connect_and_login_mux(
         Client::start(id, key, token, conn_type, interface.clone()).await?;
     interface.update_direct(Some(direct));
     if !stream.is_secured() && !crate::common::is_direct_ip_access(id) {
-        if !confirm_insecure_connection(&interface, ui_receiver).await {
-            *close_port_forward = true;
-            return Ok(None);
-        }
+        refuse_insecure_connection(&interface);
+        *close_port_forward = true;
+        return Ok(None);
     }
     let mut buffer = Vec::new();
     let mut local_eof = false;
