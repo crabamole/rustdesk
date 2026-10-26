@@ -1,14 +1,15 @@
 # Native Client Build Roadmap
 
-**Updated:** 2026-10-25
+**Updated:** 2026-10-26
 
 Stock RustDesk clients work with our server stack, but some features need a client built from this fork. This roadmap tracks what shipping our own Windows, macOS and Linux builds requires, and the features waiting on it.
 
 ## Next
 
 1. Same-user access: test on Windows and macOS ([Same-User Access](#same-user-access))
-2. CI speed
-3. Tracking upstream releases: 1.5.1 is on upstream master, not released yet ([Build Pipeline](#build-pipeline))
+2. Device admission: test the status line on Windows and macOS ([Device Admission](#device-admission))
+3. CI speed
+4. Tracking upstream releases: 1.5.1 is on upstream master, not released yet ([Build Pipeline](#build-pipeline))
 
 ## Build Pipeline
 
@@ -145,6 +146,12 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 - Stock clients never get same-user access; they keep asking for the password
 - Status: released (clients 1.5.0-2, rustdesk-server 1.1.16-6, rustdesk-api 3.7.0), off by default. Verified by e2e and on Linux; Windows and macOS not tested yet
 - Design: [design-same-user-access.md](design-same-user-access.md); tracked in [api-server-roadmap.md](api-server-roadmap.md) (Phase 3)
+
+### Device Admission
+- [x] While the api-server switch `DEVICE_ADMISSION` is on, our builds show on the device that it waits for remote control approval or that remote control is not allowed (heartbeat field `admission`)
+- Stock clients are admitted and refused the same way; they only show no status
+- Status: merged, not released. Verified on Linux; Windows and macOS not tested yet
+- Design: [design-device-admission.md](design-device-admission.md); tracked in [api-server-roadmap.md](api-server-roadmap.md) (Phase 4)
 
 ### ScreenCaptureKit on macOS ([#26](https://github.com/crabamole/rustdesk/issues/26))
 - [ ] ScreenCaptureKit video backend behind the `screencapturekit` feature, parked on branch `feat/screencapturekit`

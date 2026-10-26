@@ -3,7 +3,7 @@
 Corporate deployment features for [crabamole/rustdesk-api](https://github.com/crabamole/rustdesk-api).
 
 **Base:** sctgdesk-api-server (AGPL-3.0)  
-**Updated:** 2026-10-25
+**Updated:** 2026-10-26
 
 ## Architecture Context
 
@@ -147,11 +147,12 @@ Data loss prevention controls for regulated environments.
 - **Depends on:** our own native client builds ([native-client-roadmap.md](native-client-roadmap.md))
 
 ### Device Admission
-- [ ] Switch `DEVICE_ADMISSION`, off by default: when on, new devices are pending and only admitted devices can be controlled; others act as viewers at most
-- [ ] Admission stays with the device across accepted key changes (reinstall)
-- [ ] Console and CLI: pending list, admit, reject, reset to pending
-- [ ] Our desktop builds show pending or rejected on the device (heartbeat field `admission`)
-- [ ] Phase 2: admission webhook — the api-server asks a deployment-owned service (e.g. an asset inventory) to admit or reject pending devices; signed with a dedicated Ed25519 key
+- [x] Switch `DEVICE_ADMISSION`, off by default: when on, new devices are pending and only admitted devices can be controlled; others act as viewers at most
+- [x] Admission stays with the device across accepted key changes (reinstall)
+- [x] Console and CLI: pending list, admit, reject, reset to pending
+- [x] Our desktop builds show pending or rejected on the device (heartbeat field `admission`)
+- [x] Phase 2: admission webhook — the api-server asks a deployment-owned service (e.g. an asset inventory) to admit or reject pending devices; signed with a dedicated Ed25519 key. A runnable example receiver is in rustdesk-api `examples/admission-webhook`
+- Status: merged, not released. rustdesk-server and rustdesk-api must ship together (migrations 0019 and 0020)
 - Design: [design-device-admission.md](design-device-admission.md); works with stock clients
 
 ## Pagination

@@ -1,6 +1,6 @@
 # Design: Device Admission
 
-**Status: phase 1 implemented (not released yet); phase 2 (webhook) is a design.**
+**Status: phases 1 and 2 (webhook) implemented (not released yet).**
 
 ## Problem
 
