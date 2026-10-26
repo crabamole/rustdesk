@@ -98,6 +98,7 @@ Establish test coverage as a foundation for opinionated development.
 - **Auto-connect via URL parameters** (`?id=…&pw=…`): dropped until there is a secure design; a password in the URL ends up in browser history, proxy logs and the Referer header.
 - **Codec choice and 4:4:4**: the web client decodes VP9 only; the codec menu stays native-only.
 - **Translate keyboard mode**: the web client offers Map mode only.
+- **Other native-only features**: terminal, camera, TCP tunneling and RDP, Switch Sides, direct IP and LAN discovery, WebRTC peer-to-peer (the web client always uses the relay), screen recording, voice call, Android navigation buttons and gestures.
 - **Upstream merge**: This fork diverges intentionally from upstream's closed-source direction. We track upstream Dart/Flutter changes but own the web-specific layer.
 
 ## Community Forks
