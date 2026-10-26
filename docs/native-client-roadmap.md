@@ -151,7 +151,7 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 ### End-to-End Encryption Required
 - [x] A session never runs without end-to-end encryption: when the viewer cannot verify the device's key, our viewers refuse (upstream asks "Continue anyway?"), and our devices refuse a viewer that sends no key
 - Stock viewers that fall back to no encryption cannot connect to our devices
-- Status: merged, not released. Device side unit-tested; web client verified by e2e; native viewer not yet tested on a machine
+- Status: merged, not released. Device side unit-tested; web client verified by e2e; native viewers and devices on macOS, Windows and Linux pass the matrix and the full e2e suite (2026-10-26)
 - Design: [design-e2ee-required.md](design-e2ee-required.md)
 
 ### Device Admission
