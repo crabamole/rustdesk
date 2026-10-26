@@ -787,6 +787,8 @@ class OverlayKeyState {
 
 class OverlayDialogManager {
   final Map<String, Dialog> _dialogs = {};
+
+  bool get hasDialogs => _dialogs.isNotEmpty;
   var _overlayKeyState = OverlayKeyState();
   int _tagCount = 0;
 

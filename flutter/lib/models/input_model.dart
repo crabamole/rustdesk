@@ -821,6 +821,11 @@ class InputModel {
   }
 
   KeyEventResult handleKeyEvent(KeyEvent e) {
+    // Keys typed into a session dialog belong to the dialog, as on native, whose input hook takes
+    // keys only while the remote view has focus. On the web they would also reach the remote.
+    if (isWeb && (parent.target?.dialogManager.hasDialogs ?? false)) {
+      return KeyEventResult.ignored;
+    }
     if (isViewOnly) return KeyEventResult.handled;
     if (isViewCamera) return KeyEventResult.handled;
     if (!isInputSourceFlutter) {
