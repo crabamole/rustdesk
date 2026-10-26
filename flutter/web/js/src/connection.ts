@@ -75,6 +75,7 @@ export default class Connection {
   _lastAuditNote = "";
   _screenshot?: Uint8Array;
   _keyboardAllowed = true;
+  _selectedSid?: number;
   _closed = false;
   _cursorShapes: { [id: string]: { hotx: number; hoty: number; width: number; height: number; colors: Uint8Array } } = {};
   _auditGuid = "";
@@ -566,6 +567,7 @@ export default class Connection {
     }
     this.msgbox("success", "Successful", "Connected, waiting for image...");
     globals.pushEvent("peer_info", pi);
+    this.handleWindowsSessions(pi.windows_sessions);
     const p = this.shouldAutoLogin();
     if (p) this.inputOsPassword(p);
     const username = this.getOption("info")?.username;
@@ -694,6 +696,23 @@ export default class Connection {
       case P.PrvOffUnknown: error("Privacy mode", "Turned off"); privacy(false); break;
     }
     return true;
+  }
+
+  // As native handle_peer_info: with several Windows user sessions, the user picks one once; a
+  // reconnect keeps the pick.
+  handleWindowsSessions(ws: message.WindowsSessions | undefined) {
+    if (!ws?.sessions.length) return;
+    if (this._selectedSid === ws.current_sid) {
+      this.sendSelectedSid(ws.current_sid);
+    } else {
+      const sessions = ws.sessions.map((s) => ({ sid: String(s.sid), name: s.name }));
+      globals.pushEvent("set_multiple_windows_session", { windows_sessions: JSON.stringify(sessions) });
+    }
+  }
+
+  sendSelectedSid(sid: number) {
+    this._selectedSid = sid;
+    this._ws?.sendMessage({ misc: message.Misc.fromPartial({ selected_sid: sid }) });
   }
 
   toggleVirtualDisplay(display: number, on: boolean) {

@@ -391,6 +391,25 @@ describe("Connection", () => {
     });
   });
 
+  describe("Windows user sessions, as native", () => {
+    const ws = { sessions: [{ sid: 1, name: "alice" }, { sid: 2, name: "bob" }], current_sid: 1 };
+
+    it("asks the user which session to view", () => {
+      conn.handleWindowsSessions(ws);
+      expect(globals.pushEvent).toHaveBeenCalledWith("set_multiple_windows_session",
+        { windows_sessions: JSON.stringify([{ sid: "1", name: "alice" }, { sid: "2", name: "bob" }]) });
+    });
+
+    it("sends the pick, and a reconnect to that session keeps it without asking", () => {
+      conn.sendSelectedSid(2);
+      expect(mockWs.sendMessage.mock.calls.at(-1)[0].misc.selected_sid).toBe(2);
+      (globals.pushEvent as any).mockClear();
+      conn.handleWindowsSessions({ ...ws, current_sid: 2 });
+      expect(mockWs.sendMessage.mock.calls.at(-1)[0].misc.selected_sid).toBe(2);
+      expect(globals.pushEvent).not.toHaveBeenCalled();
+    });
+  });
+
   describe("display changes", () => {
     it("hands the device's new displays to Flutter, as native", async () => {
       const displays = [{ x: 0, y: 0, width: 1920, height: 1080 }, { x: 1920, y: 0, width: 1920, height: 1080 }];

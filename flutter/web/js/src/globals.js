@@ -419,6 +419,9 @@ window.setByName = (name, value) => {
     case 'send_note':
       curConn.sendNote(value);
       break;
+    case 'selected_sid':
+      curConn.sendSelectedSid(parseInt(value));
+      break;
     case 'toggle_virtual_display': {
       const v = JSON.parse(value);
       curConn.toggleVirtualDisplay(v.index, v.on);
