@@ -50,6 +50,16 @@ type MsgboxCallback = (type: string, title: string, text: string) => void;
 type DrawCallback = (data: Uint8Array) => void;
 //const cursorCanvas = document.createElement("canvas");
 
+// The logged-in user's name, as the native client sends it (display_name, then name).
+function viewerName(): string {
+  try {
+    const user = JSON.parse(localStorage.getItem("user_info") || "{}");
+    return user.display_name?.trim() || user.name || "web";
+  } catch (e) {
+    return "web";
+  }
+}
+
 export default class Connection {
   _msgs: any[];
   _ws: Websock | undefined;
@@ -426,7 +436,7 @@ export default class Connection {
     const login_request = message.LoginRequest.fromPartial({
       username: this._id!,
       my_id: "web", // to-do
-      my_name: "web", // to-do
+      my_name: viewerName(),
       password,
       option: this.getOptionMessage(),
       video_ack_required: true,

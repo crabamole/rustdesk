@@ -278,6 +278,21 @@ describe("Connection", () => {
     });
   });
 
+  describe("login message", () => {
+    const sentName = () => mockWs.sendMessage.mock.calls[0][0].login_request.my_name;
+
+    it("names the logged-in user", () => {
+      localStorage.setItem("user_info", JSON.stringify({ name: "Alice Chen" }));
+      (conn as any)._sendLoginMessage();
+      expect(sentName()).toBe("Alice Chen");
+    });
+
+    it("falls back to web without a login", () => {
+      (conn as any)._sendLoginMessage();
+      expect(sentName()).toBe("web");
+    });
+  });
+
   describe("refresh", () => {
     it("sends refresh_video message", () => {
       conn.refresh();
