@@ -96,6 +96,8 @@ Establish test coverage as a foundation for opinionated development.
 - **Feature parity with native clients**: The web client is for quick remote access, not a full replacement. Features like screen recording and the file manager are out of scope.
 - **File transfer**: not planned; our DC build turns file transfer off on devices (data-out lock).
 - **Auto-connect via URL parameters** (`?id=…&pw=…`): dropped until there is a secure design; a password in the URL ends up in browser history, proxy logs and the Referer header.
+- **Codec choice and 4:4:4**: the web client decodes VP9 only; the codec menu stays native-only.
+- **Translate keyboard mode**: the web client offers Map mode only.
 - **Upstream merge**: This fork diverges intentionally from upstream's closed-source direction. We track upstream Dart/Flutter changes but own the web-specific layer.
 
 ## Community Forks
