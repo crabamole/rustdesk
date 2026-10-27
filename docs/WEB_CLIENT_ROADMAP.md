@@ -9,6 +9,7 @@ Upstream RustDesk removed the open-source web client in favor of a closed-source
 The web client is the way to view without an install (no portable native build is planned), so these come first:
 
 1. Clearer messages for connection failures, if the retry countdown is not enough ([Phase 2](#phase-2-connection-reliability))
+2. Hardware video codecs: decode H264 and H265 with WebCodecs where the browser supports them, so devices with a hardware encoder send those instead of software VP9; VP9 stays the fallback. No codec menu: the device picks the codec, as it does for native viewers on Auto
 
 ## Architecture Overview
 
@@ -96,7 +97,7 @@ Establish test coverage as a foundation for opinionated development.
 - **Feature parity with native clients**: The web client is for quick remote access, not a full replacement. Features like screen recording and the file manager are out of scope.
 - **File transfer**: not planned; our DC build turns file transfer off on devices (data-out lock).
 - **Auto-connect via URL parameters** (`?id=…&pw=…`): dropped until there is a secure design; a password in the URL ends up in browser history, proxy logs and the Referer header.
-- **Codec choice and 4:4:4**: the web client decodes VP9 only; the codec menu stays native-only.
+- **Codec menu and 4:4:4**: the codec menu stays native-only.
 - **Translate keyboard mode**: the web client offers Map mode only.
 - **Restart remote device**: not supported; our builds turn remote restart off on devices, so the device denies it and the menu item stays hidden.
 - **2FA**: not supported yet on any client; the web client follows when the native clients get it.
