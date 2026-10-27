@@ -12,6 +12,8 @@ vi.mock("./message.js", () => ({
   Hash: { fromPartial: vi.fn((v: any) => v) },
   LoginRequest: { fromPartial: vi.fn((v: any) => v) },
   OptionMessage: { fromPartial: vi.fn((v: any) => v) },
+  SupportedDecoding: { fromPartial: vi.fn((v: any) => v) },
+  SupportedDecoding_PreferCodec: { Auto: 0 },
   OptionMessage_BoolOption: { Yes: 1, No: 0 },
   KeyEvent: { fromPartial: vi.fn((v: any) => v) },
   MouseEvent: { fromPartial: vi.fn((v: any) => v) },
@@ -261,8 +263,10 @@ describe("Connection", () => {
       expect(conn.getOptionMessage()!.lock_after_session_end).toBeUndefined();
     });
 
-    it("returns undefined when no options set", () => {
-      expect(conn.getOptionMessage()).toBeUndefined();
+    it("announces VP9, and H264/H265 only when WebCodecs decodes them", () => {
+      expect(conn.getOptionMessage().supported_decoding).toMatchObject({ ability_vp9: 1, ability_h264: 0, ability_h265: 0 });
+      (conn as any)._webCodecs = new Set(["h264"]);
+      expect(conn.getOptionMessage().supported_decoding).toMatchObject({ ability_vp9: 1, ability_h264: 1, ability_h265: 0 });
     });
 
     it("returns message with show-remote-cursor", () => {

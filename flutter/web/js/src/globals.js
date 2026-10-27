@@ -275,6 +275,42 @@ export function draw(frame) {
   */
 }
 
+let frameCanvas;
+let frameCtx;
+/** Draws a WebCodecs VideoFrame (webcodecs.ts) and closes it. */
+export function drawVideoFrame(frame) {
+  onFrameDecoded();
+  try {
+    const width = frame.displayWidth;
+    const height = frame.displayHeight;
+    if (!frameCanvas) {
+      frameCanvas = new OffscreenCanvas(width, height);
+      frameCtx = frameCanvas.getContext('2d', { willReadFrequently: true });
+    }
+    if (frameCanvas.width != width || frameCanvas.height != height) {
+      frameCanvas.width = width;
+      frameCanvas.height = height;
+    }
+    frameCtx.drawImage(frame, 0, 0);
+    if (typeof window.onRgba !== 'function') {
+      if (!drawErrorLogged) {
+        console.error('video: window.onRgba is not defined, cannot render frames');
+        drawErrorLogged = true;
+      }
+      return;
+    }
+    window.onRgba(0, new Uint8Array(frameCtx.getImageData(0, 0, width, height).data.buffer));
+    onFrameDrawn();
+  } catch (e) {
+    if (!drawErrorLogged) {
+      console.error('video: draw failed:', e.message);
+      drawErrorLogged = true;
+    }
+  } finally {
+    frame.close();
+  }
+}
+
 export function sendOffCanvas(c) {
   let canvas = c.transferControlToOffscreen();
   yuvWorker.postMessage({ canvas }, [canvas]);

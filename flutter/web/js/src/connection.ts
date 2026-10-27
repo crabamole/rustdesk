@@ -2,6 +2,7 @@ import Websock from "./websock";
 import * as message from "./message.js";
 import * as rendezvous from "./rendezvous.js";
 import { loadVp9 } from "./codec";
+import { Codec, WebCodecsDecoder, codecOf, webCodecs } from "./webcodecs";
 import * as sha256 from "fast-sha256";
 import * as globals from "./globals";
 import { decompress, getVersionNumber, mapKey, pkToFingerprint, sleep } from "./common";
@@ -87,6 +88,10 @@ export default class Connection {
   _decoderNotReadyWarned: boolean | undefined;
   _decodeFailureWarned: boolean | undefined;
   _unsupportedCodecWarned: boolean | undefined;
+  _webCodecs: Set<Codec> = new Set();
+  _wc: WebCodecsDecoder | undefined;
+  // Frames still to come out of _wc for each VideoFrame message, oldest first; acked when they are out.
+  _wcAcks: number[] = [];
   _clipboardAllowed: boolean;
   _lastClipboard: string | undefined;
   _offerSeq: number;
@@ -151,6 +156,7 @@ export default class Connection {
         this._msgs.splice(0, 1);
       }
     }, 1);
+    this._webCodecs = new Set(await webCodecs());
     this.loadVideoDecoder();
     const uri = getDefaultUri();
     const ws = new Websock(uri, true);
@@ -405,6 +411,7 @@ export default class Connection {
     this._videoDecoder?.close();
     this._videoDecoder = undefined;
     this._decoderGeneration++;
+    this.closeWebCodecs();
   }
 
   refresh() {
@@ -457,17 +464,14 @@ export default class Connection {
     this._ws?.sendMessage({ login_request });
   }
 
-  getOptionMessage(): message.OptionMessage | undefined {
-    let n = 0;
+  getOptionMessage(): message.OptionMessage {
     const msg = message.OptionMessage.fromPartial({});
     const q = this.getImageQualityEnum(this.getImageQuality(), true);
     const yes = message.OptionMessage_BoolOption.Yes;
     if (q != undefined) {
       msg.image_quality = q;
-      n += 1;
     } else if (this.getImageQuality() == "custom") {
       msg.custom_image_quality = this.customImageQuality() << 8;
-      n += 1;
       const fps = parseInt(this.getOption("custom-fps"), 10);
       if (fps) msg.custom_fps = fps;
     }
@@ -477,7 +481,6 @@ export default class Connection {
     const set = (field: string, on: boolean) => {
       if (!on) return;
       (msg as any)[field] = yes;
-      n += 1;
     };
     set("disable_keyboard", viewOnly);
     set("show_remote_cursor", viewOnly || !!o["show-remote-cursor"]);
@@ -488,14 +491,13 @@ export default class Connection {
     set("enable_file_transfer", !viewOnly && !!o["enable-file-copy-paste"]);
     if (this._options["privacy-mode"]) {
       msg.privacy_mode = yes;
-      n += 1;
     }
     if (this._options["disable-audio"]) {
       msg.disable_audio = yes;
-      n += 1;
     }
     set("disable_clipboard", viewOnly || !!o["disable-clipboard"]);
-    return n > 0 ? msg : undefined;
+    msg.supported_decoding = this.supportedDecoding();
+    return msg;
   }
 
   sendVideoReceived() {
@@ -503,11 +505,78 @@ export default class Connection {
     this._ws?.sendMessage({ misc });
   }
 
+  /** As native: the device picks the codec (Auto) among those every viewer decodes. VP9 always works (ogv.js). */
+  supportedDecoding(): message.SupportedDecoding {
+    return message.SupportedDecoding.fromPartial({
+      ability_vp9: 1,
+      ability_h264: this._webCodecs.has("h264") ? 1 : 0,
+      ability_h265: this._webCodecs.has("h265") ? 1 : 0,
+      prefer: message.SupportedDecoding_PreferCodec.Auto,
+    });
+  }
+
+  logDecodeTime(ms: number) {
+    this._videoTestSpeed[1] += ms;
+    this._videoTestSpeed[0] += 1;
+    if (this._videoTestSpeed[0] >= 30) {
+      console.log("video decoder: " + Math.round(this._videoTestSpeed[1] / this._videoTestSpeed[0]));
+      this._videoTestSpeed = [0, 0];
+    }
+  }
+
+  closeWebCodecs() {
+    this._wc?.close();
+    this._wc = undefined;
+    this._wcAcks.forEach(() => this.sendVideoReceived());
+    this._wcAcks = [];
+  }
+
+  /** Decodes with WebCodecs when the browser can; false hands VP9 to ogv.js. */
+  decodeWebCodecs(vf: message.VideoFrame): boolean {
+    const c = codecOf(vf);
+    if (!c || !this._webCodecs.has(c[0])) return false;
+    const [codec, frames] = c;
+    if (this._wc?.codec != codec) {
+      this.closeWebCodecs();
+      const wc = new WebCodecsDecoder(codec, (f) => {
+        if (this._wc !== wc) return f.close();
+        this.logDecodeTime(performance.now() - f.timestamp);
+        globals.drawVideoFrame(f);
+        if (this._wcAcks.length && --this._wcAcks[0] <= 0) {
+          this._wcAcks.shift();
+          this.sendVideoReceived();
+        }
+      }, (e) => {
+        if (this._wc !== wc) return;
+        // Stop using WebCodecs for this codec; the device switches when told (H264/H265), ogv.js takes VP9.
+        console.warn("video: WebCodecs " + codec + " failed, not using it again in this session: " + e.message);
+        this._webCodecs.delete(codec);
+        this.closeWebCodecs();
+        if (codec != "vp9") this.sendOption({ supported_decoding: this.supportedDecoding() });
+        this.refresh();
+      });
+      this._wc = wc;
+      console.info("video: decoding " + codec + " with WebCodecs");
+    }
+    if (this._wc.decode(frames.frames)) {
+      this._wcAcks.push(frames.frames.length);
+    } else {
+      this.sendVideoReceived();
+      // A new decoder starts at a key frame; a still screen sends none unless asked.
+      if (!this._wc.askedKey) {
+        this._wc.askedKey = true;
+        this.refresh();
+      }
+    }
+    return true;
+  }
+
   handleVideoFrame(vf: message.VideoFrame) {
     if (!this._firstFrame) {
       this.msgbox("", "", "");
       this._firstFrame = true;
     }
+    if (this.decodeWebCodecs(vf)) return;
     if (vf.vp9s) {
       const dec = this._videoDecoder;
       if (!dec) {
@@ -1096,6 +1165,7 @@ export default class Connection {
   }
 
   loadVideoDecoder() {
+    this.closeWebCodecs();
     this._videoDecoder?.close();
     this._videoDecoder = undefined;
     const gen = ++this._decoderGeneration;
