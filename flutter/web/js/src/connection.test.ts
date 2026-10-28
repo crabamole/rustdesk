@@ -79,10 +79,9 @@ vi.mock("./websock", () => {
   return { default: MockWebsock };
 });
 
-vi.mock("./codec", () => ({
-  loadVp9: vi.fn((cb: Function) => {
-    cb({ processFrame: vi.fn(), close: vi.fn() });
-  }),
+vi.mock("./webcodecs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./webcodecs")>()),
+  webCodecs: vi.fn(async () => new Set(["vp9"])),
 }));
 
 vi.mock("fast-sha256", () => {
@@ -95,7 +94,6 @@ vi.mock("fast-sha256", () => {
 
 vi.mock("./globals", () => ({
   msgbox: vi.fn(),
-  draw: vi.fn(),
   pushEvent: vi.fn(),
   getPeers: vi.fn(() => ({})),
   initSodium: vi.fn().mockResolvedValue(undefined),
@@ -133,6 +131,7 @@ import Connection, { getConfigHost } from "./connection";
 import * as globals from "./globals";
 import { IdPk } from "./rendezvous.js";
 import { getRelayUri } from "./url";
+import { webCodecs } from "./webcodecs";
 
 describe("getConfigHost", () => {
   it("returns host from url module", () => {
@@ -949,12 +948,6 @@ describe("Connection", () => {
       expect(globals.pushEvent).toHaveBeenCalledWith("switch_display", { display: 1 });
     });
 
-    it("asks for a fresh picture once the decoder is reloaded after a display switch", () => {
-      (conn as any)._firstFrame = true;
-      conn.handleMisc({ switch_display: { display: 1 } } as any);
-      expect(mockWs.sendMessage.mock.calls.at(-1)[0].misc.refresh_video).toBe(true);
-    });
-
     it("shows block input and privacy mode results from the device, as native", () => {
       expect(conn.handleMisc({ back_notification: { block_input_state: 2, details: "", impl_key: "" } } as any)).toBe(true);
       expect(globals.pushEvent).toHaveBeenCalledWith("update_block_input_state", { input_state: "on" });
@@ -1001,28 +994,12 @@ describe("Connection", () => {
     });
   });
 
-  describe("draw", () => {
-    it("calls draw callback and globals.draw", () => {
-
-      const frame = { y: new Uint8Array(1) };
-      conn.draw(frame);
-      expect(globals.draw).toHaveBeenCalledWith(frame);
-    });
-  });
-
-  describe("setMsgbox / setDraw", () => {
+  describe("setMsgbox", () => {
     it("sets custom msgbox callback", () => {
       const custom = vi.fn();
       conn.setMsgbox(custom);
       conn.msgbox("info", "T", "M");
       expect(custom).toHaveBeenCalledWith("info", "T", "M", false);
-    });
-
-    it("sets custom draw callback", () => {
-      const custom = vi.fn();
-      conn.setDraw(custom);
-      conn.draw({ test: true });
-      expect(custom).toHaveBeenCalledWith({ test: true });
     });
   });
 
@@ -1077,128 +1054,35 @@ describe("Connection", () => {
 
   describe("handleVideoFrame", () => {
     it("clears msgbox on first frame", () => {
-      const mockDecoder = {
-        processFrame: vi.fn((data: any, cb: Function) => cb(false)),
-        frameBuffer: null,
-        close: vi.fn(),
-      };
-      (conn as any)._videoDecoder = mockDecoder;
       (conn as any)._firstFrame = false;
-
-      conn.handleVideoFrame({
-        vp9s: { frames: [{ data: new Uint8Array([1, 2]) }] },
-      } as any);
-
+      conn.handleVideoFrame({ av1s: { frames: [{ data: new Uint8Array([1, 2]) }] } } as any);
       expect(globals.msgbox).toHaveBeenCalledWith("", "", "", false);
     });
 
-    it("draws frame when decoder succeeds", () => {
-      const frameBuffer = { format: { displayWidth: 1920, displayHeight: 1080 } };
-      const mockDecoder = {
-        processFrame: vi.fn((data: any, cb: Function) => {
-          mockDecoder.frameBuffer = frameBuffer;
-          cb(true);
-        }),
-        frameBuffer: null as any,
-        close: vi.fn(),
-      };
-      (conn as any)._videoDecoder = mockDecoder;
-      (conn as any)._firstFrame = true;
-
-      conn.handleVideoFrame({
-        vp9s: { frames: [{ data: new Uint8Array([1, 2]) }] },
-      } as any);
-
-      expect(globals.draw).toHaveBeenCalledWith(frameBuffer);
-    });
-
-    it("sends video received after processing all frames", () => {
-      const mockDecoder = {
-        processFrame: vi.fn((data: any, cb: Function) => cb(false)),
-        frameBuffer: null,
-        close: vi.fn(),
-      };
-      (conn as any)._videoDecoder = mockDecoder;
-      (conn as any)._firstFrame = true;
-
-      conn.handleVideoFrame({
-        vp9s: { frames: [{ data: new Uint8Array([1]) }, { data: new Uint8Array([2]) }] },
-      } as any);
-
-      expect(mockWs.sendMessage).toHaveBeenCalled();
-    });
-
-    it("acks frames without crashing when decoder is not ready", () => {
-      (conn as any)._videoDecoder = undefined;
-      (conn as any)._firstFrame = true;
-      (conn as any)._ws = mockWs;
-
-      conn.handleVideoFrame({
-        vp9s: { frames: [{ data: new Uint8Array([1]) }] },
-      } as any);
-
-      expect(mockWs.sendMessage).toHaveBeenCalled();
-    });
-
-    it("warns once when decoder is not ready", () => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      (conn as any)._videoDecoder = undefined;
-      (conn as any)._firstFrame = true;
-
-      conn.handleVideoFrame({ vp9s: { frames: [{ data: new Uint8Array([1]) }] } } as any);
-      conn.handleVideoFrame({ vp9s: { frames: [{ data: new Uint8Array([2]) }] } } as any);
-
-      const decoderWarns = warnSpy.mock.calls.filter(c => c[0].includes("decoder not ready"));
-      expect(decoderWarns).toHaveLength(1);
-      warnSpy.mockRestore();
-    });
-
-    it("warns once on decode failure", () => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-      const mockDecoder = {
-        processFrame: vi.fn((data: any, cb: Function) => cb(false)),
-        frameBuffer: null,
-        close: vi.fn(),
-      };
-      (conn as any)._videoDecoder = mockDecoder;
-      (conn as any)._firstFrame = true;
-
-      conn.handleVideoFrame({ vp9s: { frames: [{ data: new Uint8Array([1]) }] } } as any);
-      conn.handleVideoFrame({ vp9s: { frames: [{ data: new Uint8Array([2]) }] } } as any);
-
-      const decodeWarns = warnSpy.mock.calls.filter(c => c[0].includes("decode failed"));
-      expect(decodeWarns).toHaveLength(1);
-      warnSpy.mockRestore();
-    });
-
-    it("warns once for unsupported codec and acks the frame", () => {
+    it("warns once for a codec the browser does not decode and acks the frame", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       (conn as any)._firstFrame = true;
 
       conn.handleVideoFrame({ av1s: { frames: [{ data: new Uint8Array([1]) }] } } as any);
       conn.handleVideoFrame({ h264s: { frames: [{ data: new Uint8Array([2]) }] } } as any);
 
-      const codecWarns = warnSpy.mock.calls.filter(c => c[0].includes("unsupported codec"));
+      const codecWarns = warnSpy.mock.calls.filter(c => c[0].includes("does not decode"));
       expect(codecWarns).toHaveLength(1);
-      expect(codecWarns[0][0]).toContain("AV1");
+      expect(codecWarns[0][0]).toContain("av1");
       expect(mockWs.sendMessage).toHaveBeenCalled();
       warnSpy.mockRestore();
     });
   });
 
-  describe("decoder lifecycle", () => {
-    it("close() clears decoder and increments generation", () => {
-      const mockDecoder = { close: vi.fn() };
-      (conn as any)._videoDecoder = mockDecoder;
-      const genBefore = (conn as any)._decoderGeneration;
-      conn.close();
-      expect(mockDecoder.close).toHaveBeenCalled();
-      expect((conn as any)._videoDecoder).toBeUndefined();
-      expect((conn as any)._decoderGeneration).toBeGreaterThan(genBefore);
-    });
-  });
-
   describe("_start", () => {
+    it("tells the user when the browser cannot decode video, and does not connect", async () => {
+      vi.mocked(webCodecs).mockResolvedValueOnce(new Set());
+      (conn as any)._ws = undefined;
+      await (conn as any)._start("test-peer");
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Error", "web_no_video_decoder_tip", false);
+      expect((conn as any)._ws).toBeUndefined();
+    });
+
     it("connects to rendezvous and handles punch_hole_response with other_failure", async () => {
       nextWsResponse = { punch_hole_response: { other_failure: "Server busy" } };
       await (conn as any)._start("test-peer");

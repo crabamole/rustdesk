@@ -60,10 +60,6 @@ vi.mock("libsodium-wrappers", () => ({
   },
 }));
 
-vi.mock("./codec", () => ({
-  loadVp9: vi.fn(),
-}));
-
 vi.mock("./gen_js_from_hbb", () => ({
   checkIfRetry: vi.fn(() => false),
   version: "1.0.0-test",
@@ -90,8 +86,8 @@ vi.mock("pcm-player", () => {
 import {
   isDesktop, queryOnlines, msgbox, pushEvent, setConn, getConn, close, newConn,
   verify, genBoxKeyPair, genSecretKey, seal, encrypt, decrypt,
-  getPeers, copyToClipboard, draw, sendOffCanvas, initAudio, playAudio,
-  initSodium, resetRendererForTest,
+  getPeers, copyToClipboard, drawVideoFrame, initAudio, playAudio,
+  initSodium,
 } from "./globals";
 
 describe("isDesktop", () => {
@@ -755,39 +751,25 @@ describe("newConn", () => {
   });
 });
 
-describe("draw", () => {
-  it("posts message to yuvWorker when available", () => {
-    const frame = { y: { bytes: new Uint8Array(1) } };
-    draw(frame);
-  });
-
-  it("logs renderer path info on startup", () => {
-    // The setup has WebGLFrameSink.isAvailable() = false, so Web Worker path is used.
-    // The console.info call happens at module load time — verify it was called.
-    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
-    // Re-importing would be needed to capture module-level logs,
-    // but we can verify the worker path is active by confirming postMessage works.
-    const frame = { y: { bytes: new Uint8Array(1) } };
-    draw(frame);
-    // yuvWorker.postMessage is called without error
-    infoSpy.mockRestore();
-  });
-});
-
+// jsdom has no WebGL, so these run as a browser without it.
 describe("video rendering status", () => {
-  const yuvWorker = () => (globalThis as any).__workers.find((w: any) => w.url === "./yuv.js");
   const msgboxes = (onGlobalEvent: any) =>
     onGlobalEvent.mock.calls.map((c: any) => JSON.parse(c[0])).filter((e: any) => e.name === "msgbox");
-  const frame = { y: { bytes: new Uint8Array(1) } };
+  const frame = () => ({ displayWidth: 1, displayHeight: 1, close: vi.fn() });
   let onGlobalEvent: any;
 
   beforeEach(async () => {
     vi.useFakeTimers();
+    (globalThis as any).OffscreenCanvas = class {
+      constructor(public width: number, public height: number) {}
+      getContext() {
+        return { drawImage: vi.fn(), getImageData: (_x: number, _y: number, w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) }) };
+      }
+    };
     await (window as any).init();
     onGlobalEvent = vi.fn();
     (window as any).onGlobalEvent = onGlobalEvent;
     (window as any).onRgba = vi.fn();
-    resetRendererForTest();
     newConn();
   });
 
@@ -796,50 +778,30 @@ describe("video rendering status", () => {
   });
 
   it("tells the user once that video is rendered in software", () => {
-    draw(frame);
-    yuvWorker().onmessage({ data: new Uint8Array(4) });
+    const f = frame();
+    drawVideoFrame(f);
     vi.advanceTimersByTime(1000);
-    draw(frame);
-    yuvWorker().onmessage({ data: new Uint8Array(4) });
+    drawVideoFrame(frame());
     vi.advanceTimersByTime(10000);
     expect((window as any).onRgba).toHaveBeenCalledTimes(2);
+    expect(f.close).toHaveBeenCalled();
     expect(msgboxes(onGlobalEvent)).toEqual([
       expect.objectContaining({ type: "custom-nocancel-info", text: "software_rendering_tip" }),
     ]);
   });
 
   it("shows the notice again for a new session", () => {
-    draw(frame);
-    yuvWorker().onmessage({ data: new Uint8Array(4) });
+    drawVideoFrame(frame());
     vi.advanceTimersByTime(1000);
     newConn();
-    draw(frame);
-    yuvWorker().onmessage({ data: new Uint8Array(4) });
+    drawVideoFrame(frame());
     vi.advanceTimersByTime(1000);
     expect(msgboxes(onGlobalEvent)).toHaveLength(2);
   });
 
-  it("shows an error with the first frame when the software renderer failed to load", () => {
-    yuvWorker().onmessage({ data: { error: "yuv.wasm: HTTP 404" } });
-    expect((window as any).onRgba).not.toHaveBeenCalled();
-    expect(msgboxes(onGlobalEvent)).toEqual([]);
-    draw(frame);
-    expect(msgboxes(onGlobalEvent)).toEqual([
-      expect.objectContaining({ type: "custom-nocancel-error", text: "video_render_error_tip" }),
-    ]);
-  });
-
-  it("shows an error with the first frame when the renderer worker failed", () => {
-    yuvWorker().onerror({ message: "404" });
-    newConn();
-    draw(frame);
-    expect(msgboxes(onGlobalEvent)).toEqual([
-      expect.objectContaining({ type: "custom-nocancel-error", text: "video_render_error_tip" }),
-    ]);
-  });
-
   it("shows an error when decoded frames are never drawn", () => {
-    draw(frame);
+    (window as any).onRgba = undefined;
+    drawVideoFrame(frame());
     vi.advanceTimersByTime(4999);
     expect(msgboxes(onGlobalEvent)).toEqual([]);
     vi.advanceTimersByTime(1);
@@ -849,8 +811,7 @@ describe("video rendering status", () => {
   });
 
   it("shows no error while frames are drawn", () => {
-    draw(frame);
-    yuvWorker().onmessage({ data: new Uint8Array(4) });
+    drawVideoFrame(frame());
     vi.advanceTimersByTime(10000);
     expect(msgboxes(onGlobalEvent).filter((m: any) => m.type.includes("error"))).toEqual([]);
   });

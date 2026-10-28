@@ -8,7 +8,6 @@ vi.mock("./connection", () => ({}));
 vi.mock("./globals", () => ({
   newConn: vi.fn(() => ({
     setMsgbox: vi.fn(),
-    setDraw: vi.fn(),
     start: vi.fn(),
     login: vi.fn(),
   })),
@@ -16,16 +15,12 @@ vi.mock("./globals", () => ({
     login: vi.fn(),
   })),
   close: vi.fn(),
-  draw: vi.fn(),
 }));
 
 describe("ui.js XSS prevention", () => {
   beforeEach(async () => {
     document.body.innerHTML = '<div id="app"></div>';
 
-    (globalThis as any).YUVCanvas = {
-      attach: vi.fn(() => ({ drawFrame: vi.fn() })),
-    };
     (window as any).init = vi.fn();
 
     vi.resetModules();
@@ -35,7 +30,6 @@ describe("ui.js XSS prevention", () => {
     vi.doMock("./globals", () => ({
       newConn: vi.fn(() => ({
         setMsgbox: vi.fn(),
-        setDraw: vi.fn(),
         start: vi.fn(),
         login: vi.fn(),
       })),
@@ -43,7 +37,6 @@ describe("ui.js XSS prevention", () => {
         login: vi.fn(),
       })),
       close: vi.fn(),
-      draw: vi.fn(),
     }));
 
     await import("./ui.js");
@@ -106,16 +99,12 @@ describe("ui.js behavioral tests", () => {
   beforeEach(async () => {
     document.body.innerHTML = '<div id="app"></div>';
 
-    (globalThis as any).YUVCanvas = {
-      attach: vi.fn(() => ({ drawFrame: vi.fn() })),
-    };
     (window as any).init = vi.fn();
 
     vi.resetModules();
 
     mockConn = {
       setMsgbox: vi.fn(),
-      setDraw: vi.fn(),
       start: vi.fn(),
       login: vi.fn(),
     };
@@ -123,7 +112,6 @@ describe("ui.js behavioral tests", () => {
       newConn: vi.fn(() => mockConn),
       getConn: vi.fn(() => mockConn),
       close: vi.fn(),
-      draw: vi.fn(),
     };
 
     vi.doMock("./style.css", () => ({}));

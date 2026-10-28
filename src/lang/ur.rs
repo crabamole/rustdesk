@@ -797,6 +797,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_rejected_tip", ""),
         ("The connection is not allowed. This device is not admitted for remote control.", ""),
         ("conn-e2ee-refused-tip", ""),
+        ("web_no_video_decoder_tip", ""),
     ].iter().cloned().collect();
 }
 

@@ -44,7 +44,7 @@ The web client shares ~68K lines of Dart with native clients. The web-specific l
 - [x] Log in first: the login button replaces the ID field until the user logs in (1.5.0-1)
 - [x] Named cRustDesk; the powered-by link is hidden (1.5.0-5); the page and browser tab are titled cRustDesk, without "(Preview)"
 - [x] Never runs a session without end-to-end encryption: a failed key check ends the connection instead of continuing unencrypted ([design-e2ee-required.md](design-e2ee-required.md))
-- [x] Decodes video with WebCodecs where the browser has it: VP9, plus H264 and H265 when the browser decodes them, so devices with a hardware encoder send those. A device without one sends VP9. ogv.js stays the VP9 decoder for browsers without WebCodecs. No codec menu: the device picks the codec, as it does for native viewers on Auto
+- [x] Decodes video with WebCodecs where the browser has it: VP9, plus H264 and H265 when the browser decodes them, so devices with a hardware encoder send those. A device without one sends VP9. Needs a browser with WebCodecs (Chrome or Edge 94, Safari 16.4, Firefox 130 or later); an older browser shows a message instead of connecting. No codec menu: the device picks the codec, as it does for native viewers on Auto
 
 ### Phase 1: Testing Infrastructure
 

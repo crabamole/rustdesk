@@ -1,7 +1,6 @@
 import Connection, { loadConfig, getConfigKey, getConfigHost, getApiServer } from "./connection";
 import _sodium from "libsodium-wrappers";
 import { CursorData } from "./message";
-import { loadVp9 } from "./codec";
 import { checkIfRetry, version } from "./gen_js_from_hbb";
 import { getVersionNumber, initZstd, translate } from "./common";
 import Websock from "./websock";
@@ -159,32 +158,13 @@ export function pushEvent(name, payload) {
   }
 }
 
-let yuvWorker;
-let yuvCanvas;
-let gl;
-let pixels;
-let flipPixels;
-let oldSize;
-if (YUVCanvas.WebGLFrameSink.isAvailable()) {
-  var canvas = document.createElement('canvas');
-  yuvCanvas = YUVCanvas.attach(canvas, { webGL: true });
-  gl = canvas.getContext("webgl");
-  console.info('video: using WebGL YUV renderer');
-} else {
-  yuvWorker = new Worker("./yuv.js");
-  console.info('video: using Web Worker YUV renderer');
-}
-let testSpeed = [0, 0];
+// Without WebGL, Flutter draws everything on the CPU.
+const hasWebGL = !!document.createElement('canvas').getContext('webgl');
 
 // Say why the screen stays black (or slow) instead of failing silently.
 const RENDER_TIMEOUT_MS = 5000;
 const NOTICE_DELAY_MS = 1000; // Flutter dismisses dialogs when the first image arrives.
 let renderState;
-let rendererLoadError; // the worker loads with the page; report it once video arrives
-
-export function resetRendererForTest() {
-  rendererLoadError = undefined;
-}
 
 function resetRenderState() {
   clearTimeout(renderState?.timer);
@@ -193,7 +173,6 @@ function resetRenderState() {
 resetRenderState();
 
 function onFrameDecoded() {
-  if (rendererLoadError) renderError(rendererLoadError);
   if (renderState.drawn || renderState.timer) return;
   renderState.timer = setTimeout(() => {
     if (!renderState.drawn) renderError(`no frame drawn ${RENDER_TIMEOUT_MS} ms after the first decoded frame`);
@@ -204,7 +183,7 @@ function onFrameDrawn() {
   if (renderState.drawn) return;
   renderState.drawn = true;
   clearTimeout(renderState.timer);
-  if (yuvWorker) {
+  if (!hasWebGL) {
     setTimeout(() => msgbox('custom-nocancel-info', 'Warning', 'software_rendering_tip'), NOTICE_DELAY_MS);
   }
 }
@@ -217,64 +196,6 @@ function renderError(detail) {
 }
 
 let drawErrorLogged = false;
-export function draw(frame) {
-  onFrameDecoded();
-  if (yuvWorker) {
-    // frame's (y/u/v).bytes already detached, can not transferrable any more.
-    yuvWorker.postMessage(frame);
-  } else {
-    try {
-      var tm0 = new Date().getTime();
-      yuvCanvas.drawFrame(frame);
-      var width = canvas.width;
-      var height = canvas.height;
-      var size = width * height * 4;
-      if (size != oldSize) {
-        pixels = new Uint8Array(size);
-        flipPixels = new Uint8Array(size);
-        oldSize = size;
-      }
-      gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-      const row = width * 4;
-      const end = (height - 1) * row;
-      for (let i = 0; i < size; i += row) {
-        flipPixels.set(pixels.subarray(i, i + row), end - i);
-      }
-      if (typeof window.onRgba !== 'function') {
-        if (!drawErrorLogged) {
-          console.error('video: window.onRgba is not defined, cannot render frames');
-          drawErrorLogged = true;
-        }
-        return;
-      }
-      window.onRgba(0, flipPixels);
-      onFrameDrawn();
-      testSpeed[1] += new Date().getTime() - tm0;
-      testSpeed[0] += 1;
-      if (testSpeed[0] > 30) {
-        console.log('gl: ' + parseInt('' + testSpeed[1] / testSpeed[0]));
-        testSpeed = [0, 0];
-      }
-    } catch (e) {
-      if (!drawErrorLogged) {
-        console.error('video: draw failed:', e.message);
-        drawErrorLogged = true;
-      }
-    }
-  }
-  /*
-  var testCanvas = document.getElementById("test-yuv-decoder-canvas");
-  if (testCanvas && currentFrame) {
-    var ctx = testCanvas.getContext("2d");
-    testCanvas.width = frame.format.displayWidth;
-    testCanvas.height = frame.format.displayHeight;
-    var img = ctx.createImageData(testCanvas.width, testCanvas.height);
-    img.data.set(currentFrame);
-    ctx.putImageData(img, 0, 0);
-  }
-  */
-}
-
 let frameCanvas;
 let frameCtx;
 /** Draws a WebCodecs VideoFrame (webcodecs.ts) and closes it. */
@@ -309,11 +230,6 @@ export function drawVideoFrame(frame) {
   } finally {
     frame.close();
   }
-}
-
-export function sendOffCanvas(c) {
-  let canvas = c.transferControlToOffscreen();
-  yuvWorker.postMessage({ canvas }, [canvas]);
 }
 
 export function setConn(conn) {
@@ -836,26 +752,10 @@ export function playAudio(packet) {
 }
 
 window.init = async () => {
-  if (yuvWorker) {
-    yuvWorker.onmessage = (e) => {
-      if (e.data?.error) {
-        rendererLoadError = e.data.error;
-        console.error('video: software renderer failed to load:', rendererLoadError);
-        return;
-      }
-      window.onRgba(0, e.data);
-      if (e.data) onFrameDrawn();
-    }
-    yuvWorker.onerror = (e) => {
-      rendererLoadError = e.message || 'yuv worker failed to load';
-      console.error('video: software renderer failed to load:', rendererLoadError);
-    }
-  }
   opusWorker.onmessage = (e) => {
     if (pcmPlayer) pcmPlayer.feed(e.data);
   }
   await loadConfig();
-  loadVp9(() => { });
   await initZstd();
   console.log('init done');
   if (window.onInitFinished) window.onInitFinished();

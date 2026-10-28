@@ -23,12 +23,9 @@ if (app) {
   </div>
   <div id="canvas" style="display: none;">
     <button id="cancel" onclick="cancel();">Cancel</button>
-    <canvas id="player"></canvas>
-    <canvas id="test-yuv-decoder-canvas"></canvas>
   </div>
 `;
 
-  let player;
   window.init();
 
   document.body.onload = () => {
@@ -38,8 +35,6 @@ if (app) {
     id.value = localStorage.getItem('id');
     const key = document.querySelector('#key');
     key.value = localStorage.getItem('key');
-    player = YUVCanvas.attach(document.getElementById('player'));
-    // globals.sendOffCanvas(document.getElementById('player'));
   };
 
   window.connect = () => {
@@ -52,16 +47,6 @@ if (app) {
     const func = async () => {
       const conn = globals.newConn();
       conn.setMsgbox(msgbox);
-      conn.setDraw((f) => {
-        /*
-        if (!(document.getElementById('player').width > 0)) {
-          document.getElementById('player').width = f.format.displayWidth;
-          document.getElementById('player').height = f.format.displayHeight;
-        }
-        */
-        globals.draw(f);
-        player.drawFrame(f);
-      });
       document.querySelector('div#status').style.display = 'block';
       document.querySelector('div#connect').style.display = 'none';
       document.querySelector('div#text').innerHTML = 'Connecting ...';

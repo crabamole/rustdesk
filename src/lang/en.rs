@@ -286,5 +286,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_pending_tip", "Other devices cannot connect to this device until an administrator allows it. You can still connect to other devices."),
         ("admission_rejected_tip", "An administrator does not allow other devices to connect to this device. You can still connect to other devices."),
         ("conn-e2ee-refused-tip", "Could not verify end-to-end encryption, so the connection was refused.\nThe server or the network may not be trusted. Contact your administrator."),
+        ("web_no_video_decoder_tip", "This browser cannot decode video. Update it, or use a current version of Chrome, Edge, Firefox or Safari."),
     ].iter().cloned().collect();
 }

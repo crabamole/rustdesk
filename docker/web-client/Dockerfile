@@ -28,40 +28,12 @@ RUN cat /tmp/opus-worker-glue.js >> api.js
 RUN ./build.sh -O2 -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -fno-exceptions -s DISABLE_EXCEPTION_CATCHING=1 \
     -s 'EXPORTED_FUNCTIONS=["_free","_malloc"]'
 
-# yuv.wasm for yuv.js, which renders video when the browser has no WebGL.
-FROM --platform=linux/amd64 emscripten/emsdk:3.1.61 AS yuv-wasm
-COPY flutter/web/js/yuv2rgb /src
-RUN mkdir -p /out \
-    && emcc -O2 -msimd128 /src/yuv_rgb.c --no-entry -s STANDALONE_WASM \
-      -s EXPORTED_FUNCTIONS=_yuv420_rgb24_std,_malloc,_free -o /out/yuv.wasm \
-    && node /src/test.mjs /out/yuv.wasm \
-    && cp /src/LICENSE /out/yuv.wasm.LICENSE
-
-FROM --platform=linux/amd64 node:18-slim AS yuv-canvas
-
-WORKDIR /build
-RUN npm pack yuv-canvas@1.2.6 \
-    && tar xzf yuv-canvas-1.2.6.tgz \
-    && cd package \
-    && npm install \
-    && npx grunt replace browserify \
-    && npx browserify src/yuv-canvas.js --standalone YUVCanvas -o /build/yuv-canvas-1.2.6.js
-
 # Everything copied into the web root next to the Flutter build.
 FROM --platform=linux/amd64 alpine:3.20 AS web-deps
 
-RUN apk add --no-cache curl unzip
-
 WORKDIR /out
 
-# ogvjs 1.8.6 from GitHub release (includes SIMD builds not in npm)
-RUN curl -fsSL -o /tmp/ogvjs.zip \
-      https://github.com/brion/ogv.js/releases/download/1.8.6/ogvjs-1.8.6.zip \
-    && unzip /tmp/ogvjs.zip -d /out
-
 COPY --from=libopus /build/libopus.js /build/libopus.wasm /out/
-COPY --from=yuv-canvas /build/yuv-canvas-1.2.6.js /out/
-COPY --from=yuv-wasm /out/ /out/
 
 # Just the files, for local builds: docker build --target web-deps-files --output flutter/web
 FROM scratch AS web-deps-files

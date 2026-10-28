@@ -1,7 +1,6 @@
 import Websock from "./websock";
 import * as message from "./message.js";
 import * as rendezvous from "./rendezvous.js";
-import { loadVp9 } from "./codec";
 import { Codec, WebCodecsDecoder, codecOf, webCodecs } from "./webcodecs";
 import * as sha256 from "fast-sha256";
 import * as globals from "./globals";
@@ -49,7 +48,6 @@ export function getConfigHost(): string {
 }
 
 type MsgboxCallback = (type: string, title: string, text: string, retry?: boolean) => void;
-type DrawCallback = (data: Uint8Array) => void;
 //const cursorCanvas = document.createElement("canvas");
 
 // The logged-in user's name, as the native client sends it (display_name, then name).
@@ -69,7 +67,6 @@ export default class Connection {
   _id: string;
   _hash: message.Hash | undefined;
   _msgbox: MsgboxCallback;
-  _draw: DrawCallback;
   _peerInfo: message.PeerInfo | undefined;
   // As native LoginConfigHandler.session_id: one random ID for the session, kept across reconnects.
   _sessionId: number = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
@@ -80,13 +77,9 @@ export default class Connection {
   _cursorShapes: { [id: string]: { hotx: number; hoty: number; width: number; height: number; colors: Uint8Array } } = {};
   _auditGuid = "";
   _firstFrame: Boolean | undefined;
-  _videoDecoder: any;
-  _decoderGeneration: number;
   _password: Uint8Array | undefined;
   _options: any;
   _videoTestSpeed: number[];
-  _decoderNotReadyWarned: boolean | undefined;
-  _decodeFailureWarned: boolean | undefined;
   _unsupportedCodecWarned: boolean | undefined;
   _webCodecs: Set<Codec> = new Set();
   _wc: WebCodecsDecoder | undefined;
@@ -101,11 +94,9 @@ export default class Connection {
 
   constructor() {
     this._msgbox = globals.msgbox;
-    this._draw = globals.draw;
     this._msgs = [];
     this._id = "";
     this._videoTestSpeed = [0, 0];
-    this._decoderGeneration = 0;
     this._clipboardAllowed = true;
     this._offerSeq = 0;
     this._browserTipShown = false;
@@ -136,6 +127,11 @@ export default class Connection {
   }
 
   async _start(id: string) {
+    this._webCodecs = new Set(await webCodecs());
+    if (!this._webCodecs.has("vp9")) {
+      this.msgbox("error", "Error", "web_no_video_decoder_tip");
+      return;
+    }
     await globals.initSodium();
     if (!this._options) {
       this._options = globals.getPeers()[id] || {};
@@ -156,8 +152,6 @@ export default class Connection {
         this._msgs.splice(0, 1);
       }
     }, 1);
-    this._webCodecs = new Set(await webCodecs());
-    this.loadVideoDecoder();
     const uri = getDefaultUri();
     const ws = new Websock(uri, true);
     this._ws = ws;
@@ -394,11 +388,6 @@ export default class Connection {
     this._msgbox?.(type_, title, text, retry);
   }
 
-  draw(frame: any) {
-    this._draw?.(frame);
-    globals.draw(frame);
-  }
-
   close() {
     // As native: tell the device first, so it ends the connection at once.
     if (!this._closed) {
@@ -408,9 +397,6 @@ export default class Connection {
     this._msgs = [];
     clearInterval(this._interval);
     this._ws?.close();
-    this._videoDecoder?.close();
-    this._videoDecoder = undefined;
-    this._decoderGeneration++;
     this.closeWebCodecs();
   }
 
@@ -421,10 +407,6 @@ export default class Connection {
 
   setMsgbox(callback: MsgboxCallback) {
     this._msgbox = callback;
-  }
-
-  setDraw(callback: DrawCallback) {
-    this._draw = callback;
   }
 
   login(password: string | undefined = undefined) {
@@ -505,7 +487,7 @@ export default class Connection {
     this._ws?.sendMessage({ misc });
   }
 
-  /** As native: the device picks the codec (Auto) among those every viewer decodes. VP9 always works (ogv.js). */
+  /** As native: the device picks the codec (Auto) among those every viewer decodes. _start checks VP9. */
   supportedDecoding(): message.SupportedDecoding {
     return message.SupportedDecoding.fromPartial({
       ability_vp9: 1,
@@ -531,7 +513,7 @@ export default class Connection {
     this._wcAcks = [];
   }
 
-  /** Decodes with WebCodecs when the browser can; false hands VP9 to ogv.js. */
+  /** Decodes with WebCodecs; false when the browser cannot decode the frame's codec. */
   decodeWebCodecs(vf: message.VideoFrame): boolean {
     const c = codecOf(vf);
     if (!c || !this._webCodecs.has(c[0])) return false;
@@ -548,11 +530,15 @@ export default class Connection {
         }
       }, (e) => {
         if (this._wc !== wc) return;
-        // Stop using WebCodecs for this codec; the device switches when told (H264/H265), ogv.js takes VP9.
+        // Stop using this codec; the device switches to VP9 when told. VP9 has no fallback.
         console.warn("video: WebCodecs " + codec + " failed, not using it again in this session: " + e.message);
         this._webCodecs.delete(codec);
         this.closeWebCodecs();
-        if (codec != "vp9") this.sendOption({ supported_decoding: this.supportedDecoding() });
+        if (codec == "vp9") {
+          this.msgbox("error", "Error", "web_no_video_decoder_tip");
+          return;
+        }
+        this.sendOption({ supported_decoding: this.supportedDecoding() });
         this.refresh();
       });
       this._wc = wc;
@@ -577,54 +563,12 @@ export default class Connection {
       this._firstFrame = true;
     }
     if (this.decodeWebCodecs(vf)) return;
-    if (vf.vp9s) {
-      const dec = this._videoDecoder;
-      if (!dec) {
-        if (!this._decoderNotReadyWarned) {
-          console.warn("video: decoder not ready, dropping frames");
-          this._decoderNotReadyWarned = true;
-        }
-        this.sendVideoReceived();
-        return;
-      }
-      var tm = new Date().getTime();
-      var i = 0;
-      const n = vf.vp9s?.frames.length;
-      vf.vp9s.frames.forEach((f) => {
-        dec.processFrame(f.data.slice(0).buffer, (ok: any) => {
-          i++;
-          if (i == n) this.sendVideoReceived();
-          if (ok && dec.frameBuffer && n == i) {
-            this.draw(dec.frameBuffer);
-            const now = new Date().getTime();
-            var elapsed = now - tm;
-            this._videoTestSpeed[1] += elapsed;
-            this._videoTestSpeed[0] += 1;
-            if (this._videoTestSpeed[0] >= 30) {
-              console.log(
-                "video decoder: " +
-                  parseInt(
-                    "" + this._videoTestSpeed[1] / this._videoTestSpeed[0]
-                  )
-              );
-              this._videoTestSpeed = [0, 0];
-            }
-          } else if (!ok) {
-            if (!this._decodeFailureWarned) {
-              console.warn("video: VP9 decode failed for frame");
-              this._decodeFailureWarned = true;
-            }
-          }
-        });
-      });
-    } else {
-      const codec = vf.av1s ? 'AV1' : vf.h264s ? 'H264' : vf.h265s ? 'H265' : vf.vp8s ? 'VP8' : 'unknown';
-      if (!this._unsupportedCodecWarned) {
-        console.warn("video: received unsupported codec: " + codec + " (only VP9 is supported)");
-        this._unsupportedCodecWarned = true;
-      }
-      this.sendVideoReceived();
+    const codec = codecOf(vf)?.[0] ?? (vf.av1s ? "av1" : vf.vp8s ? "vp8" : "unknown");
+    if (!this._unsupportedCodecWarned) {
+      console.warn("video: received a codec this browser does not decode: " + codec);
+      this._unsupportedCodecWarned = true;
     }
+    this.sendVideoReceived();
   }
 
   handlePeerInfo(pi: message.PeerInfo) {
@@ -710,7 +654,7 @@ export default class Connection {
     } else if (misc.follow_current_display !== undefined) {
       globals.pushEvent("follow_current_display", { display_idx: misc.follow_current_display });
     } else if (misc.switch_display) {
-      this.loadVideoDecoder();
+      this.closeWebCodecs();
       globals.pushEvent("switch_display", misc.switch_display);
     } else if (misc.close_reason) {
       this.msgbox("error", "Connection Error", misc.close_reason);
@@ -1162,27 +1106,6 @@ export default class Connection {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: this._id, session_id: this._sessionId, note }),
     }).catch((e) => console.error("send note:", e));
-  }
-
-  loadVideoDecoder() {
-    this.closeWebCodecs();
-    this._videoDecoder?.close();
-    this._videoDecoder = undefined;
-    const gen = ++this._decoderGeneration;
-    loadVp9((decoder: any) => {
-      if (gen !== this._decoderGeneration) {
-        decoder.close();
-        return;
-      }
-      this._videoDecoder = decoder;
-      console.log("vp9 loaded");
-      // Frames that came while it loaded were dropped; a still screen sends no new key frame.
-      if (this._firstFrame) this.refresh();
-    }, (err: any) => {
-      if (gen !== this._decoderGeneration) return;
-      this.msgbox("error", "Error", "Failed to load video decoder");
-      console.error("VP9 load failed:", err);
-    });
   }
 }
 

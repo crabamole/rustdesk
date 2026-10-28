@@ -1,5 +1,4 @@
 // Video decoding with the browser's WebCodecs: VP9, H264 and H265, in hardware where the browser can.
-// ogv.js (codec.js) stays the VP9 decoder for browsers without WebCodecs.
 import * as message from "./message";
 
 export type Codec = "vp9" | "h264" | "h265";

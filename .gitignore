@@ -58,11 +58,8 @@ libsciter.dylib
 # libdrmtap is cloned at build time by build.py (not a submodule)
 /third_party/libdrmtap/
 # web client build artifacts
-flutter/web/ogvjs*/
 flutter/web/web_deps.tar.gz
 flutter/web/libopus.*
-flutter/web/yuv-canvas-*.js
-flutter/web/yuv.wasm*
 flutter/web/js/coverage/
 # core dumps
 core
