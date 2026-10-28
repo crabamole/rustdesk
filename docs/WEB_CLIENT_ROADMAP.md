@@ -9,7 +9,6 @@ Upstream RustDesk removed the open-source web client in favor of a closed-source
 The web client is the way to view without an install (no portable native build is planned), so these come first:
 
 1. Clearer messages for connection failures, if the retry countdown is not enough ([Phase 2](#phase-2-connection-reliability))
-2. Hardware video codecs: decode H264 and H265 with WebCodecs where the browser supports them, so devices with a hardware encoder send those instead of software VP9; VP9 stays the fallback. No codec menu: the device picks the codec, as it does for native viewers on Auto
 
 ## Architecture Overview
 
@@ -45,6 +44,7 @@ The web client shares ~68K lines of Dart with native clients. The web-specific l
 - [x] Log in first: the login button replaces the ID field until the user logs in (1.5.0-1)
 - [x] Named cRustDesk; the powered-by link is hidden (1.5.0-5); the page and browser tab are titled cRustDesk, without "(Preview)"
 - [x] Never runs a session without end-to-end encryption: a failed key check ends the connection instead of continuing unencrypted ([design-e2ee-required.md](design-e2ee-required.md))
+- [x] Decodes video with WebCodecs where the browser has it: VP9, plus H264 and H265 when the browser decodes them, so devices with a hardware encoder send those. A device without one sends VP9. ogv.js stays the VP9 decoder for browsers without WebCodecs. No codec menu: the device picks the codec, as it does for native viewers on Auto
 
 ### Phase 1: Testing Infrastructure
 
