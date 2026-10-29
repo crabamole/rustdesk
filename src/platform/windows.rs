@@ -1601,7 +1601,7 @@ pub fn install_me(options: &str, path: String, silent: bool, debug: bool) -> Res
     let mut version_major = "0";
     let mut version_minor = "0";
     let mut version_build = "0";
-    let versions: Vec<&str> = crate::VERSION.split(".").collect();
+    let versions: Vec<&str> = crate::VERSION.split(['.', '-']).collect();
     if versions.len() > 0 {
         version_major = versions[0];
     }
@@ -3488,7 +3488,7 @@ pub fn update_me(debug: bool) -> ResultType<()> {
     let mut version_major = "0";
     let mut version_minor = "0";
     let mut version_build = "0";
-    let versions: Vec<&str> = crate::VERSION.split(".").collect();
+    let versions: Vec<&str> = crate::VERSION.split(['.', '-']).collect();
     if versions.len() > 0 {
         version_major = versions[0];
     }
