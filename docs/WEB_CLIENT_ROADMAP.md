@@ -6,7 +6,7 @@ Upstream RustDesk removed the open-source web client in favor of a closed-source
 
 ## Next
 
-The web client is the way to view without an install (no portable native build is planned). No item is planned now; the open items are Flutter widget tests ([Phase 1](#phase-1-testing-infrastructure)) and the config.json reference ([Phase 4](#phase-4-operations)).
+The web client is the way to view without an install (no portable native build is planned). No item is planned now.
 
 ## Architecture Overview
 
@@ -53,7 +53,6 @@ Establish test coverage as a foundation for opinionated development.
   - `jsonfyForDart()` — payload serialization
   - `getByName`/`setByName` option handlers — defaults, read/write, server config blocking
   - `loadConfig()` — config.json parsing and fallback behavior
-- [ ] **Flutter widget tests**: Extend existing `server_settings_dialog_test.dart` for `readOnly` parameter. Add tests for web-specific UI behavior (read-only server settings, close-only dialog).
 - [x] **CI gating**: `web-docker.yml` runs `yarn test` (vitest) before building the web image; Flutter tests do not run in CI
 - [x] **E2E smoke test**: end-to-end tests `webclient-linux` / `webclient-mac` log in via OIDC, connect to real Linux and macOS peers through hbbs/hbbr, and verify the remote desktop screenshot
 
@@ -87,7 +86,7 @@ Establish test coverage as a foundation for opinionated development.
 - [x] Helm chart: `oci://ghcr.io/crabamole/charts/rustdesk` with the webclient deployment; nginx serves the static files and the chart's Istio VirtualService routes `/ws/id`, `/ws/relay/<n>` and `/api/` to the servers
 - [x] Health check endpoint or readiness probe (liveness/readiness probes in the Helm chart's webclient Deployment)
 - [x] Deployment: the Helm chart README covers the web client
-- [ ] Documentation: config.json reference, architecture diagram
+- [x] Documentation: config.json reference and a deployment diagram in [docker/web-client/README.md](../docker/web-client/README.md)
 
 ## Non-Goals
 

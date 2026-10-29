@@ -38,10 +38,41 @@ Then open http://localhost:8080 in a browser.
 |----------|----------|---------|-------------|
 | `RUSTDESK_KEY` | **Yes** | | Server public key |
 | `RUSTDESK_HOST` | No | `/ws/id` | Rendezvous server (hbbs). Path (e.g. `/ws/id`) or full URI (e.g. `ws://host:21118`) |
+| `RUSTDESK_API` | No | the page origin | API server base URL (login, address book, audit), e.g. `https://api.example.com` |
 
 When `RUSTDESK_HOST` is a path (starts with `/`), the WebSocket scheme is derived from the page: `wss://` on HTTPS, `ws://` on HTTP. Full URIs are used as-is.
 
+## config.json
+
+At start, the image writes the variables above to `/config.json` next to `index.html`. The web
+client reads it once when the page loads. To serve the static files without this image, write the
+file yourself:
+
+```json
+{
+  "host": "/ws/id",
+  "key": "your-public-key",
+  "api": "https://api.example.com"
+}
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `host` | `/ws/id` | As `RUSTDESK_HOST` |
+| `key` | empty | As `RUSTDESK_KEY`. It must be the public key of hbbs: hbbs refuses a wrong key ("Key mismatch"), and the web client checks the device's signed key with it |
+| `api` | the page origin | As `RUSTDESK_API` |
+
+A missing or unreadable file gives the defaults. An empty field also keeps its default. The page
+must be reloaded to read a changed file.
+
 ## Reverse Proxy Setup
+
+```
+                       +--> /            web client (static files, config.json)
+browser --> proxy -----+--> /ws/id       hbbs   (rendezvous, WebSocket)
+          (TLS, 443)   +--> /ws/relay/n  hbbr n (relay, WebSocket)
+                       +--> /api/, /ui   API server (login, address book, audit)
+```
 
 The proxy must route WebSocket connections to hbbs, and each relay URL hbbs hands out to its hbbr:
 
@@ -78,4 +109,4 @@ Istio sets no route timeout, so open WebSockets stay up.
 
 ## Source
 
-Built from [rophy/rustdesk](https://github.com/rophy/rustdesk) using [`docker/web-client/Dockerfile`](https://github.com/rophy/rustdesk/blob/master/docker/web-client/Dockerfile).
+Built from [crabamole/rustdesk](https://github.com/crabamole/rustdesk) using [`docker/web-client/Dockerfile`](https://github.com/crabamole/rustdesk/blob/master/docker/web-client/Dockerfile).
