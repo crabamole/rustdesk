@@ -9,6 +9,7 @@ Upstream RustDesk removed the open-source web client in favor of a closed-source
 The web client is the way to view without an install (no portable native build is planned), so these come first:
 
 1. Clearer messages for connection failures, if the retry countdown is not enough ([Phase 2](#phase-2-connection-reliability))
+2. Audit the 115 bridge stubs ([Phase 2](#phase-2-connection-reliability))
 
 ## Architecture Overview
 
@@ -80,7 +81,6 @@ Establish test coverage as a foundation for opinionated development.
 
 - [x] **WSS support**: `url.ts` resolves `/ws/id` to `wss://` on HTTPS pages (same-origin, behind a TLS-terminating reverse proxy); covered by `url.test.ts` and used in production over HTTPS
 - [x] **Clipboard support**: text in both directions; respects the host's clipboard permission. Viewer → device is on request (1.5.0-4): when the pointer enters the remote view and before Ctrl/Cmd+V, the web client reads the browser clipboard and offers only its formats; the device asks for the text when an app on it reads the clipboard, and audits it ([design-clipboard-on-request.md](design-clipboard-on-request.md)). Reading needs the user's clipboard permission (Chromium); Firefox and Safari refuse reads without a user gesture
-- [ ] **Mobile browser**: Responsive layout and touch input handling
 - [x] **Login without polling**: redeem a one-time result from a same-origin callback page with a PKCE verifier ([design-oidc-login.md](design-oidc-login.md))
 - [x] **Viewer identity**: the login request names the logged-in user (`my_name`, as the native client sends it), so the device's connection prompt and the audit row's viewer name show the user instead of `web`; `my_id` stays `web` (a browser has no RustDesk ID)
 
@@ -102,6 +102,7 @@ Establish test coverage as a foundation for opinionated development.
 - **AV1**: the web client decodes VP9, H264 and H265 only.
 - **Translate keyboard mode**: the web client offers Map mode only.
 - **Restart remote device**: not supported; our builds turn remote restart off on devices, so the device denies it and the menu item stays hidden.
+- **Mobile browser**: no responsive layout or touch input; the supported viewers are Windows, macOS and Linux desktops.
 - **2FA**: not supported yet on any client; the web client follows when the native clients get it.
 - **Other native-only features**: terminal, camera, TCP tunneling and RDP, Switch Sides, direct IP and LAN discovery, WebRTC peer-to-peer (the web client always uses the relay), screen recording, voice call, Android navigation buttons and gestures.
 - **Upstream merge**: This fork diverges intentionally from upstream's closed-source direction. We track upstream Dart/Flutter changes but own the web-specific layer.
