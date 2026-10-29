@@ -63,13 +63,16 @@ vi.mock("./rendezvous.js", () => ({
 
 let nextWsResponse: any = {};
 let nextWsResponses: any[] = [];
+let nextOpenError: any;
+let nextWsError: any;
 
 vi.mock("./websock", () => {
   class MockWebsock {
     sendMessage = vi.fn();
     sendRendezvous = vi.fn();
-    open = vi.fn().mockResolvedValue(undefined);
+    open = vi.fn().mockImplementation(() => (nextOpenError ? Promise.reject(nextOpenError) : Promise.resolve(undefined)));
     next = vi.fn().mockImplementation(() => {
+      if (nextWsError) return Promise.reject(nextWsError);
       if (nextWsResponses.length) return Promise.resolve(nextWsResponses.shift());
       return Promise.resolve(nextWsResponse);
     });
@@ -149,6 +152,8 @@ describe("Connection", () => {
     vi.clearAllMocks();
     nextWsResponse = {};
     nextWsResponses = [];
+    nextOpenError = undefined;
+    nextWsError = undefined;
     conn = new Connection();
     (conn as any)._options = {};
     (conn as any)._id = "test-id";
@@ -1031,6 +1036,12 @@ describe("Connection", () => {
       await conn.start("test");
       expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "Reset by the peer", true);
     });
+
+    it("shows 'Reset by the peer' for a WebSocket error, as native", async () => {
+      (conn as any)._start = vi.fn().mockRejectedValue(new Event("error"));
+      await conn.start("test");
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "Reset by the peer", true);
+    });
   });
 
   describe("reconnect", () => {
@@ -1148,10 +1159,20 @@ describe("Connection", () => {
       expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "Key overuse", false);
     });
 
-    it("handles unrecognized nonzero failure with generic message", async () => {
+    it("shows the native text when the rendezvous server does not answer in time", async () => {
+      nextOpenError = "Timeout";
+      await expect((conn as any)._start("test-peer")).rejects.toBe("deadline has elapsed");
+    });
+
+    it("shows the native text when the punch hole request gets no answer", async () => {
+      nextWsError = "Timeout";
+      await expect((conn as any)._start("test-peer")).rejects.toBe("Failed to connect via rendezvous server");
+    });
+
+    it("shows the native text for an unrecognized failure", async () => {
       nextWsResponse = { punch_hole_response: { failure: 99 } };
       await (conn as any)._start("test-peer");
-      expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "Connection failed", false);
+      expect(globals.msgbox).toHaveBeenCalledWith("error", "Connection Error", "other punch hole failure", false);
     });
 
     it("handles relay_response with no version", async () => {
@@ -1221,6 +1242,12 @@ describe("Connection", () => {
 
       await expect(conn.connectRelay({ pk: new Uint8Array(32), uuid: "test-uuid" } as any))
         .rejects.toThrow("No WebSocket relay");
+    });
+
+    it("fails with the native text when the relay cannot be reached", async () => {
+      nextOpenError = "Timeout";
+      await expect(conn.connectRelay({ pk: new Uint8Array(32), uuid: "test-uuid" } as any))
+        .rejects.toBe("Failed to connect via relay server: Failed to connect to relay server");
     });
   });
 

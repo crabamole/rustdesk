@@ -120,7 +120,7 @@ export default class Connection {
       this.msgbox(
         "error",
         "Connection Error",
-        e.type == "close" ? "Reset by the peer" : String(e),
+        e.type == "close" || e.type == "error" ? "Reset by the peer" : String(e),
         !(e instanceof Error)
       );
     }
@@ -159,7 +159,10 @@ export default class Connection {
     console.log(
       new Date() + ": Connecting to rendezvous server: " + uri + ", for " + id
     );
-    await ws.open();
+    // As native: a WebSocket connect that times out fails with tokio's text.
+    await ws.open().catch((e) => {
+      throw e == "Timeout" ? "deadline has elapsed" : e;
+    });
     console.log(new Date() + ": Connected to rendezvous server");
     const conn_type = rendezvous.ConnType.DEFAULT_CONN;
     const nat_type = rendezvous.NatType.SYMMETRIC;
@@ -171,7 +174,10 @@ export default class Connection {
       token: localStorage.getItem("access_token") || undefined,
     });
     ws.sendRendezvous({ punch_hole_request });
-    const msg = (await ws.next()) as rendezvous.RendezvousMessage;
+    // As native client.rs: no answer to the punch hole request.
+    const msg = (await ws.next().catch(() => {
+      throw "Failed to connect via rendezvous server";
+    })) as rendezvous.RendezvousMessage;
     ws.close();
     console.log(new Date() + ": Got relay response");
     const phr = msg.punch_hole_response;
@@ -197,7 +203,7 @@ export default class Connection {
             this.msgbox("error", "Connection Error", "Key overuse");
             break;
           default:
-            this.msgbox("error", "Connection Error", "Connection failed");
+            this.msgbox("error", "Connection Error", "other punch hole failure");
             break;
         }
         return;
@@ -217,7 +223,10 @@ export default class Connection {
     const uuid = rr.uuid;
     console.log(new Date() + ": Connecting to relay server: " + uri);
     const ws = new Websock(uri, false);
-    await ws.open();
+    // As native client.rs: the same text for any failure to reach the relay.
+    await ws.open().catch(() => {
+      throw "Failed to connect via relay server: Failed to connect to relay server";
+    });
     console.log(new Date() + ": Connected to relay server");
     this._ws = ws;
     const request_relay = rendezvous.RequestRelay.fromPartial({
