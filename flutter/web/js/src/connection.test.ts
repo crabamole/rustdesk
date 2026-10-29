@@ -500,6 +500,11 @@ describe("Connection", () => {
       expect(sent().auth_2fa).toEqual({ code: "123456" });
     });
 
+    it("does not make the device wait for each frame, as native", () => {
+      (conn as any)._sendLoginMessage();
+      expect(sent().login_request.video_ack_required).toBeFalsy();
+    });
+
     it("sends a session ID in the login request", () => {
       (conn as any)._sendLoginMessage();
       expect(sent().login_request.session_id).toBe((conn as any)._sessionId);
@@ -1003,13 +1008,6 @@ describe("Connection", () => {
     });
   });
 
-  describe("sendVideoReceived", () => {
-    it("sends video_received misc message", () => {
-      conn.sendVideoReceived();
-      expect(mockWs.sendMessage).toHaveBeenCalled();
-    });
-  });
-
   describe("start", () => {
     it("catches and displays connection errors", async () => {
 
@@ -1059,7 +1057,7 @@ describe("Connection", () => {
       expect(globals.msgbox).toHaveBeenCalledWith("", "", "", false);
     });
 
-    it("warns once for a codec the browser does not decode and acks the frame", () => {
+    it("warns once for a codec the browser does not decode", () => {
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       (conn as any)._firstFrame = true;
 
@@ -1069,8 +1067,39 @@ describe("Connection", () => {
       const codecWarns = warnSpy.mock.calls.filter(c => c[0].includes("does not decode"));
       expect(codecWarns).toHaveLength(1);
       expect(codecWarns[0][0]).toContain("av1");
-      expect(mockWs.sendMessage).toHaveBeenCalled();
       warnSpy.mockRestore();
+    });
+
+    it("drops the backlog and asks for a key frame when the decoder falls behind", () => {
+      // A decoder that never catches up: every frame stays queued.
+      const decoders: any[] = [];
+      vi.stubGlobal("EncodedVideoChunk", class { constructor(public init: any) {} });
+      vi.stubGlobal("VideoDecoder", class {
+        state = "configured";
+        decodeQueueSize = 0;
+        constructor() { decoders.push(this); }
+        configure() {}
+        decode() { this.decodeQueueSize++; }
+        close() { this.state = "closed"; }
+      });
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      (conn as any)._firstFrame = true;
+      (conn as any)._webCodecs = new Set(["vp9"]);
+      const frame = (key: boolean) => ({ vp9s: { frames: [{ key, data: new Uint8Array([1]) }] } } as any);
+      const refreshes = () => mockWs.sendMessage.mock.calls.filter((c: any) => c[0].misc?.refresh_video).length;
+
+      conn.handleVideoFrame(frame(true));
+      for (let i = 0; i < 119; i++) conn.handleVideoFrame(frame(false));
+      expect(decoders[0].state).toBe("configured");
+      conn.handleVideoFrame(frame(false));
+      expect(decoders[0].state).toBe("closed");
+
+      conn.handleVideoFrame(frame(false));
+      expect(refreshes()).toBe(1);
+      conn.handleVideoFrame(frame(true));
+      expect(decoders[1].decodeQueueSize).toBe(1);
+      warnSpy.mockRestore();
+      vi.unstubAllGlobals();
     });
   });
 

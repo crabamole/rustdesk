@@ -73,6 +73,7 @@ Establish test coverage as a foundation for opinionated development.
 - [x] The remote cursor shape is the local mouse cursor
 - [x] More native session features (2026-10-27): Take screenshot (Save as downloads the PNG, Copy puts the image on the clipboard); Copy fingerprint (the device key); choosing a monitor shows it (the request carried the wrong display number, and the new display's first frame was lost while the decoder reloaded); follow remote cursor and window across monitors; display changes during a session; privacy mode and block user input with the device's replies; virtual displays (RustDesk and Amyuni drivers); choosing the Windows user session to view; the block input and privacy mode permissions hide what the device denies. A link `<web client>/#/<id>` opens a session to that device; a password in the link is ignored
 - [x] Session options are readable as soon as the session starts (Flutter read them before the connection loaded them)
+- [x] Frame rate does not depend on the network round trip: the device no longer waits for the browser to acknowledge each frame (as native). Before, a path with a 0.5 s round trip gave 1-2 fps. A browser that falls behind by 120 frames drops them and starts again at a new key frame, as native
 - [ ] Audit the 118 `UnimplementedError` stubs in `web/bridge.dart` — categorize as: needed, not-applicable-to-web, or deferred
 
 ### Phase 3: Features

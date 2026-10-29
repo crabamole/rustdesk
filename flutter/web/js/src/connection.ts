@@ -12,6 +12,8 @@ import { loadConfig, getConfigKey, getDefaultUri, getHost, getApiServer, getRela
 const CLIPBOARD_READ_TIMEOUT_MS = 4000;
 // The paste key waits for the read before an offer.
 const LOCAL_READ_TIMEOUT_MS = 300;
+// As native client::VIDEO_QUEUE_SIZE.
+const VIDEO_QUEUE_SIZE = 120;
 
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -83,8 +85,6 @@ export default class Connection {
   _unsupportedCodecWarned: boolean | undefined;
   _webCodecs: Set<Codec> = new Set();
   _wc: WebCodecsDecoder | undefined;
-  // Frames still to come out of _wc for each VideoFrame message, oldest first; acked when they are out.
-  _wcAcks: number[] = [];
   _clipboardAllowed: boolean;
   _lastClipboard: string | undefined;
   _offerSeq: number;
@@ -441,7 +441,6 @@ export default class Connection {
       password,
       session_id: this._sessionId,
       option: this.getOptionMessage(),
-      video_ack_required: true,
     });
     this._ws?.sendMessage({ login_request });
   }
@@ -482,11 +481,6 @@ export default class Connection {
     return msg;
   }
 
-  sendVideoReceived() {
-    const misc = message.Misc.fromPartial({ video_received: true });
-    this._ws?.sendMessage({ misc });
-  }
-
   /** As native: the device picks the codec (Auto) among those every viewer decodes. _start checks VP9. */
   supportedDecoding(): message.SupportedDecoding {
     return message.SupportedDecoding.fromPartial({
@@ -509,8 +503,6 @@ export default class Connection {
   closeWebCodecs() {
     this._wc?.close();
     this._wc = undefined;
-    this._wcAcks.forEach(() => this.sendVideoReceived());
-    this._wcAcks = [];
   }
 
   /** Decodes with WebCodecs; false when the browser cannot decode the frame's codec. */
@@ -524,10 +516,6 @@ export default class Connection {
         if (this._wc !== wc) return f.close();
         this.logDecodeTime(performance.now() - f.timestamp);
         globals.drawVideoFrame(f);
-        if (this._wcAcks.length && --this._wcAcks[0] <= 0) {
-          this._wcAcks.shift();
-          this.sendVideoReceived();
-        }
       }, (e) => {
         if (this._wc !== wc) return;
         // Stop using this codec; the device switches to VP9 when told. VP9 has no fallback.
@@ -545,14 +533,16 @@ export default class Connection {
       console.info("video: decoding " + codec + " with WebCodecs");
     }
     if (this._wc.decode(frames.frames)) {
-      this._wcAcks.push(frames.frames.length);
-    } else {
-      this.sendVideoReceived();
-      // A new decoder starts at a key frame; a still screen sends none unless asked.
-      if (!this._wc.askedKey) {
-        this._wc.askedKey = true;
-        this.refresh();
+      // As native (VIDEO_QUEUE_SIZE): a viewer that falls behind drops the backlog and
+      // starts again at a new key frame.
+      if (this._wc.queued > VIDEO_QUEUE_SIZE) {
+        console.warn("video: decoder fell behind, dropping " + this._wc.queued + " frames");
+        this.closeWebCodecs();
       }
+    } else if (!this._wc.askedKey) {
+      // A new decoder starts at a key frame; a still screen sends none unless asked.
+      this._wc.askedKey = true;
+      this.refresh();
     }
     return true;
   }
@@ -568,7 +558,6 @@ export default class Connection {
       console.warn("video: received a codec this browser does not decode: " + codec);
       this._unsupportedCodecWarned = true;
     }
-    this.sendVideoReceived();
   }
 
   handlePeerInfo(pi: message.PeerInfo) {

@@ -62,6 +62,11 @@ export class WebCodecsDecoder {
     return queued;
   }
 
+  /** Frames waiting to be decoded. */
+  get queued(): number {
+    return this.dec.decodeQueueSize;
+  }
+
   close() {
     if (this.dec.state != "closed") this.dec.close();
   }
