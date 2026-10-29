@@ -2,6 +2,8 @@
 
 Newest first. The release workflow copies a version's section into its GitHub Release.
 
+Native clients. From 2.0.0 the web client has its own version and notes: [web-client-release-notes.md](web-client-release-notes.md).
+
 ## 1.5.0-6
 
 - Device admission: a device shows "pending" or "rejected" in its home-page status line while an administrator has not admitted it. Needs rustdesk-server 1.1.16-7 and rustdesk-api 3.9.0 with the chart's `deviceAdmission` switch on; with the switch off nothing changes.

@@ -16,7 +16,6 @@ env:
   FLUTTER_VERSION: "3.24.5"
   VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
   VCPKG_COMMIT_ID: "9e593bb18ea69cc5095e012465dcd675a822ed0d"
-  VERSION: "1.5.0"
   RUSTDESK_CUSTOM_CLIENT_PK: ${{ vars.RUSTDESK_CUSTOM_CLIENT_PK }}
 
 jobs:
@@ -69,6 +68,11 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: recursive
+
+      - name: Read the version
+        shell: bash
+        # Cargo.toml holds the native clients' version (<upstream>-<n>); the files are named after it.
+        run: echo "VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)" >> "$GITHUB_ENV"
 
       - name: Set Swap Space
         uses: pierotofy/set-swap-space@49819abfb41bd9b44fb781159c033dba90353a7c # v1.0

@@ -1,7 +1,7 @@
-# Releases every client under one tag: the version in flutter/web/js/package.json (<upstream>-<n>).
-# web-docker.yml publishes the web-client image; this workflow builds the native installers,
-# creates the GitHub Release (and its tag) once all of them exist, then publishes them as an image
-# (installers-image.yml). A dispatch on any branch is a dry run.
+# Releases the native clients under the tag <version>, the version in Cargo.toml (<upstream>-<n>).
+# This workflow builds the installers, creates the GitHub Release (and its tag) once all of them
+# exist, then publishes them as an image (installers-image.yml). The web client has its own version
+# and release (web-docker.yml). A dispatch on any branch is a dry run.
 name: Release
 
 on:
@@ -30,7 +30,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          version=$(jq -r .version flutter/web/js/package.json)
+          version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
           echo "version=$version" >> "$GITHUB_OUTPUT"
           # Release only on a definite "not found"; any other lookup error fails the job.
           if out=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$version" 2>&1); then
@@ -84,7 +84,6 @@ jobs:
     env:
       VERSION: ${{ needs.version.outputs.version }}
       PUBLISH: ${{ needs.version.outputs.release == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-      IMAGE: ghcr.io/crabamole/rustdesk/web-client
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -97,12 +96,9 @@ jobs:
           pattern: c*
           merge-multiple: true
 
-      - name: Name the installers after the release version
+      - name: Check the installers
         working-directory: dist
         run: |
-          # The builds name their files after the upstream version (e.g. cRustDesk-1.4.9-x86_64.msi).
-          upstream=${VERSION%-*}
-          for f in *; do mv "$f" "${f/-$upstream-/-$VERSION-}"; done
           ls -l
           [ "$(ls | grep -c -- "-$VERSION-")" = 6 ] || { echo "expected 6 installers"; exit 1; }
           sha256sum * > SHA256SUMS
@@ -117,16 +113,6 @@ jobs:
             -o cyclonedx-json=/dev/stdout -q > "dist/cRustDesk-$VERSION.cdx.json"
           (cd dist && sha256sum "cRustDesk-$VERSION.cdx.json" >> SHA256SUMS)
           jq -e '.components | length > 1000' "dist/cRustDesk-$VERSION.cdx.json"
-
-      - name: Wait for the web-client image
-        if: env.PUBLISH == 'true'
-        run: |
-          for _ in $(seq 90); do
-            docker manifest inspect "$IMAGE:$VERSION" >/dev/null 2>&1 && exit 0
-            sleep 60
-          done
-          echo "$IMAGE:$VERSION was not published within 90 minutes"
-          exit 1
 
       - name: Attest the installers
         if: env.PUBLISH == 'true'
@@ -144,7 +130,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cat > notes.md <<EOF
-          Web client image: \`$IMAGE:$VERSION\`
           Installers image: \`ghcr.io/crabamole/rustdesk/installers:$VERSION\`
 
           Installers for the device (\`cRustDesk\`) and client-only (\`cRustDesk-client\`) variants.
