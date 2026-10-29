@@ -1,6 +1,6 @@
 # RustDesk OSS Web Client Roadmap
 
-**Updated:** 2026-10-27
+**Updated:** 2026-10-29
 
 Upstream RustDesk removed the open-source web client in favor of a closed-source Pro offering. This roadmap tracks our effort to revive and maintain the web client against the OSS rendezvous server (hbbs/hbbr).
 
@@ -15,14 +15,14 @@ The web client is the way to view without an install (no portable native build i
 ```
 Flutter Dart UI (93% shared with desktop/mobile)
        |
-   web/bridge.dart (JS interop, 118 methods stubbed)
+   web/bridge.dart (JS interop, 115 methods stubbed)
        |
    JS bridge: globals.js (setByName/getByName dispatch)
        |
    connection.ts (WebSocket + protobuf to hbbs/hbbr)
 ```
 
-The web client shares ~68K lines of Dart with native clients. The web-specific layer is ~4K lines of Dart + ~1.6K lines of TypeScript/JavaScript. The JS layer reimplements the connection protocol over WebSocket; it does not compile Rust to wasm.
+The web client shares ~68K lines of Dart with native clients. The web-specific layer is ~4K lines of Dart + ~2.5K lines of TypeScript/JavaScript. The JS layer reimplements the connection protocol over WebSocket; it does not compile Rust to wasm.
 
 ## Status
 
@@ -50,7 +50,7 @@ The web client shares ~68K lines of Dart with native clients. The web-specific l
 
 Establish test coverage as a foundation for opinionated development.
 
-- [x] **JS unit tests (vitest)**: vitest in `flutter/web/js/` — 8 suites (url, globals, connection, websock, codec, common, lang, ui), ~80% line coverage. Original priority targets:
+- [x] **JS unit tests (vitest)**: vitest in `flutter/web/js/` — 8 suites (url, globals, connection, websock, common, lang, ui, pkce), ~82% line coverage. Original priority targets:
   - `getrUriFromRs()` / `getDefaultUri()` — URI construction logic
   - `jsonfyForDart()` — payload serialization
   - `getByName`/`setByName` option handlers — defaults, read/write, server config blocking
@@ -74,7 +74,7 @@ Establish test coverage as a foundation for opinionated development.
 - [x] More native session features (2026-10-27): Take screenshot (Save as downloads the PNG, Copy puts the image on the clipboard); Copy fingerprint (the device key); choosing a monitor shows it (the request carried the wrong display number, and the new display's first frame was lost while the decoder reloaded); follow remote cursor and window across monitors; display changes during a session; privacy mode and block user input with the device's replies; virtual displays (RustDesk and Amyuni drivers); choosing the Windows user session to view; the block input and privacy mode permissions hide what the device denies. A link `<web client>/#/<id>` opens a session to that device; a password in the link is ignored
 - [x] Session options are readable as soon as the session starts (Flutter read them before the connection loaded them)
 - [x] Frame rate does not depend on the network round trip: the device no longer waits for the browser to acknowledge each frame (as native). Before, a path with a 0.5 s round trip gave 1-2 fps. A browser that falls behind by 120 frames drops them and starts again at a new key frame, as native
-- [ ] Audit the 118 `UnimplementedError` stubs in `web/bridge.dart` — categorize as: needed, not-applicable-to-web, or deferred
+- [ ] Audit the 115 `UnimplementedError` stubs in `web/bridge.dart` — categorize as: needed, not-applicable-to-web, or deferred
 
 ### Phase 3: Features
 
@@ -99,6 +99,7 @@ Establish test coverage as a foundation for opinionated development.
 - **File transfer**: not planned; our DC build turns file transfer off on devices (data-out lock).
 - **Auto-connect via URL parameters** (`?id=…&pw=…`): dropped until there is a secure design; a password in the URL ends up in browser history, proxy logs and the Referer header.
 - **Codec menu and 4:4:4**: the codec menu stays native-only.
+- **AV1**: the web client decodes VP9, H264 and H265 only.
 - **Translate keyboard mode**: the web client offers Map mode only.
 - **Restart remote device**: not supported; our builds turn remote restart off on devices, so the device denies it and the menu item stays hidden.
 - **2FA**: not supported yet on any client; the web client follows when the native clients get it.
@@ -120,9 +121,10 @@ Reviewed for feature inspiration (none have strong traction):
 | File | Purpose |
 |------|---------|
 | `flutter/web/js/src/connection.ts` | WebSocket connection to hbbs/hbbr |
+| `flutter/web/js/src/webcodecs.ts` | Video decoding (WebCodecs) |
 | `flutter/web/js/src/globals.js` | JS bridge (setByName/getByName dispatch) |
-| `flutter/lib/web/bridge.dart` | Dart-side bridge (118 stubs) |
+| `flutter/lib/web/bridge.dart` | Dart-side bridge (115 stubs) |
 | `flutter/lib/models/web_model.dart` | Web platform FFI |
 | `flutter/lib/mobile/widgets/dialog.dart` | Server settings dialog (read-only on web) |
 | `flutter/web/config.json` | Server config (host/key) |
-| `docker/web-client/Dockerfile` | Web client image: browser codecs, Flutter web build, nginx |
+| `docker/web-client/Dockerfile` | Web client image: Opus audio decoder, Flutter web build, nginx |
