@@ -1,6 +1,6 @@
 # RustDesk OSS Web Client Roadmap
 
-**Updated:** 2026-10-29
+**Updated:** 2026-10-30
 
 Upstream RustDesk removed the open-source web client in favor of a closed-source Pro offering. This roadmap tracks our effort to revive and maintain the web client against the OSS rendezvous server (hbbs/hbbr).
 
@@ -82,7 +82,7 @@ Establish test coverage as a foundation for opinionated development.
 
 ### Phase 4: Operations
 
-- [x] CI/CD pipeline: pushes to master build the Docker image; a version bump in `flutter/web/js/package.json` publishes it; the release workflow tags `<version>` for all clients (`web-client-<version>` before 1.4.9-7)
+- [x] CI/CD pipeline: pushes to master build the Docker image; a version bump in `flutter/web/js/package.json` publishes it and creates the GitHub Release `web-client-<version>` with its section of [web-client-release-notes.md](web-client-release-notes.md). The web client has its own version from 2.0.0; from 1.4.9-7 to 1.5.0-6 it shared the native clients' tag `<version>`
 - [x] Helm chart: `oci://ghcr.io/crabamole/charts/rustdesk` with the webclient deployment; nginx serves the static files and the chart's Istio VirtualService routes `/ws/id`, `/ws/relay/<n>` and `/api/` to the servers
 - [x] Health check endpoint or readiness probe (liveness/readiness probes in the Helm chart's webclient Deployment)
 - [x] Deployment: the Helm chart README covers the web client

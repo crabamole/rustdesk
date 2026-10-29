@@ -8,6 +8,10 @@ on:
       - 'flutter/assets/**'
       - 'flutter/pubspec.*'
       - 'src/lang/**'
+      - 'src/client.rs'
+      - 'libs/hbb_common'
+      - 'libs/base/protos/**'
+      - 'docs/web-client-release-notes.md'
       - 'docker/web-client/**'
       - '.github/workflows/web-docker.yml'
       - '.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff'
@@ -19,6 +23,10 @@ on:
       - 'flutter/assets/**'
       - 'flutter/pubspec.*'
       - 'src/lang/**'
+      - 'src/client.rs'
+      - 'libs/hbb_common'
+      - 'libs/base/protos/**'
+      - 'docs/web-client-release-notes.md'
       - 'docker/web-client/**'
       - '.github/workflows/web-docker.yml'
       - '.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff'
@@ -47,13 +55,6 @@ jobs:
       - name: Install protoc
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
-      - name: Check the version matches upstream RustDesk
-        run: |
-          # flutter/web/js/package.json holds <upstream RustDesk version>-<our build number>.
-          version=$(jq -r .version flutter/web/js/package.json)
-          upstream=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
-          [[ "$version" =~ ^${upstream//./\\.}-[0-9]+$ ]] || { echo "package.json version $version must be $upstream-<n>"; exit 1; }
-
       - name: Install and test
         working-directory: flutter/web/js
         run: |
@@ -66,7 +67,7 @@ jobs:
     needs: test
     runs-on: ubuntu-22.04
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - name: Checkout
@@ -75,23 +76,35 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
-      - name: Check if this version is published
+      - name: Check if this version is released
         id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # The web client has its own version, apart from the native clients' Cargo.toml version.
           version=$(jq -r .version flutter/web/js/package.json)
           echo "version=$version" >> "$GITHUB_OUTPUT"
           # A dispatch on master publishes too, for a push that started no run.
           if [ "${{ github.event_name }}" = pull_request ] || [ "${{ github.ref }}" != refs/heads/master ]; then
             echo "publish=false" >> "$GITHUB_OUTPUT"
           # Publish only on a definite "not found"; any other lookup error fails the job.
-          elif out=$(docker manifest inspect "$IMAGE_NAME:$version" 2>&1); then
+          elif out=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/web-client-$version" 2>&1); then
             echo "publish=false" >> "$GITHUB_OUTPUT"
-          elif grep -qiE 'manifest unknown|no such manifest|not found' <<<"$out"; then
+          elif grep -q 'HTTP 404' <<<"$out"; then
             echo "publish=true" >> "$GITHUB_OUTPUT"
           else
             echo "$out" >&2
             exit 1
           fi
+
+      # The release needs this section; fail here, before the build.
+      - name: Check the release notes
+        if: steps.check.outputs.publish == 'true'
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          awk -v v="## $VERSION" '$0 == v {f = 1; next} /^## / {f = 0} f' docs/web-client-release-notes.md > section.md
+          [ -s section.md ] || { echo "docs/web-client-release-notes.md has no section for $VERSION"; exit 1; }
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -113,3 +126,14 @@ jobs:
           tags: ${{ env.IMAGE_NAME }}:${{ steps.check.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Create the release
+        if: steps.check.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          { echo "Web client image: \`$IMAGE_NAME:$VERSION\`"; echo; cat section.md; } > notes.md
+          # The latest release stays the native clients' one.
+          gh release create "web-client-$VERSION" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "cRustDesk web client $VERSION" --notes-file notes.md --latest=false

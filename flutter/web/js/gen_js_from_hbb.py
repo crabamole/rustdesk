@@ -3,6 +3,7 @@
 import re
 import os
 import glob
+import json
 from tabnanny import check
 
 def pad_start(s, n, c = ' '):
@@ -70,9 +71,8 @@ def main():
    print('export const KEY_MAP: any = {')
    print(KEY_MAP[0])
    print('}')
-   for ln in open('../../../Cargo.toml', encoding='utf-8'):
-      if ln.startswith('version ='):
-         print('export const ' + ln)
+   # The web client has its own version, apart from the native clients' Cargo.toml version.
+   print('export const version = "%s";' % json.load(open('package.json', encoding='utf-8'))['version'])
 
 
 def removeComment(ln):
