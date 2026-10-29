@@ -107,16 +107,6 @@ Establish test coverage as a foundation for opinionated development.
 - **Other native-only features**: terminal, camera, TCP tunneling and RDP, Switch Sides, direct IP and LAN discovery, WebRTC peer-to-peer (the web client always uses the relay), screen recording, voice call, Android navigation buttons and gestures.
 - **Upstream merge**: This fork diverges intentionally from upstream's closed-source direction. We track upstream Dart/Flutter changes but own the web-specific layer.
 
-## Community Forks
-
-Reviewed for feature inspiration (none have strong traction):
-
-| Fork | Stars | Status | Notable Features |
-|------|-------|--------|-----------------|
-| MonsieurBiche/rustdesk-web-client | 20 | Stale (Oct 2024) | WSS, auto-connect URL params, mobile fixes |
-| pmietlicki/docker-rustdesk-web-client | 27 | Active | Docker packaging |
-| linkzy/rustdesk-custom-web-client | 3 | New (2026) | Self-hosted relay focus |
-
 ## Key Files
 
 | File | Purpose |
