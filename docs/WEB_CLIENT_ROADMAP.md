@@ -6,9 +6,7 @@ Upstream RustDesk removed the open-source web client in favor of a closed-source
 
 ## Next
 
-The web client is the way to view without an install (no portable native build is planned), so these come first:
-
-1. Audit the 115 bridge stubs ([Phase 2](#phase-2-connection-reliability))
+The web client is the way to view without an install (no portable native build is planned). No item is planned now; the open items are Flutter widget tests ([Phase 1](#phase-1-testing-infrastructure)) and the config.json reference ([Phase 4](#phase-4-operations)).
 
 ## Architecture Overview
 
@@ -74,7 +72,7 @@ Establish test coverage as a foundation for opinionated development.
 - [x] More native session features (2026-10-27): Take screenshot (Save as downloads the PNG, Copy puts the image on the clipboard); Copy fingerprint (the device key); choosing a monitor shows it (the request carried the wrong display number, and the new display's first frame was lost while the decoder reloaded); follow remote cursor and window across monitors; display changes during a session; privacy mode and block user input with the device's replies; virtual displays (RustDesk and Amyuni drivers); choosing the Windows user session to view; the block input and privacy mode permissions hide what the device denies. A link `<web client>/#/<id>` opens a session to that device; a password in the link is ignored
 - [x] Session options are readable as soon as the session starts (Flutter read them before the connection loaded them)
 - [x] Frame rate does not depend on the network round trip: the device no longer waits for the browser to acknowledge each frame (as native). Before, a path with a 0.5 s round trip gave 1-2 fps. A browser that falls behind by 120 frames drops them and starts again at a new key frame, as native
-- [ ] Audit the 115 `UnimplementedError` stubs in `web/bridge.dart` — categorize as: needed, not-applicable-to-web, or deferred
+- [x] Audit the 115 `UnimplementedError` stubs in `web/bridge.dart` (2026-10-29): no web screen, toolbar item or web event reaches 114 of them. The one left is `sessionSendPointer`, a two-finger pinch on the remote image with a touch screen; pinch is not supported on web (see Non-Goals). The stubs stay: the shared Dart code calls them
 
 ### Phase 3: Features
 
@@ -101,6 +99,7 @@ Establish test coverage as a foundation for opinionated development.
 - **AV1**: the web client decodes VP9, H264 and H265 only.
 - **Translate keyboard mode**: the web client offers Map mode only.
 - **Restart remote device**: not supported; our builds turn remote restart off on devices, so the device denies it and the menu item stays hidden.
+- **Pinch on the remote image**: not supported; a two-finger pinch on a touch screen reaches the `sessionSendPointer` stub.
 - **Mobile browser**: no responsive layout or touch input; the supported viewers are Windows, macOS and Linux desktops.
 - **2FA**: not supported yet on any client; the web client follows when the native clients get it.
 - **Other native-only features**: terminal, camera, TCP tunneling and RDP, Switch Sides, direct IP and LAN discovery, WebRTC peer-to-peer (the web client always uses the relay), screen recording, voice call, Android navigation buttons and gestures.
