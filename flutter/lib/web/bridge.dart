@@ -1233,7 +1233,7 @@ class RustdeskImpl {
   }
 
   Future<int> cmGetClientsLength({dynamic hint}) {
-    throw UnimplementedError("cmCheckClientsLength");
+    throw UnimplementedError("cmGetClientsLength");
   }
 
   Future<void> mainInit({required String appDir, dynamic hint}) {
@@ -1537,7 +1537,7 @@ class RustdeskImpl {
   }
 
   void mainInitInputSource({dynamic hint}) {
-    throw UnimplementedError("mainIsInstalled");
+    throw UnimplementedError("mainInitInputSource");
   }
 
   bool mainIsInstalledLowerVersion({dynamic hint}) {
