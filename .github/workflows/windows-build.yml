@@ -40,7 +40,7 @@ jobs:
           fi
 
       - name: Checkout source code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Verify the custom.txt files against the key
         # Fails before the long build if the committed custom.txt was signed with another key.
@@ -68,15 +68,8 @@ jobs:
     needs: [build-RustDeskTempTopMostWindow, generate-bridge]
     runs-on: windows-2022
     steps:
-      - name: Export GitHub Actions cache environment variables
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
-        with:
-          script: |
-            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
       - name: Checkout source code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
 
@@ -86,7 +79,7 @@ jobs:
         run: echo "VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)" >> "$GITHUB_ENV"
 
       - name: Restore bridge files
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: bridge-artifact-windows
           path: ./
@@ -97,7 +90,7 @@ jobs:
           version: ${{ env.LLVM_VERSION }}
 
       - name: Install flutter
-        uses: subosito/flutter-action@2783a3f08e1baf891508463f8c6653c258246225 # v2.12.0
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           channel: "stable"
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -126,12 +119,12 @@ jobs:
           targets: x86_64-pc-windows-msvc
           components: "rustfmt"
 
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - uses: Swatinem/rust-cache@63fed3e2fecf6f7b51dc6f043341b79ef82a9ae7 # v2.9.2
         with:
           prefix-key: windows-2022
 
       - name: Setup vcpkg with Github Actions binary cache
-        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11
+        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11.6
         with:
           vcpkgDirectory: C:\vcpkg
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
@@ -169,7 +162,7 @@ jobs:
           mv -Force .\usbmmidd_v2 ./rustdesk
 
       - name: Download RustDeskTempTopMostWindow artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: topmostwindow-artifacts-x64
           path: "./rustdesk"
@@ -182,7 +175,7 @@ jobs:
 
       - name: Upload the files to sign
         if: inputs.sign
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-dist
           path: dist
@@ -190,7 +183,7 @@ jobs:
 
       - name: Add MSBuild to PATH
         if: ${{ !inputs.sign }}
-        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
       - name: Build the MSIs
         if: ${{ !inputs.sign }}
@@ -243,7 +236,7 @@ jobs:
 
       - name: Upload cRustDesk msi
         if: ${{ !inputs.sign }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: cRustDesk-windows-x86_64-msi
           path: SignOutput/cRustDesk-${{ env.VERSION }}-x86_64.msi
@@ -251,7 +244,7 @@ jobs:
 
       - name: Upload cRustDesk client msi
         if: ${{ !inputs.sign }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: cRustDesk-client-windows-x86_64-msi
           path: SignOutput/cRustDesk-client-${{ env.VERSION }}-x86_64.msi
@@ -297,7 +290,7 @@ jobs:
         run: Get-ChildItem -Force | Remove-Item -Recurse -Force
 
       - name: Download the files to sign
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: windows-dist
           path: dist
@@ -342,7 +335,7 @@ jobs:
           "verified $(@($files).Count) files"
 
       - name: Upload the signed files
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-dist-signed
           path: dist
@@ -354,7 +347,7 @@ jobs:
     runs-on: windows-2022
     steps:
       - name: Checkout source code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Read the version
         shell: bash
@@ -362,13 +355,13 @@ jobs:
         run: echo "VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)" >> "$GITHUB_ENV"
 
       - name: Download the signed files
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: windows-dist-signed
           path: dist
 
       - name: Add MSBuild to PATH
-        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
+        uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
       # Same as "Build the MSIs" and "Verify the MSIs" in job build.
       - name: Build the MSIs
@@ -419,7 +412,7 @@ jobs:
           Check (Resolve-Path SignOutput/cRustDesk-client-${{ env.VERSION }}-x86_64.msi).Path (Resolve-Path res/custom/client.txt).Path
 
       - name: Upload the MSIs to sign
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-msi-unsigned
           path: SignOutput/*.msi
@@ -442,7 +435,7 @@ jobs:
         run: Get-ChildItem -Force | Remove-Item -Recurse -Force
 
       - name: Download the MSIs
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: windows-msi-unsigned
           path: SignOutput
@@ -461,7 +454,7 @@ jobs:
           }
 
       - name: Upload cRustDesk msi
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: cRustDesk-windows-x86_64-msi
           path: SignOutput/cRustDesk-[0-9]*-x86_64.msi
@@ -469,7 +462,7 @@ jobs:
           retention-days: 30
 
       - name: Upload cRustDesk client msi
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: cRustDesk-client-windows-x86_64-msi
           path: SignOutput/cRustDesk-client-*-x86_64.msi

@@ -31,7 +31,7 @@ jobs:
           fi
 
       - name: Checkout source code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Verify the custom.txt files against the key
         # Fails before the long build if the committed custom.txt was signed with another key.
@@ -49,23 +49,17 @@ jobs:
     needs: [check-signing-key, generate-bridge]
     runs-on: ubuntu-22.04
     steps:
-      - name: Export GitHub Actions cache environment variables
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
-        with:
-          script: |
-            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
-            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
-
       - name: Maximize build space
         run: |
           sudo rm -rf /opt/ghc
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /usr/share/dotnet
+          sudo docker system prune -a --volumes -f
           sudo apt-get update -y
           sudo apt-get install -y nasm qemu-user-static
 
       - name: Checkout source code
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
 
@@ -102,13 +96,13 @@ jobs:
           sed -i  "s/\[\"cdylib\", \"staticlib\", \"rlib\"\]/\[\"cdylib\"\]/g" Cargo.toml
 
       - name: Restore bridge files
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: bridge-artifact-linux
           path: ./
 
       - name: Setup vcpkg with Github Actions binary cache
-        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11
+        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11.6
         with:
           vcpkgDirectory: /opt/artifacts/vcpkg
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
@@ -133,12 +127,13 @@ jobs:
           head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-x64-linux-rel-out.log" || true
         shell: bash
 
-      - uses: rustdesk-org/run-on-arch-action@d3fcfbb632b84cf7f6bc772bfaaa2c2f4f8789a8 # no release tag; commit 2026-05-26
+      - uses: uraimo/run-on-arch-action@fa1f3e7de95534497266c7265950b5188355fbfb # v3.2.1
         name: Build rustdesk
         id: vcpkg
         with:
-          arch: x86_64
-          distro: ubuntu18.04
+          arch: none
+          distro: none
+          base_image: amd64/ubuntu:18.04
           githubToken: ${{ github.token }}
           # The key is compiled in by env! and must reach the container.
           env: |
@@ -251,14 +246,14 @@ jobs:
           bash res/linux/check-variant.sh "crustdesk-client-$VERSION-x86_64.deb" res/custom/client.txt client
 
       - name: Upload crustdesk deb
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: crustdesk-linux-x86_64-deb
           path: crustdesk-${{ env.VERSION }}-x86_64.deb
           retention-days: 30
 
       - name: Upload crustdesk client deb
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: crustdesk-client-linux-x86_64-deb
           path: crustdesk-client-${{ env.VERSION }}-x86_64.deb
