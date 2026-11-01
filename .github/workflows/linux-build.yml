@@ -55,6 +55,7 @@ jobs:
           submodules: recursive
 
       - name: Install prerequisites
+        # libunwind-dev (for GStreamer) replaces the image's libunwind-14-dev; apt removes that only when asked by name.
         run: |
           sudo apt-get update -y
           sudo apt-get install -y \
@@ -67,6 +68,7 @@ jobs:
             libgstreamer-plugins-base1.0-dev \
             libgtk-3-dev \
             libpulse-dev \
+            libunwind-dev \
             libva-dev \
             libxcb-randr0-dev \
             libxcb-shape0-dev \
