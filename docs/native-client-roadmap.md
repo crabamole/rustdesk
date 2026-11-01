@@ -19,7 +19,7 @@ Stock RustDesk clients work with our server stack, but some features need a clie
 - [x] Linux x86_64: one `.deb` per variant (`crustdesk-<ver>-x86_64.deb`, `crustdesk-client-<ver>-x86_64.deb`), Ubuntu, X11 only. Package `crustdesk`, `Conflicts: rustdesk, rustdesk-unattended-wayland`; upstream's stock-layout package is renamed by a post-build step
 - [x] macOS arm64: signed, notarized, stapled `cRustDesk` app (DC and client variants) shipped as a zip
 - macOS x86_64 (Intel): not supported; arm64 only
-- [ ] CI speed: vcpkg cache not effective (12–15 min per run)
+- [x] CI speed: vcpkg packages come from the Actions cache; the Linux tests run beside the build
 - [ ] Linux build base: Rust builds in an Ubuntu 18.04 container (as upstream) while vcpkg builds the codecs on the Ubuntu 22.04 runner; since 1.5.0 the codecs need glibc 2.28 (`fcntl64`), so the package no longer runs on 18.04 anyway and the tests skip `hwcodec` to link. Decide with the supported-distro list whether to build everything on 22.04 (glibc 2.35, Ubuntu 22.04+ / Debian 12+)
 - [x] `custom.txt` signing key is a required build parameter (`RUSTDESK_CUSTOM_CLIENT_PK`, base64 Ed25519 public key); builds fail without it and never trust RustDesk's key. Sign with `rustdesk-utils signcustom` (rustdesk-server)
 - [x] macOS: Apple Developer ID signing and notarization (Gatekeeper)
