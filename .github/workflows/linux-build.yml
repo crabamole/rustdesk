@@ -175,6 +175,7 @@ jobs:
           doNotCache: true
 
       - name: Restore the vcpkg binary cache
+        id: vcpkg-restore
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/vcpkg-bincache
@@ -208,6 +209,7 @@ jobs:
         run: bash .github/scripts/prune-vcpkg-cache.sh "$RUNNER_TEMP/vcpkg-bincache" "$VCPKG_ROOT/installed"
 
       - name: Save the vcpkg binary cache
+        if: steps.vcpkg-cache.outputs.key != steps.vcpkg-restore.outputs.cache-matched-key
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/vcpkg-bincache
