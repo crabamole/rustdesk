@@ -14,7 +14,6 @@ concurrency:
 env:
   RUST_VERSION: "1.75"
   FLUTTER_VERSION: "3.24.5"
-  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
   VCPKG_COMMIT_ID: "9e593bb18ea69cc5095e012465dcd675a822ed0d"
   RUSTDESK_CUSTOM_CLIENT_PK: ${{ vars.RUSTDESK_CUSTOM_CLIENT_PK }}
 
@@ -44,6 +43,71 @@ jobs:
     uses: ./.github/workflows/bridge.yml
     with:
       artifact-name: bridge-artifact-linux
+
+  test:
+    # A job of its own, so it runs beside the long container build.
+    needs: [check-signing-key, generate-bridge]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+
+      - name: Install prerequisites
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            clang \
+            cmake \
+            libasound2-dev \
+            libayatana-appindicator3-dev \
+            libclang-dev \
+            libgstreamer1.0-dev \
+            libgstreamer-plugins-base1.0-dev \
+            libgtk-3-dev \
+            libpulse-dev \
+            libva-dev \
+            libxcb-randr0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            libxdo-dev \
+            libxfixes-dev \
+            nasm \
+            ninja-build \
+            pkg-config
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: Restore bridge files
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: bridge-artifact-linux
+          path: ./
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11.6
+        with:
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
+          doNotCache: true
+
+      - name: Restore the vcpkg binary cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/vcpkg-bincache
+          key: vcpkg-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: vcpkg-${{ runner.os }}-
+
+      - name: Install vcpkg dependencies
+        env:
+          VCPKG_BINARY_SOURCES: clear;files,${{ runner.temp }}/vcpkg-bincache,read
+        run: $VCPKG_ROOT/vcpkg install --triplet x64-linux --x-install-root="$VCPKG_ROOT/installed"
+
+      - name: Run the account tests
+        run: cargo test --locked --lib --features flutter,unix-file-copy-paste -- hbbs_http::account::tests
 
   build:
     needs: [check-signing-key, generate-bridge]
@@ -101,14 +165,23 @@ jobs:
           name: bridge-artifact-linux
           path: ./
 
-      - name: Setup vcpkg with Github Actions binary cache
+      - name: Setup vcpkg
         uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11.6
         with:
           vcpkgDirectory: /opt/artifacts/vcpkg
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
-          doNotCache: false
+          doNotCache: true
+
+      - name: Restore the vcpkg binary cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/vcpkg-bincache
+          key: vcpkg-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: vcpkg-${{ runner.os }}-
 
       - name: Install vcpkg dependencies
+        env:
+          VCPKG_BINARY_SOURCES: clear;files,${{ runner.temp }}/vcpkg-bincache,readwrite
         run: |
           sudo apt install -y libva-dev && apt show libva-dev
           if ! $VCPKG_ROOT/vcpkg \
@@ -126,6 +199,17 @@ jobs:
           fi
           head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-x64-linux-rel-out.log" || true
         shell: bash
+
+      - name: Prune the vcpkg binary cache
+        id: vcpkg-cache
+        shell: bash
+        run: bash .github/scripts/prune-vcpkg-cache.sh "$RUNNER_TEMP/vcpkg-bincache" "$VCPKG_ROOT/installed"
+
+      - name: Save the vcpkg binary cache
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/vcpkg-bincache
+          key: ${{ steps.vcpkg-cache.outputs.key }}
 
       - uses: uraimo/run-on-arch-action@fa1f3e7de95534497266c7265950b5188355fbfb # v3.2.1
         name: Build rustdesk
@@ -206,8 +290,6 @@ jobs:
             pushd /workspace
             export VCPKG_ROOT=/opt/artifacts/vcpkg
             cargo build --locked --lib --features hwcodec,flutter,unix-file-copy-paste --release
-            # Without hwcodec: its ffmpeg calls fcntl64, which this container's glibc lacks, so a test binary cannot link.
-            cargo test --locked --lib --features flutter,unix-file-copy-paste --release -- hbbs_http::account::tests
             rm -rf target/release/deps target/release/build
             rm -rf ~/.cargo
 

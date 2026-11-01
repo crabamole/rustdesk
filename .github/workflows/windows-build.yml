@@ -23,7 +23,6 @@ env:
   SCITER_RUST_VERSION: "1.75"
   LLVM_VERSION: "15.0.6"
   FLUTTER_VERSION: "3.24.5"
-  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
   VCPKG_COMMIT_ID: "9e593bb18ea69cc5095e012465dcd675a822ed0d"
   RUSTDESK_CUSTOM_CLIENT_PK: ${{ vars.RUSTDESK_CUSTOM_CLIENT_PK }}
 
@@ -123,15 +122,23 @@ jobs:
         with:
           prefix-key: windows-2022
 
-      - name: Setup vcpkg with Github Actions binary cache
+      - name: Setup vcpkg
         uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11.6
         with:
           vcpkgDirectory: C:\vcpkg
           vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
-          doNotCache: false
+          doNotCache: true
+
+      - name: Restore the vcpkg binary cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/vcpkg-bincache
+          key: vcpkg-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: vcpkg-${{ runner.os }}-
 
       - name: Install vcpkg dependencies
         env:
+          VCPKG_BINARY_SOURCES: clear;files,${{ runner.temp }}/vcpkg-bincache,readwrite
           VCPKG_DEFAULT_HOST_TRIPLET: x64-windows-static
         run: |
           if ! $VCPKG_ROOT/vcpkg \
@@ -148,6 +155,17 @@ jobs:
             exit 1
           fi
         shell: bash
+
+      - name: Prune the vcpkg binary cache
+        id: vcpkg-cache
+        shell: bash
+        run: bash .github/scripts/prune-vcpkg-cache.sh "$RUNNER_TEMP/vcpkg-bincache" "$VCPKG_ROOT/installed"
+
+      - name: Save the vcpkg binary cache
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/vcpkg-bincache
+          key: ${{ steps.vcpkg-cache.outputs.key }}
 
       - name: Build rustdesk
         run: |

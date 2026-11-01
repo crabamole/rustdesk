@@ -124,8 +124,6 @@ jobs:
           file: docker/web-client/Dockerfile
           push: ${{ steps.check.outputs.publish == 'true' }}
           tags: ${{ env.IMAGE_NAME }}:${{ steps.check.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Create the release
         if: steps.check.outputs.publish == 'true'
