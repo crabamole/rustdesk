@@ -101,7 +101,7 @@ From 1.5.0-3 on, `cRustDesk-<ver>.cdx.json` next to the installers is the releas
 
 Pick a variant per machine:
 
-| Machine | Variant | Windows x64 (signed MSI) | Ubuntu x86_64, X11 | macOS arm64 (signed, notarized) |
+| Machine | Variant | Windows x64 (signed MSI) | Ubuntu 22.04 or later, x86_64, X11 | macOS arm64 (signed, notarized) |
 |---|---|---|---|---|
 | Controlled (and may control others) | DC | `cRustDesk-<ver>-x86_64.msi` | `crustdesk-<ver>-x86_64.deb` | `cRustDesk-<ver>-aarch64.zip` |
 | Only connects to others | Client | `cRustDesk-client-<ver>-x86_64.msi` | `crustdesk-client-<ver>-x86_64.deb` | `cRustDesk-client-<ver>-aarch64.zip` |
