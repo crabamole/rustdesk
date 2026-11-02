@@ -20,6 +20,10 @@ sed -i -e 's/^Package: .*/Package: crustdesk/' -e 's/^Maintainer: .*/Maintainer:
   -e 's/^Homepage: .*/Homepage: https:\/\/github.com\/crabamole\/rustdesk/' -e '/^Replaces:/d' -e '/^Provides:/d' -e '/^Conflicts:/d' DEBIAN/control
 sed -i '0,/^Description:/s/^Description: .*/Description: cRustDesk, a RustDesk fork by crabamole/' DEBIAN/control
 sed -i '/^Package:/a Conflicts: rustdesk, rustdesk-unattended-wayland' DEBIAN/control
+# Upstream declares no libc6 floor; without one apt installs on a release whose glibc is older than the build's.
+floor=$({ find usr/share/crustdesk -type f -exec grep -aoh 'GLIBC_2\.[0-9]*' {} + || true; } | sort -t. -k2 -n | tail -1 | cut -d_ -f2)
+[ -n "$floor" ] || { echo "no GLIBC_2.x symbol version found" >&2; exit 1; }
+sed -i "s/^Depends: .*/&, libc6 (>= $floor)/" DEBIAN/control
 # Display names only; the link scheme stays rustdesk.
 sed -i 's/^Name=RustDesk$/Name=cRustDesk/' usr/share/applications/crustdesk*.desktop
 sed -i 's/^Description=RustDesk$/Description=cRustDesk/' usr/share/crustdesk/files/systemd/crustdesk.service

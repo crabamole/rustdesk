@@ -12,6 +12,7 @@ has() { grep -qE -- "$2" "$1" 2>/dev/null || fail "$1: missing $2"; }
 has DEBIAN/control '^Package: crustdesk$'
 has DEBIAN/control '^Description: .*RustDesk fork'
 has DEBIAN/control '^Conflicts: rustdesk, rustdesk-unattended-wayland$'
+has DEBIAN/control '^Depends: .*, libc6 \(>= 2\.[0-9]+\)$'
 has DEBIAN/control '^Maintainer: crabamole <592046\+rophy@users.noreply.github.com>$'
 ! grep -qE '^(Replaces|Provides):' DEBIAN/control || fail "DEBIAN/control: Replaces/Provides present"
 
