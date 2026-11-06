@@ -152,7 +152,7 @@ Data loss prevention controls for regulated environments.
 - [x] Console and CLI: pending list, admit, reject, reset to pending
 - [x] Our desktop builds show pending or rejected on the device (heartbeat field `admission`)
 - [x] Phase 2: admission webhook — the api-server asks a deployment-owned service (e.g. an asset inventory) to admit or reject pending devices; signed with a dedicated Ed25519 key. A runnable example receiver is in rustdesk-api `examples/admission-webhook`
-- Status: merged, not released. rustdesk-server and rustdesk-api must ship together (migrations 0019 and 0020)
+- Status: released (rustdesk-server 1.1.16-7, rustdesk-api 3.9.0, clients 1.5.0-6). rustdesk-server and rustdesk-api must ship together (migrations 0019 and 0020). Verified on Linux, Windows and macOS (2026-11-06)
 - Design: [design-device-admission.md](design-device-admission.md); works with stock clients
 
 ## Pagination

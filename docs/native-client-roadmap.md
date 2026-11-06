@@ -1,15 +1,12 @@
 # Native Client Build Roadmap
 
-**Updated:** 2026-10-26
+**Updated:** 2026-11-06
 
 Stock RustDesk clients work with our server stack, but some features need a client built from this fork. This roadmap tracks what shipping our own Windows, macOS and Linux builds requires, and the features waiting on it.
 
 ## Next
 
-1. Same-user access: test on Windows and macOS ([Same-User Access](#same-user-access))
-2. Device admission: test the status line on Windows and macOS ([Device Admission](#device-admission))
-3. CI speed
-4. Tracking upstream releases: 1.5.1 is on upstream master, not released yet ([Build Pipeline](#build-pipeline))
+1. Tracking upstream releases: merge upstream 1.5.1 (released; parked for now) ([Build Pipeline](#build-pipeline))
 
 ## Build Pipeline
 
@@ -145,19 +142,19 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 - [x] Our builds sign the device login with the device key (the request goes to the server process over IPC, so the private key stays there) and accept the flag only on a verified `wss` rendezvous link with a `wss` relay, when the owner key is their own key
 - [x] Audit: such sessions have `primary_auth` 5 (same user)
 - Stock clients never get same-user access; they keep asking for the password
-- Status: released (clients 1.5.0-2, rustdesk-server 1.1.16-6, rustdesk-api 3.7.0), off by default. Verified by e2e and on Linux; Windows and macOS not tested yet
+- Status: released (clients 1.5.0-2, rustdesk-server 1.1.16-6, rustdesk-api 3.7.0), off by default. Verified by e2e and on Linux, Windows and macOS (2026-11-06)
 - Design: [design-same-user-access.md](design-same-user-access.md); tracked in [api-server-roadmap.md](api-server-roadmap.md) (Phase 3)
 
 ### End-to-End Encryption Required
 - [x] A session never runs without end-to-end encryption: when the viewer cannot verify the device's key, our viewers refuse (upstream asks "Continue anyway?"), and our devices refuse a viewer that sends no key
 - Stock viewers that fall back to no encryption cannot connect to our devices
-- Status: merged, not released. Device side unit-tested; web client verified by e2e; native viewers and devices on macOS, Windows and Linux pass the matrix and the full e2e suite (2026-10-26)
+- Status: released (clients 1.5.0-6). Device side unit-tested; web client verified by e2e; native viewers and devices on macOS, Windows and Linux pass the matrix and the full e2e suite (2026-10-26)
 - Design: [design-e2ee-required.md](design-e2ee-required.md)
 
 ### Device Admission
 - [x] While the api-server switch `DEVICE_ADMISSION` is on, our builds show on the device that it waits for remote control approval or that remote control is not allowed (heartbeat field `admission`)
 - Stock clients are admitted and refused the same way; they only show no status
-- Status: merged, not released. Verified on Linux; Windows and macOS not tested yet
+- Status: released (clients 1.5.0-6, rustdesk-server 1.1.16-7, rustdesk-api 3.9.0). Verified on Linux, Windows and macOS (2026-11-06)
 - Design: [design-device-admission.md](design-device-admission.md); tracked in [api-server-roadmap.md](api-server-roadmap.md) (Phase 4)
 
 ### ScreenCaptureKit on macOS ([#26](https://github.com/crabamole/rustdesk/issues/26))
