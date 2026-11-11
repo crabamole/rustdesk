@@ -57,7 +57,7 @@ Two builds per platform, named `cRustDesk` and differing only in their signed `c
 
 - Public builds carry no deployment data; organisations package them and supply server config
 - OA (client variant) is client-only (`conn-type: outgoing`): it never registers with hbbs, so it cannot be controlled (it sends no heartbeats)
-- DC (service variant) works in both directions (it can be controlled and can control); its data-out locks (one-way clipboard, disabled file transfer/printer/recording/tunnel/remote-restart/camera/terminal) live in `res/custom/rustdesk.json`
+- DC (service variant) works in both directions (it can be controlled and can control); its data-out locks (one-way clipboard, disabled file transfer/printer/recording/tunnel/remote-restart/camera/terminal, permission type fixed to custom, no permission changes in the connection window) live in `res/custom/rustdesk.json`
 - No build of this fork has a public-server fallback: without a configured server, an install waits until it gets a server config before it runs its usual background services
 - Server addresses and key: a pre-seeded config (verified on macOS in the user and root folders, Windows under the LocalService profile, and Linux for root and the session user) or `cRustDesk --config <string>` after install (upstream's documented method), so one public build serves every deployment
 - Machines that ran stock RustDesk against the same server keep an old peer row under their natural ID with the old key; our build then registers under a random ID on every reinstall. Remove stale rows when moving a fleet over

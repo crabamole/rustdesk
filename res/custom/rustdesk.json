@@ -11,6 +11,8 @@
     "enable-remote-restart": "N",
     "enable-camera": "N",
     "enable-terminal": "N",
+    "access-mode": "custom",
+    "enable-perm-change-in-accept-window": "N",
     "disable-unlock-pin": "Y",
     "disable-change-id": "Y",
     "hide-security-settings": "Y",
