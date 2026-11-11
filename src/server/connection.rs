@@ -797,6 +797,16 @@ impl Connection {
                             conn.chat_unanswered = false;
                         }
                         ipc::Data::SwitchPermission{name, enabled} => {
+                            if Self::is_permission_switch_locked(&name, enabled) {
+                                hbb_common::throttled_log!(
+                                    Duration::from_secs(10),
+                                    info,
+                                    "Blocked permission change {} -> {}",
+                                    name,
+                                    enabled
+                                );
+                                continue;
+                            }
                             log::info!("Change permission {} -> {}", name, enabled);
                             if &name == "keyboard" {
                                 conn.keyboard = enabled;
@@ -2680,6 +2690,35 @@ impl Connection {
             enable_prefix_option,
             &Config::get_option(enable_prefix_option),
         )
+    }
+
+    // The connection window runs as the desktop user, so its own check of the locks is not
+    // enough: the service applies them to every request to change a permission.
+    fn is_permission_switch_locked(name: &str, enabled: bool) -> bool {
+        #[cfg(not(target_os = "android"))]
+        if !config::option2bool(
+            keys::OPTION_ENABLE_PERM_CHANGE_IN_ACCEPT_WINDOW,
+            &crate::get_builtin_option(keys::OPTION_ENABLE_PERM_CHANGE_IN_ACCEPT_WINDOW),
+        ) {
+            return true;
+        }
+        let key = match name {
+            "keyboard" => keys::OPTION_ENABLE_KEYBOARD,
+            "clipboard" => keys::OPTION_ENABLE_CLIPBOARD,
+            "audio" => keys::OPTION_ENABLE_AUDIO,
+            "file" => keys::OPTION_ENABLE_FILE_TRANSFER,
+            "restart" => keys::OPTION_ENABLE_REMOTE_RESTART,
+            "recording" => keys::OPTION_ENABLE_RECORD_SESSION,
+            "block_input" => keys::OPTION_ENABLE_BLOCK_INPUT,
+            "privacy_mode" => keys::OPTION_ENABLE_PRIVACY_MODE,
+            _ => return false,
+        };
+        enabled
+            && config::OVERWRITE_SETTINGS
+                .read()
+                .unwrap()
+                .get(key)
+                .is_some_and(|v| !config::option2bool(key, v))
     }
 
     fn permission(
@@ -8049,5 +8088,28 @@ mod test {
         // is all three fields, and either of those is someone else's screen to lock.
         assert!(!replaced_by(&conn(3, remote, key(8, "peer")), 2, &mine));
         assert!(!replaced_by(&conn(3, remote, key(7, "other")), 2, &mine));
+    }
+
+    #[test]
+    fn locked_permission_cannot_be_switched_on() {
+        let file = keys::OPTION_ENABLE_FILE_TRANSFER;
+        let window = keys::OPTION_ENABLE_PERM_CHANGE_IN_ACCEPT_WINDOW;
+        let set = |settings: &RwLock<HashMap<String, String>>, key: &str| {
+            settings.write().unwrap().insert(key.to_owned(), "N".to_owned());
+        };
+
+        assert!(!Connection::is_permission_switch_locked("file", true));
+
+        set(&config::OVERWRITE_SETTINGS, file);
+        assert!(Connection::is_permission_switch_locked("file", true));
+        assert!(!Connection::is_permission_switch_locked("file", false));
+        assert!(!Connection::is_permission_switch_locked("clipboard", true));
+
+        set(&config::BUILTIN_SETTINGS, window);
+        assert!(Connection::is_permission_switch_locked("clipboard", true));
+        assert!(Connection::is_permission_switch_locked("file", false));
+
+        config::OVERWRITE_SETTINGS.write().unwrap().remove(file);
+        config::BUILTIN_SETTINGS.write().unwrap().remove(window);
     }
 }
