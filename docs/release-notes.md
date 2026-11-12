@@ -4,6 +4,14 @@ Newest first. The release workflow copies a version's section into its GitHub Re
 
 Native clients. From 2.0.0 the web client has its own version and notes: [web-client-release-notes.md](web-client-release-notes.md).
 
+## 1.5.0-7
+
+- **Locked permissions stay off.** A permission that custom.txt turns off (for example `enable-file-transfer: N`) can no longer be turned on during a session: the device service refuses the change. The device (DC) build also locks the permission type to custom and disables the permission toggles in the connection window.
+- Windows: an install whose version has a build number (1.5.0-6) writes its registry entry again.
+- **Linux: the .deb needs Ubuntu 22.04 or later, or Debian 12 or later** (`libc6 >= 2.35`). Older releases are not supported; apt refuses the package there.
+- macOS: built on macOS 15. The minimum stays macOS 12.3.
+- Works with rustdesk-server 1.1.16-8, rustdesk-api 3.9.0 and Helm chart 0.14.2.
+
 ## 1.5.0-6
 
 - Device admission: a device shows "pending" or "rejected" in its home-page status line while an administrator has not admitted it. Needs rustdesk-server 1.1.16-7 and rustdesk-api 3.9.0 with the chart's `deviceAdmission` switch on; with the switch off nothing changes.
