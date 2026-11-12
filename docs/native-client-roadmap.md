@@ -1,6 +1,6 @@
 # Native Client Build Roadmap
 
-**Updated:** 2026-11-06
+**Updated:** 2026-11-12
 
 Stock RustDesk clients work with our server stack, but some features need a client built from this fork. This roadmap tracks what shipping our own Windows, macOS and Linux builds requires, and the features waiting on it.
 
@@ -94,6 +94,7 @@ The e2e suite (private repo) runs against test machines that rest on the DC buil
 
 ### Locked Settings
 - [x] Security settings that local admins cannot change: the DC build locks them in its signed `custom.txt` (`override-settings`), verified on macOS by the e2e suite (same `custom.txt` on every platform)
+- [x] A permission that `custom.txt` turns off cannot be turned on during a session: the device service refuses the change, and the DC build disables the permission toggles in the connection window (clients 1.5.0-7); hbbs does not pass a viewer's permission values to the device (rustdesk-server 1.1.16-8)
 - Stock clients: file permissions, `chattr +i`, MDM; strategy push re-applies policy options when the policy changes
 - Design: [design-config-enforcement.md](design-config-enforcement.md)
 
