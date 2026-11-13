@@ -4,6 +4,13 @@ Newest first. The web client CI copies a version's section into the GitHub Relea
 
 The web client has its own version. Up to 1.5.0-6 it shared one version with the native clients; see [release-notes.md](release-notes.md) for those releases.
 
+## 2.0.1
+
+- The image is rebuilt on the current `nginx:alpine` (Alpine 3.24.4). This fixes CVE-2026-111497 (brotli) and the curl CVEs CVE-2026-87861, -87866, -92388, -94265, -86411, -86413 and -86414.
+- curl is removed from the image; the web client does not use it. libxslt is upgraded to 1.1.43-r4.
+- No change in the web client itself.
+- Works with cRustDesk 1.5.0-7 devices, rustdesk-server 1.1.16-8, rustdesk-api 3.9.0 and Helm chart 0.14.3.
+
 ## 2.0.0
 
 UI from RustDesk 1.5.0.

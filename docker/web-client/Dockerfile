@@ -94,6 +94,9 @@ RUN find web/js -mindepth 1 -maxdepth 1 ! -name dist -exec rm -rf {} + \
 # --- Production stage ---
 FROM nginx:alpine
 
+# curl is not used at runtime; libxslt: nginx:alpine lags behind the Alpine fix.
+RUN apk del --no-cache curl && apk upgrade --no-cache libxslt
+
 COPY --from=build /build/flutter/build/web /usr/share/nginx/html
 COPY --from=fonts /fonts /usr/share/nginx/html/fonts
 
