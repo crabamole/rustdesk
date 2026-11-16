@@ -287,5 +287,17 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("admission_rejected_tip", "An administrator does not allow other devices to connect to this device. You can still connect to other devices."),
         ("conn-e2ee-refused-tip", "Could not verify end-to-end encryption, so the connection was refused.\nThe server or the network may not be trusted. Contact your administrator."),
         ("web_no_video_decoder_tip", "This browser cannot decode video. Update it, or use a current version of Chrome, Edge, Firefox or Safari."),
+        ("shortcut-page-description", "Bind a key combination to each session action below. Each binding must include at least one modifier."),
+        ("shortcut-passthrough-tip", "When on, every bound combination is forwarded to the remote. Useful when a binding collides with something you need on the remote."),
+        ("shortcut-reset-confirm-tip", "This will replace all current bindings with the default set. Continue?"),
+        ("shortcut-recording-instruction", "Press the key combination you want to use."),
+        ("shortcut-recording-press-keys-tip", "Press a key combination..."),
+        ("shortcut-must-include-modifiers", "Must include at least one modifier: {}"),
+        ("shortcut-already-bound-to", "Already bound to"),
+        ("shortcut-mobile-physical-keyboard-tip", "Recording requires a physical keyboard. Soft keyboards are not supported."),
+        ("shortcut-key-not-supported", "\"{}\" can't be used as a shortcut."),
+        ("api_server_connection_tip", "Your custom server uses unencrypted HTTP. Contact your administrator to enable HTTPS."),
+        ("api_server_empty_tip", "With API Server empty, your custom server defaults to HTTP. Contact your administrator to enable HTTPS."),
+        ("android-logs-folder-tip", "Choose Android → media to store log files."),
     ].iter().cloned().collect();
 }

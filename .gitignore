@@ -70,3 +70,5 @@ flutter/core
 .local/
 # helm local overrides (contain private config)
 deploy/helm/*/values-*.yaml
+# Local git worktrees
+.worktrees/
