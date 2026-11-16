@@ -25,7 +25,7 @@ Placeholders:
 | `docker.io/library/postgres` | Only with the bundled database |
 | `ghcr.io/crabamole/rustdesk/installers:<ver>` | The client installers and `SHA256SUMS` (not deployed by the chart) |
 
-Each chart release states the client release it was tested with (`UPGRADING.md`); deploy that `<ver>`.
+Each chart release states the client release it was tested with (its notes in the chart repo's `releases/`); deploy that `<ver>`.
 With a mirror, set `global.imageRegistry: <registry>` in the chart values.
 
 ## 1. Server
@@ -249,7 +249,7 @@ not an interactive shell history.
 
 ## 3. Upgrades
 
-- Server: follow the chart's `UPGRADING.md` for each chart release; it names the matching client release.
+- Server: follow the chart's `releases/<version>.md` for each chart release; it names the matching client release.
 - Clients: the release notes of each client release say how to upgrade from the previous one.
 
 ## 4. Reference

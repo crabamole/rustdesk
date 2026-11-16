@@ -12,7 +12,7 @@ This repo builds:
   no public servers.
 
 It is a fork of [rustdesk/rustdesk](https://github.com/rustdesk/rustdesk) and follows
-upstream releases; the [release notes](docs/release-notes.md) name the upstream version
+upstream releases; the [release notes](docs/releases/) name the upstream version
 each release is built on. The [org page](https://github.com/crabamole) lists the other
 repos and how they fit; the server side is deployed with
 [rustdesk-charts](https://github.com/crabamole/rustdesk-charts).

@@ -11,7 +11,6 @@ on:
       - 'src/client.rs'
       - 'libs/hbb_common'
       - 'libs/base/protos/**'
-      - 'docs/web-client-release-notes.md'
       - 'docker/web-client/**'
       - '.github/workflows/web-docker.yml'
       - '.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff'
@@ -26,7 +25,6 @@ on:
       - 'src/client.rs'
       - 'libs/hbb_common'
       - 'libs/base/protos/**'
-      - 'docs/web-client-release-notes.md'
       - 'docker/web-client/**'
       - '.github/workflows/web-docker.yml'
       - '.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff'
@@ -97,15 +95,6 @@ jobs:
             exit 1
           fi
 
-      # The release needs this section; fail here, before the build.
-      - name: Check the release notes
-        if: steps.check.outputs.publish == 'true'
-        env:
-          VERSION: ${{ steps.check.outputs.version }}
-        run: |
-          awk -v v="## $VERSION" '$0 == v {f = 1; next} /^## / {f = 0} f' docs/web-client-release-notes.md > section.md
-          [ -s section.md ] || { echo "docs/web-client-release-notes.md has no section for $VERSION"; exit 1; }
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
@@ -131,7 +120,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.check.outputs.version }}
         run: |
-          { echo "Web client image: \`$IMAGE_NAME:$VERSION\`"; echo; cat section.md; } > notes.md
+          { echo "Web client image: \`$IMAGE_NAME:$VERSION\`"; echo
+            echo "Release notes: the Helm chart release that ships it (crabamole/rustdesk-charts, \`releases/\`)."; } > notes.md
           # The latest release stays the native clients' one.
           gh release create "web-client-$VERSION" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "cRustDesk web client $VERSION" --notes-file notes.md --latest=false

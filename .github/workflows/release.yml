@@ -42,14 +42,13 @@ jobs:
             exit 1
           fi
 
-      # publish needs this section; fail here, before the builds and the signing.
+      # publish needs this file; fail here, before the builds and the signing.
       - name: Check the release notes
         if: steps.check.outputs.release == 'true'
         env:
           VERSION: ${{ steps.check.outputs.version }}
         run: |
-          awk -v v="## $VERSION" '$0 == v {f = 1; next} /^## / {f = 0} f' docs/release-notes.md > section.md
-          [ -s section.md ] || { echo "docs/release-notes.md has no section for $VERSION"; exit 1; }
+          [ -s "docs/releases/$VERSION.md" ] || { echo "docs/releases/$VERSION.md is missing"; exit 1; }
 
   windows:
     needs: version
@@ -138,9 +137,8 @@ jobs:
           SBOM (CycloneDX): \`cRustDesk-$VERSION.cdx.json\`
           Deployment guide: [docs/crustdesk-deployment.md](https://github.com/$GITHUB_REPOSITORY/blob/$VERSION/docs/crustdesk-deployment.md)
           EOF
-          awk -v v="## $VERSION" '$0 == v {f = 1; next} /^## / {f = 0} f' docs/release-notes.md > section.md
-          [ -s section.md ] || { echo "docs/release-notes.md has no section for $VERSION"; exit 1; }
-          { echo; cat section.md; } >> notes.md
+          [ -s "docs/releases/$VERSION.md" ] || { echo "docs/releases/$VERSION.md is missing"; exit 1; }
+          { echo; sed '1{/^# /d}' "docs/releases/$VERSION.md"; } >> notes.md
           gh release create "$VERSION" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "cRustDesk $VERSION" --notes-file notes.md
 
