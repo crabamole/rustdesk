@@ -58,7 +58,7 @@ server's flag.
 
 | Repo | Change |
 |------|--------|
-| hbb_common | `bool same_user = 2; bytes owner_pk = 3;` in `ControlledContext` (`rendezvous.proto`); bump the submodule in rustdesk and rustdesk-server; `tls::is_verified_tls` |
+| hbb_common | `bool same_user = 1001; bytes owner_pk = 1002;` in `ControlledContext` (our fields start at 1001) (`rendezvous.proto`); bump the submodule in rustdesk and rustdesk-server; `tls::is_verified_tls` |
 | rustdesk-api | Migration `peer.owner_session`, `peer.owner_pk`; the login code as challenge; owner set at device login only with a valid device signature; `same_user` and `owner_pk` in the `/api/audit/ref` answer; "Same user" label for `primary_auth` 5 in the console and audit spec |
 | rustdesk-server | `check_viewer_token` reads `same_user` and `owner_pk`; `controlled_context()` sets them |
 | rustdesk | Login: an IPC request asks the server process to sign the challenge (the private key never leaves it), the signature goes with `/api/oidc/token`. `connection.rs`: a new branch before the approve-mode check, doing what the recent-session branch does (logon response, then `try_start_cm` as authorized); the owner-key check in a new function (`same_user::admits`); the `wss://` link check is a hook in `rendezvous_mediator.rs` (`same_user::checked_context`) that clears the flag before the connection sees it |

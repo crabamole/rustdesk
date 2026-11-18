@@ -69,7 +69,7 @@ Only the interactive device login counts. A bearer token alone never approves a 
 
 | Repo | Stage | Change |
 |---|---|---|
-| hbb_common | 1 | `KEY_CHANGE_REFUSED = 9` in `RegisterPkResponse.Result`; bump the submodule in rustdesk and rustdesk-server |
+| hbb_common | 1 | `KEY_CHANGE_REFUSED = 1001` in `RegisterPkResponse.Result` (our values start at 1001); bump the submodule in rustdesk and rustdesk-server |
 | rustdesk-server | 1 | `handle_register_pk`: refuse another `pk` for a known device unless the stored `pk` is empty |
 | rustdesk-server | 2 | also accept `pk` = `approved_pk`, empty it on use |
 | rustdesk-api | 1 | CLI `peer reset-key`; console action; `iop` 27 |
