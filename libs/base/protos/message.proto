@@ -1054,10 +1054,11 @@ message Message {
     TerminalAction terminal_action = 31;
     TerminalResponse terminal_response = 32;
     PortForwardChannel port_forward_channel = 33;
-    ClipboardOffer clipboard_offer = 34;
-    ClipboardRequest clipboard_request = 35;
-    ClipboardReply clipboard_reply = 36;
     // Auto Login: the peer types the password only if it is at its logon or lock screen.
-    OSLogin os_login = 37;
+    OSLogin os_login = 34;
+    // cRustDesk messages start at 1001, so upstream can take the next free numbers.
+    ClipboardOffer clipboard_offer = 1001;
+    ClipboardRequest clipboard_request = 1002;
+    ClipboardReply clipboard_reply = 1003;
   }
 }
