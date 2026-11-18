@@ -40,6 +40,11 @@ New messages in `message.proto`, in the `Message` union:
   empty when `seq` is stale or the format is gone. A new reply message keeps the existing
   `Clipboard` handler, which writes at once, out of this flow.
 
+Field numbers: `Message` fields 34, 35 and 36. Upstream RustDesk 1.5.1 also took 34, for
+`OSLogin` (auto-login); our merge moved `os_login` to 37. So auto-login does not work between our
+clients and stock 1.5.1 clients, in either direction. Each upstream merge must check new
+`Message` fields against 34-36, because upstream takes the next free number.
+
 The device sets `lazy_text_clipboard: true` in PeerInfo `platform_additions` only when its
 provider started. Older devices, stock devices, Android devices and Wayland desktops do not
 set it.
