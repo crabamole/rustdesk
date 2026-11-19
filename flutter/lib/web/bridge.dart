@@ -1000,6 +1000,8 @@ class RustdeskImpl {
   // use the same platform-filtered bindings as the Flutter matcher, while
   // keeping unsupported saved bindings in LocalStorage.
   void mainReloadKeyboardShortcuts({dynamic hint}) {
+    // Our JS client has no shortcut matcher yet; calling a missing function stops startup.
+    if (!js.context.hasProperty('reloadShortcuts')) return;
     final config = ShortcutModel.config(active: true);
     js.context.callMethod('reloadShortcuts', [
       jsonEncode({
