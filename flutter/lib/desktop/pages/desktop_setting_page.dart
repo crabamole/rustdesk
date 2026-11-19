@@ -424,7 +424,8 @@ class _GeneralState extends State<_General> {
         if (!isWeb) record(context),
         if (!isWeb) WaylandCard(),
         other(),
-        if (!bind.isIncomingOnly()) keyboardShortcuts(),
+        // The web client has no shortcut matcher.
+        if (!isWeb && !bind.isIncomingOnly()) keyboardShortcuts(),
       ],
     ).marginOnly(bottom: _kListViewBottomMargin);
   }
